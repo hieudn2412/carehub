@@ -69,7 +69,11 @@ const DEFAULT_EVALUATION_DASHBOARD_FILTERS = {
   toDate: DEFAULT_EVALUATION_DASHBOARD_DATES.toDate,
 }
 
-function EvaluationDashboardPage({ role = 'admin' }) {
+/**
+ * Thân trang Dashboard lý thuyết, tách khỏi AppShell để nhúng được vào tab
+ * "Dashboard lý thuyết" của trang Năng lực chuyên môn.
+ */
+export function EvaluationDashboardContent({ role = 'admin' }) {
   const isManager = role === 'manager'
   const { showToast } = useToast()
   const [departments, setDepartments] = useState([])
@@ -257,13 +261,7 @@ function EvaluationDashboardPage({ role = 'admin' }) {
     setIsFilterOpen(false)
   }
 
-  const pageTitle = 'Dashboard lý thuyết'
-
   return (
-    <AppShell
-      breadcrumbs={isManager ? undefined : [{ label: 'Dashboard & Báo cáo' }, { label: pageTitle }]}
-      title={isManager ? pageTitle : undefined}
-    >
         <div className="exam-dashboard">
           <AppliedFilterToolbar
             activeCount={activeFilterCount}
@@ -387,31 +385,22 @@ function EvaluationDashboardPage({ role = 'admin' }) {
                 </article>
               </section>
 
-              <section className="exam-dashboard__panel exam-dashboard__paper-panel">
-                <header><div><h2>Danh sách bài kiểm tra</h2><p>Kết quả tổng hợp theo từng đề và phạm vi đang lọc.</p></div><span>{paperRows.length} bài</span></header>
-                <div className="exam-dashboard__table-wrap">
-                  <table className="exam-dashboard__table">
-                    <thead><tr><th>Mã đề</th><th>Bài kiểm tra</th><th>Lĩnh vực chuyên môn</th><th>Số câu</th><th>Điểm đạt</th><th>Điểm trung bình</th></tr></thead>
-                    <tbody>
-                      {!paperRows.length ? (
-                        <tr><td colSpan="6" className="exam-dashboard__empty-row">Chưa có bài kiểm tra phù hợp.</td></tr>
-                      ) : paperRows.map((paper) => (
-                        <tr key={paper.paperId}>
-                          <td><code>{paper.paperCode || '—'}</code></td>
-                          <td><strong>{paper.paperName || '—'}</strong><span>Phiên bản {paper.version || '—'} · {formatNumber(paper.gradedAttempts)} lượt</span></td>
-                          <td>{(paper.professionalFieldNames || []).join(', ') || '—'}</td>
-                          <td>{formatNumber(paper.totalQuestions)}</td>
-                          <td>{paper.passingScore === null || paper.passingScore === undefined ? '—' : `${formatNumber(paper.passingScore)}/10`}</td>
-                          <td><strong>{formatNumber(paper.averageScore, 2)}</strong>/10</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
             </>
           )}
         </div>
+  )
+}
+
+/** Trang độc lập; route cũ vẫn dùng để không phá link đã lưu. */
+function EvaluationDashboardPage({ role = 'admin' }) {
+  const pageTitle = 'Dashboard lý thuyết'
+  const isManager = role === 'manager'
+  return (
+    <AppShell
+      breadcrumbs={isManager ? undefined : [{ label: 'Dashboard & Báo cáo' }, { label: pageTitle }]}
+      title={isManager ? pageTitle : undefined}
+    >
+      <EvaluationDashboardContent role={role} />
     </AppShell>
   )
 }

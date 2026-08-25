@@ -41,8 +41,8 @@ public class FirstLoginServiceImpl implements FirstLoginService {
     public void sendEmailVerificationOtp(SendEmailVerificationRequest request) {
         String email = request.getEmail();
 
-        if (userRepository.existsByEmailAndIsDeletedFalse(email)) {
-            throw new BadRequestException("Email này đã được sử dụng");
+        if (userRepository.existsByEmail(email)) {
+            throw new BadRequestException("Email này đã được sử dụng hoặc thuộc tài khoản đã ngừng sử dụng");
         }
 
         User user = getCurrentUserRequiringFirstLoginSetup();
@@ -96,8 +96,8 @@ public class FirstLoginServiceImpl implements FirstLoginService {
             throw new BadRequestException("Tài khoản này không cần thực hiện thiết lập lần đầu");
         }
 
-        if (userRepository.existsByEmailAndIsDeletedFalse(request.getEmail())) {
-            throw new BadRequestException("Email này đã được sử dụng");
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new BadRequestException("Email này đã được sử dụng hoặc thuộc tài khoản đã ngừng sử dụng");
         }
 
         user.setEmail(request.getEmail());

@@ -6,7 +6,6 @@ import {
   FileTextOutlined,
   FileAddOutlined,
   SettingOutlined,
-  ImportOutlined,
   BankOutlined,
   DatabaseOutlined,
   CheckSquareOutlined,
@@ -51,6 +50,12 @@ const navSections = [
       { icon: <HistoryOutlined />, label: 'Lịch sử đồng bộ', path: '/admin/reference/sync-history' },
       { icon: <SlidersOutlined />, label: 'Hình thức đào tạo', path: '/admin/training/activity-types' },
       { icon: <DatabaseOutlined />, label: 'Lĩnh vực chuyên môn', path: '/admin/training/professional-fields' },
+      {
+        icon: <DatabaseOutlined />,
+        label: 'Danh mục câu hỏi',
+        path: '/admin/evaluation/categories',
+        requiredPermissions: [EVALUATION_PERMISSION.questionAuthor],
+      },
     ],
   },
   {
@@ -64,9 +69,10 @@ const navSections = [
     label: 'GIÁM SÁT TUÂN THỦ',
     items: [
       { icon: <CheckSquareOutlined />, label: 'Tuân thủ chung', path: '/admin/evaluation/compliance-by-technique' },
-      { icon: <CheckSquareOutlined />, label: 'Bảng kiểm giám sát', path: '/admin/quality/checklists' },
       { icon: <CheckSquareOutlined />, label: 'Tuân thủ theo kỹ thuật', path: '/admin/reports/checklist-dashboard' },
+      { icon: <CheckSquareOutlined />, label: 'Bảng kiểm giám sát', path: '/admin/quality/checklists' },
       { icon: <UserSwitchOutlined />, label: 'Giao bảng kiểm', path: '/admin/quality/checklist-assignments' },
+      { icon: <HistoryOutlined />, label: 'Lịch sử đánh giá', path: '/admin/quality/history' },
     ],
   },
   {
@@ -88,12 +94,6 @@ const navSections = [
         ],
       },
       {
-        icon: <DatabaseOutlined />,
-        label: 'Danh mục câu hỏi',
-        path: '/admin/evaluation/categories',
-        requiredPermissions: [EVALUATION_PERMISSION.questionAuthor],
-      },
-      {
         icon: <FileSearchOutlined />,
         label: 'Quản lý bài kiểm tra',
         path: '/admin/evaluation/exam-management',
@@ -103,11 +103,14 @@ const navSections = [
           EVALUATION_PERMISSION.assignmentManager,
         ],
       },
-      // Dashboard năng lực trước đây nằm ở mục "Chất lượng chăm sóc" — nội dung là năng lực
-      // chuyên môn nên chuyển về đúng nhóm này.
+    ],
+  },
+  {
+    label: 'NĂNG LỰC CHUYÊN MÔN',
+    items: [
       {
         icon: <LineChartOutlined />,
-        label: 'Dashboard năng lực',
+        label: 'Năng lực chuyên môn',
         path: '/admin/evaluation/competency-summary',
         requiredPermissions: [EVALUATION_PERMISSION.resultViewer],
       },
@@ -124,12 +127,6 @@ const navSections = [
         label: 'Audit đánh giá',
         path: '/admin/evaluation/audit-logs',
         requiredPermissions: [EVALUATION_PERMISSION.auditViewer],
-      },
-      {
-        icon: <ImportOutlined />,
-        label: 'Lịch sử import đánh giá',
-        path: '/admin/evaluation/imports',
-        requiredPermissions: [EVALUATION_PERMISSION.questionAuthor, EVALUATION_PERMISSION.questionReviewer],
       },
     ],
   },
@@ -158,6 +155,7 @@ const navGroups = [
       navSections[3],
       navSections[4],
       navSections[5],
+      navSections[6],
     ],
   },
   {
@@ -166,7 +164,7 @@ const navGroups = [
     icon: <SettingOutlined />,
     sections: [
       navSections[2],
-      ...navSections.slice(6),
+      ...navSections.slice(7),
     ],
   },
 ]

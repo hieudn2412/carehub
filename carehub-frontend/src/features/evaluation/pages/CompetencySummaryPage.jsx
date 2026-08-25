@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   ReloadOutlined,
   CheckCircleFilled,
@@ -25,7 +25,6 @@ import AppliedFilterToolbar from '../../../shared/components/AppliedFilterToolba
 import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { competencyApi } from '../api/examAssignmentApi.js'
-import { questionCategoryApi } from '../api/questionCategoryApi.js'
 import { adminApi } from '../../admin/api/adminApi.js'
 import { staffApi } from '../../staff/api/staffApi.js'
 import { apiData, apiErrorMessage, formatNumber } from '../utils/documentQuestionUi.js'
@@ -35,6 +34,7 @@ import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 import { currentYearDateRange, validateHistoricalDateRange } from '../../../shared/utils/dateRange.js'
 import '../styles/EvaluationDashboardPage.css'
 import PassFailBadge from '../../../shared/components/PassFailBadge.jsx'
+import { EvaluationDashboardContent } from './EvaluationDashboardPage.jsx'
 
 const PAGE_SIZE = 10
 const defaultDateRange = currentYearDateRange()
@@ -46,6 +46,12 @@ function formatScore(value) {
   return Number.isFinite(score) ? score.toFixed(1).replace('.', ',') : '—'
 }
 
+const REPORT_TITLES = {
+  summary: 'Năng lực chuyên môn',
+  technique: 'Kỹ năng thực hành',
+  theory: 'Kỹ năng lý thuyết',
+}
+
 function CompetencySummaryPage() {
   const { showToast } = useToast()
   const navigate = useNavigate()
@@ -55,7 +61,12 @@ function CompetencySummaryPage() {
   const isAdmin = roles.some(r => String(r).toUpperCase().includes('ADMIN'))
   const isManager = roles.some(r => String(r).toUpperCase().includes('MANAGER'))
 
-  const [reportType, setReportType] = useState('summary') // 'summary', 'field', 'technique'
+  const [searchParams, setSearchParams] = useSearchParams()
+  // 'summary' | 'technique' | 'theory'. Đọc từ ?view= để link cũ tới
+  // trang Dashboard lý thuyết (nay đã gộp vào đây) vẫn mở đúng tab.
+  const [reportType, setReportType] = useState(
+    () => (REPORT_TITLES[searchParams.get('view')] ? searchParams.get('view') : 'summary'),
+  )
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [departments, setDepartments] = useState([])
@@ -66,8 +77,6 @@ function CompetencySummaryPage() {
   const [filterError, setFilterError] = useState('')
 
   // Field specific states
-  const [categories, setCategories] = useState([])
-  const [selectedCategory, setSelectedCategory] = useState('')
 
   // Technique specific states
   const [forms, setForms] = useState([])
@@ -80,7 +89,6 @@ function CompetencySummaryPage() {
     departmentId: '',
     fromDate: yearStart,
     searchTerm: '',
-    selectedCategory: '',
     selectedFormId: '',
     toDate: today,
   })
@@ -89,23 +97,11 @@ function CompetencySummaryPage() {
   const [sortColumn, setSortColumn] = useState('overallScore')
   const [sortDirection, setSortDirection] = useState('desc')
 
-  const dashboardPath = isAdmin ? '/admin/dashboard' : '/manager/dashboard'
-  const detailPathField = isAdmin ? '/admin/evaluation/competency-by-field' : '/manager/competency-by-field'
   const effectiveDepartmentId = isAdmin ? appliedFilters.departmentId : departmentId
   const effectiveFromDate = appliedFilters.fromDate
   const effectiveToDate = appliedFilters.toDate
   const effectiveSearchTerm = appliedFilters.searchTerm
-  const effectiveSelectedCategory = appliedFilters.selectedCategory
   const effectiveSelectedFormId = appliedFilters.selectedFormId
-
-  const loadCategories = useCallback(async () => {
-    try {
-      const response = await questionCategoryApi.listCategories()
-      setCategories(apiData(response, []))
-    } catch {
-      setCategories([])
-    }
-  }, [])
 
   useEffect(() => {
     async function init() {
@@ -131,10 +127,9 @@ function CompetencySummaryPage() {
     }
     const timer = window.setTimeout(() => {
       init()
-      loadCategories()
     }, 0)
     return () => window.clearTimeout(timer)
-  }, [isAdmin, showToast, loadCategories])
+  }, [isAdmin, showToast])
 
   useEffect(() => {
     const nextSearchTerm = searchTerm.trim()
@@ -164,20 +159,6 @@ function CompetencySummaryPage() {
         })
         const responseData = apiData(response, null)
         setData(responseData)
-      } else if (reportType === 'field') {
-        const params = {
-          departmentId: effectiveDepartmentId || undefined,
-          fromDate: effectiveFromDate || undefined,
-          toDate: effectiveToDate || undefined,
-          keyword: effectiveSearchTerm || undefined,
-          page,
-          size: PAGE_SIZE,
-        }
-        if (effectiveSelectedCategory) {
-          params.categoryId = effectiveSelectedCategory
-        }
-        const response = await competencyApi.getByField(params)
-        setData(apiData(response, null))
       } else if (reportType === 'technique') {
         const response = await competencyApi.getByTechnique({
           departmentId: effectiveDepartmentId || undefined,
@@ -198,7 +179,7 @@ function CompetencySummaryPage() {
       setLoading(false)
     }
   }, [
-    reportType, departmentId, effectiveDepartmentId, effectiveFromDate, effectiveToDate, effectiveSelectedCategory,
+    reportType, departmentId, effectiveDepartmentId, effectiveFromDate, effectiveToDate,
     effectiveSelectedFormId, effectiveSearchTerm, page, isAdmin, showToast,
   ])
 
@@ -207,7 +188,7 @@ function CompetencySummaryPage() {
     const timer = window.setTimeout(loadData, 0)
     return () => window.clearTimeout(timer)
   }, [
-    departmentId, reportType, effectiveFromDate, effectiveToDate, effectiveSelectedCategory,
+    departmentId, reportType, effectiveFromDate, effectiveToDate,
     effectiveSelectedFormId, effectiveSearchTerm, page, isAdmin, loadData,
   ])
 
@@ -268,7 +249,6 @@ function CompetencySummaryPage() {
     effectiveSearchTerm,
     effectiveFromDate && effectiveFromDate !== yearStart,
     effectiveToDate && effectiveToDate !== today,
-    reportType === 'field' && effectiveSelectedCategory,
     reportType === 'technique' && effectiveSelectedFormId,
   ].filter(Boolean).length
 
@@ -336,22 +316,13 @@ function CompetencySummaryPage() {
     )
   }
 
-  const breadcrumbs = [
-    { label: 'Dashboard', link: dashboardPath },
-    { label: 'Đánh giá' },
-    {
-      label: reportType === 'summary' ? 'Năng lực chuyên môn'
-        : reportType === 'field' ? 'Năng lực theo lĩnh vực'
-        : 'Kỹ năng chuyên môn'
-    },
-  ]
+  const breadcrumbs = [{ label: 'Năng lực chuyên môn' }]
 
-  const pageTitle = reportType === 'summary' ? 'Năng lực chuyên môn'
-    : reportType === 'field' ? 'Năng lực theo lĩnh vực'
-    : 'Kỹ năng chuyên môn'
+  const pageTitle = REPORT_TITLES[reportType]
 
   function selectReportType(nextReportType) {
     setReportType(nextReportType)
+    setSearchParams(nextReportType === 'summary' ? {} : { view: nextReportType }, { replace: true })
     setSearchTerm('')
     setAppliedFilters((current) => ({ ...current, searchTerm: '' }))
     setPage(0)
@@ -368,7 +339,6 @@ function CompetencySummaryPage() {
       departmentId,
       fromDate,
       searchTerm: searchTerm.trim(),
-      selectedCategory,
       selectedFormId,
       toDate,
     })
@@ -380,10 +350,9 @@ function CompetencySummaryPage() {
     setFromDate(yearStart)
     setToDate(today)
     setSearchTerm('')
-    setSelectedCategory('')
     setSelectedFormId('')
     if (isAdmin) setDepartmentId('')
-    setAppliedFilters({ departmentId: '', fromDate: yearStart, searchTerm: '', selectedCategory: '', selectedFormId: '', toDate: today })
+    setAppliedFilters({ departmentId: '', fromDate: yearStart, searchTerm: '', selectedFormId: '', toDate: today })
     setFilterError('')
     setPage(0)
   }
@@ -392,8 +361,8 @@ function CompetencySummaryPage() {
     <div className="competency-dashboard-tabs" role="tablist" aria-label="Loại báo cáo năng lực">
       {[
         { key: 'summary', label: 'Năng lực chuyên môn' },
-        { key: 'field', label: 'Năng lực theo lĩnh vực' },
-        { key: 'technique', label: 'Kỹ năng chuyên môn' },
+        { key: 'technique', label: 'Kỹ năng thực hành' },
+        { key: 'theory', label: 'Kỹ năng lý thuyết' },
       ].map(tab => (
         <button key={tab.key} onClick={() => selectReportType(tab.key)}
           className={reportType === tab.key ? 'competency-dashboard-tabs__button is-active' : 'competency-dashboard-tabs__button'}
@@ -434,12 +403,6 @@ function CompetencySummaryPage() {
           if (!isManager) setPage(0)
         }} />
       </label>
-      {reportType === 'field' && <FilterSelectField label="Lĩnh vực" value={selectedCategory} onChange={(value) => {
-          setSelectedCategory(value)
-          if (!isManager) setPage(0)
-        }}
-          options={[{ value: '', label: 'Tất cả lĩnh vực' }, ...categories.map((category) => ({ value: category.id, label: category.name }))]}
-          placeholder="Tất cả lĩnh vực" searchable searchPlaceholder="Tìm tên lĩnh vực..." />}
       {reportType === 'technique' && <FilterSelectField label="Kỹ thuật" value={selectedFormId} onChange={(value) => {
           setSelectedFormId(value)
           if (!isManager) setPage(0)
@@ -453,6 +416,13 @@ function CompetencySummaryPage() {
   return (
     <AppShell breadcrumbs={isAdmin ? breadcrumbs : undefined} title={isManager ? pageTitle : undefined}>
             <div className="evd-page">
+              {reportType === 'theory' ? (
+                <>
+                  <div className="competency-dashboard-theory-tabs">{reportTabs}</div>
+                  <EvaluationDashboardContent role={isAdmin ? 'admin' : 'manager'} />
+                </>
+              ) : (
+              <>
               <AppliedFilterToolbar
                 activeCount={activeFilterCount}
                 actions={toolbarActions}
@@ -548,7 +518,7 @@ function CompetencySummaryPage() {
                           <th style={{ cursor: 'pointer' }} onClick={() => handleSort('overallScore')}>
                             Tổng điểm{sortIcon('overallScore')}
                           </th>
-                          <th>Phân loại</th>
+                          <th>Kết quả</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -591,98 +561,6 @@ function CompetencySummaryPage() {
               )}
 
               {/* REPORT TYPE: 2. FIELD VIEW */}
-              {reportType === 'field' && (
-                <>
-                  {data && data.items && data.items.length > 0 && (
-                    <section className="evd-panel" style={{ padding: 16, marginBottom: 16 }}>
-                      <div style={{ fontSize: 14, color: '#374151' }}>
-                        <strong>{data.departmentName}</strong>
-                        {data.categoryName && <> — <em>{data.categoryName}</em></>}
-                        : {totalElements} điều dưỡng có dữ liệu
-                      </div>
-                    </section>
-                  )}
-
-                  <div className="evd-card evd-x-table-card competency-dashboard-table-card">
-                    <table className="evd-table evd-competency-table evd-competency-table--field admin-table-uppercase">
-                      <colgroup>
-                        <col className="evd-col-index" />
-                        <col className="evd-col-code" />
-                        <col className="evd-col-name" />
-                        {isAdmin && <col className="evd-col-department" />}
-                        <col className="evd-col-attempts" />
-                        <col className="evd-col-score" />
-                        <col className="evd-col-rate" />
-                        <col className="evd-col-level" />
-                        <col className="evd-col-actions" />
-                      </colgroup>
-                      <thead>
-                        <tr>
-                          <th>STT</th>
-                          <th>Mã NV</th>
-                          <th>Họ tên</th>
-                          {isAdmin && <th>Khoa/phòng</th>}
-                          <th>Số lượt</th>
-                          <th>Điểm trung bình</th>
-                          <th>Tỷ lệ đạt</th>
-                          <th>Phân loại</th>
-                          <th>Hành động</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {loading ? (
-                          <tr>
-                            <td colSpan={isAdmin ? 9 : 8} className="ch-empty">
-                              Đang tải dữ liệu...
-                            </td>
-                          </tr>
-                        ) : filteredItems.length === 0 ? (
-                          <tr>
-                            <td colSpan={isAdmin ? 9 : 8} className="ch-empty">
-                              Chưa có dữ liệu đánh giá cho lĩnh vực này.
-                            </td>
-                          </tr>
-                        ) : (
-                          filteredItems.map((item, idx) => (
-                            <tr key={item.employeeId} className={!item.isPassed ? 'evd-row--danger' : ''}>
-                              <td>{page * PAGE_SIZE + idx + 1}</td>
-                              <td><span className="evd-table-code">{item.employeeCode || '—'}</span></td>
-                              <td><strong className="evd-table-person">{item.employeeName || '—'}</strong></td>
-                              {isAdmin && <td><span className="evd-table-department" title={item.departmentName || ''}>{item.departmentName || '—'}</span></td>}
-                              <td><span className="evd-table-metric">{item.attemptCount ?? 0}</span></td>
-                              <td><strong className="evd-table-score">{formatNumber(item.averageScore)}</strong></td>
-                              <td>
-                                <span className={(item.passRate || 0) < 50 ? 'evd-table-rate is-low' : 'evd-table-rate'}>
-                                  {item.passRate != null ? `${item.passRate}%` : '—'}
-                                </span>
-                              </td>
-                              <td>
-                                <PassFailBadge passed={item.isPassed} />
-                              </td>
-                              <td>
-                                <div className="admin-table-actions">
-                                  <button
-                                    className="admin-table-action admin-table-action--icon admin-table-action--primary"
-                                    type="button"
-                                    title="Xem chi tiết"
-                                    aria-label={`Xem chi tiết năng lực của ${item.employeeName || item.employeeCode}`}
-                                    onClick={() => navigate(`${detailPathField}/${item.employeeId}`)}
-                                  >
-                                    <EyeOutlined />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                    {renderPagination()}
-                  </div>
-                </>
-              )}
-
-              {/* REPORT TYPE: 3. TECHNIQUE VIEW */}
               {reportType === 'technique' && (
                 <>
                   {data && (
@@ -732,7 +610,7 @@ function CompetencySummaryPage() {
                           <th>Điểm trung bình</th>
                           <th>Tỷ lệ đạt</th>
                           <th>Mục tiêu</th>
-                          <th>Phân loại</th>
+                          <th>Kết quả</th>
                           <th>Hành động</th>
                         </tr>
                       </thead>
@@ -810,6 +688,8 @@ function CompetencySummaryPage() {
                     {renderPagination()}
                   </div>
                 </>
+              )}
+              </>
               )}
             </div>
     </AppShell>

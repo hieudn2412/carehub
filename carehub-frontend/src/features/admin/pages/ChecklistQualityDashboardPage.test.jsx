@@ -98,6 +98,12 @@ describe('ChecklistQualityDashboardPage', () => {
       if (params.formId) {
         return Promise.resolve(dashboardResponse(allChecklists.filter((item) => String(item.formId) === String(params.formId))))
       }
+      if (params.targetStatus === 'MET') {
+        return Promise.resolve(dashboardResponse(allChecklists.filter((item) => Number(item.complianceRate) > Number(item.targetPercent))))
+      }
+      if (params.targetStatus === 'NOT_MET') {
+        return Promise.resolve(dashboardResponse(allChecklists.filter((item) => Number(item.complianceRate || 0) <= Number(item.targetPercent || 80))))
+      }
       return Promise.resolve(dashboardResponse(params.view === 'LATEST' ? [checklist] : allChecklists))
     })
     adminApi.getQualityChecklistFilterOptions.mockResolvedValue({
@@ -117,18 +123,18 @@ describe('ChecklistQualityDashboardPage', () => {
     vi.clearAllMocks()
 
     fireEvent.click(screen.getByRole('button', { name: /Bộ lọc/i }))
-    fireEvent.change(screen.getByLabelText('Kết quả'), { target: { value: 'PASSED' } })
+    fireEvent.change(screen.getByLabelText('Mục tiêu'), { target: { value: 'MET' } })
     fireEvent.click(screen.getByRole('button', { name: 'Áp dụng' }))
 
     expect(await screen.findByRole('heading', { name: 'Danh sách bảng kiểm' })).toBeInTheDocument()
     await waitFor(() => {
       expect(adminApi.getQualityChecklistDashboard).toHaveBeenCalledWith(expect.objectContaining({
-        resultStatus: 'PASSED',
+        targetStatus: 'MET',
         view: 'FILTERED',
       }))
     })
-    expect(screen.getByText('Quy trình thay băng vết thương')).toBeInTheDocument()
-    expect(container.querySelectorAll('.checklist-quality-process-card__top button')).toHaveLength(2)
+    expect(screen.queryByText('Quy trình thay băng vết thương')).not.toBeInTheDocument()
+    expect(container.querySelectorAll('.checklist-quality-process-card__top button')).toHaveLength(1)
     expect(screen.queryByRole('button', { name: /Cấu hình mục tiêu/i })).not.toBeInTheDocument()
     expect(screen.queryByText('KẾT QUẢ BẢNG KIỂM ĐANG CHỌN')).not.toBeInTheDocument()
     expect(adminApi.getQualityChecklistTrend).not.toHaveBeenCalled()
@@ -149,7 +155,7 @@ describe('ChecklistQualityDashboardPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /Danh sách bảng kiểm đã lọc/i }))
 
     expect(await screen.findByRole('heading', { name: 'Danh sách bảng kiểm' })).toBeInTheDocument()
-    expect(screen.getByText('Quy trình thay băng vết thương')).toBeInTheDocument()
+    expect(screen.queryByText('Quy trình thay băng vết thương')).not.toBeInTheDocument()
     expect(screen.queryByText('KẾT QUẢ BẢNG KIỂM ĐANG CHỌN')).not.toBeInTheDocument()
   })
 
@@ -160,7 +166,7 @@ describe('ChecklistQualityDashboardPage', () => {
     vi.clearAllMocks()
 
     fireEvent.click(screen.getByRole('button', { name: /Bộ lọc/i }))
-    fireEvent.change(screen.getByLabelText('Kết quả'), { target: { value: 'PASSED' } })
+    fireEvent.change(screen.getByLabelText('Mục tiêu'), { target: { value: 'MET' } })
     fireEvent.click(screen.getByRole('button', { name: 'Áp dụng' }))
 
     expect(await screen.findByRole('heading', { name: 'Danh sách bảng kiểm' })).toBeInTheDocument()
@@ -229,17 +235,17 @@ describe('ChecklistQualityDashboardPage', () => {
 
     expect(await screen.findByRole('heading', { name: 'Danh sách bảng kiểm' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /Bộ lọc/i }))
-    fireEvent.change(screen.getByLabelText('Kết quả'), { target: { value: 'PASSED' } })
+    fireEvent.change(screen.getByLabelText('Mục tiêu'), { target: { value: 'MET' } })
 
     expect(adminApi.getQualityChecklistDashboard).not.toHaveBeenCalledWith(expect.objectContaining({
-      resultStatus: 'PASSED',
+      targetStatus: 'MET',
     }))
 
     fireEvent.click(screen.getByRole('button', { name: 'Áp dụng' }))
 
     await waitFor(() => {
       expect(adminApi.getQualityChecklistDashboard).toHaveBeenCalledWith(expect.objectContaining({
-        resultStatus: 'PASSED',
+        targetStatus: 'MET',
         view: 'FILTERED',
       }))
     })
@@ -250,17 +256,17 @@ describe('ChecklistQualityDashboardPage', () => {
 
     expect(await screen.findByRole('heading', { name: 'Danh sách bảng kiểm' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /Bộ lọc/i }))
-    fireEvent.change(screen.getByLabelText('Kết quả'), { target: { value: 'PASSED' } })
+    fireEvent.change(screen.getByLabelText('Mục tiêu'), { target: { value: 'MET' } })
 
     expect(adminApi.getQualityChecklistDashboard).not.toHaveBeenCalledWith(expect.objectContaining({
-      resultStatus: 'PASSED',
+      targetStatus: 'MET',
     }))
 
     fireEvent.click(screen.getByRole('button', { name: 'Áp dụng' }))
 
     await waitFor(() => {
       expect(adminApi.getQualityChecklistDashboard).toHaveBeenCalledWith(expect.objectContaining({
-        resultStatus: 'PASSED',
+        targetStatus: 'MET',
         view: 'FILTERED',
       }))
     })
@@ -271,10 +277,10 @@ describe('ChecklistQualityDashboardPage', () => {
 
     expect(await screen.findByRole('heading', { name: 'Danh sách bảng kiểm' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /Bộ lọc/i }))
-    fireEvent.change(screen.getByLabelText('Kết quả'), { target: { value: 'PASSED' } })
+    fireEvent.change(screen.getByLabelText('Mục tiêu'), { target: { value: 'MET' } })
 
     expect(adminApi.getQualityChecklistDashboard).not.toHaveBeenCalledWith(expect.objectContaining({
-      resultStatus: 'PASSED',
+      targetStatus: 'MET',
     }))
 
     fireEvent.click(screen.getByRole('button', { name: 'Áp dụng' }))
@@ -282,7 +288,7 @@ describe('ChecklistQualityDashboardPage', () => {
     await waitFor(() => {
       expect(adminApi.getQualityChecklistDashboard).toHaveBeenCalledWith(expect.objectContaining({
         departmentId: '7',
-        resultStatus: 'PASSED',
+        targetStatus: 'MET',
         view: 'FILTERED',
       }))
     })

@@ -655,6 +655,20 @@
   background: #fff;
 }
 
+/* Tab "Dashboard lý thuyết" tự mang bộ lọc riêng nên không dùng thanh công cụ của
+   trang; wrapper này dựng lại đúng hộp mà .competency-dashboard-tabs trông đợi. */
+.competency-dashboard-theory-tabs {
+  padding: 0 20px;
+  border: 1px solid #dbe3ee;
+  border-radius: 8px;
+  background: #fff;
+  margin-bottom: 16px;
+}
+
+.competency-dashboard-theory-tabs .competency-dashboard-tabs {
+  margin-bottom: 0;
+}
+
 .competency-dashboard-tabs {
   display: flex;
   gap: 4px;

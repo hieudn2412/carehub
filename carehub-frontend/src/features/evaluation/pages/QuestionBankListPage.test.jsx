@@ -64,4 +64,20 @@ describe('QuestionBankListPage', () => {
     expect(screen.getByText('Câu hỏi đã lưu trữ')).toBeInTheDocument()
     expect(screen.queryByText('Câu hỏi đang hoạt động')).not.toBeInTheDocument()
   })
+
+  it('đóng cửa sổ import khi bấm ra ngoài', async () => {
+    const { default: QuestionBankListPage } = await import('./QuestionBankListPage.jsx')
+    render(<MemoryRouter><QuestionBankListPage /></MemoryRouter>)
+
+    await screen.findByText('Câu hỏi đang hoạt động')
+    fireEvent.click(screen.getByRole('button', { name: 'Nhập dữ liệu câu hỏi' }))
+
+    const dialog = screen.getByRole('dialog', { name: 'Import ngân hàng câu hỏi' })
+    expect(screen.queryByText(/Dùng mẫu Excel tiếng Việt/)).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Đóng cửa sổ import' })).toBeInTheDocument()
+
+    fireEvent.click(dialog.parentElement)
+
+    expect(screen.queryByRole('dialog', { name: 'Import ngân hàng câu hỏi' })).not.toBeInTheDocument()
+  })
 })

@@ -16,6 +16,7 @@ import ChecklistReadOnlyVersion from '../components/ChecklistReadOnlyVersion.jsx
 import { adminApi } from '../api/adminApi'
 import { createChecklistCode } from '../utils/formCode.js'
 import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
+import { useToast } from '../../../shared/context/ToastContext.jsx'
 import '../styles/ChecklistCreatePage.css'
 
 const CHOICE_FIELD_TYPES = ['DROPDOWN', 'SINGLE_CHOICE', 'MULTIPLE_CHOICE']
@@ -279,6 +280,7 @@ function ChecklistCreatePage() {
   const { id } = useParams()
 
   // Confirm Modal state
+  const { showToast } = useToast()
   const [confirmModal, setConfirmModal] = useState({
     isOpen: false
   })
@@ -304,12 +306,18 @@ function ChecklistCreatePage() {
       : '',
   )
   const [successMessage, setSuccessMessage] = useState('')
+  const [loadedForm, setLoadedForm] = useState(null)
   const [loadedVersion, setLoadedVersion] = useState(null)
   const [sectionKey, setSectionKey] = useState(null)
   const [simpleEditable, setSimpleEditable] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
   const pendingFormId = pendingDraft?.formId || null
-  const formControlsEnabled = !isDetailMode || (simpleEditable && isEditing)
+  const isRetired = Boolean(
+    loadedForm?.deleted ||
+    loadedForm?.isDeleted ||
+    loadedForm?.status === 'RETIRED'
+  )
+  const formControlsEnabled = (!isDetailMode || (simpleEditable && isEditing)) && !isRetired
 
   const breadcrumbs = useMemo(
     () => [
@@ -333,6 +341,7 @@ function ChecklistCreatePage() {
       ])
       const form = formResponse.data?.data
       const versions = versionsResponse.data?.data?.content
+      setLoadedForm(form)
 
       if (!form || !Array.isArray(versions)) {
         throw new Error('Phản hồi chi tiết checklist không hợp lệ.')
@@ -368,11 +377,12 @@ function ChecklistCreatePage() {
       setIsEditing(false)
 
     } catch (error) {
-      setErrorMessage(
-        error?.response?.data?.message
-          || error?.message
-          || 'Không thể tải chi tiết checklist.',
-      )
+      const msg = error?.response?.data?.message || error?.message;
+      if (msg === 'Form not found') {
+        setErrorMessage('Bảng kiểm đã ngừng hoạt động');
+      } else {
+        setErrorMessage(msg || 'Không thể tải chi tiết checklist.');
+      }
     } finally {
       setLoading(false)
     }
@@ -420,6 +430,10 @@ function ChecklistCreatePage() {
   }
 
   const addOption = (questionId) => {
+    if (isRetired) {
+      showToast('Bảng kiểm đã ngừng hoạt động', 'warning')
+      return
+    }
     setQuestions((current) =>
       current.map((question) => {
         if (question.id !== questionId) {
@@ -435,6 +449,10 @@ function ChecklistCreatePage() {
   }
 
   const removeOption = (questionId, optionId) => {
+    if (isRetired) {
+      showToast('Bảng kiểm đã ngừng hoạt động', 'warning')
+      return
+    }
     setQuestions((current) =>
       current.map((question) => {
         if (question.id !== questionId || question.options.length <= 1) {
@@ -450,10 +468,18 @@ function ChecklistCreatePage() {
   }
 
   const addQuestion = () => {
+    if (isRetired) {
+      showToast('Bảng kiểm đã ngừng hoạt động', 'warning')
+      return
+    }
     setQuestions((current) => [...current, createQuestion()])
   }
 
   const duplicateQuestion = (questionId) => {
+    if (isRetired) {
+      showToast('Bảng kiểm đã ngừng hoạt động', 'warning')
+      return
+    }
     setQuestions((current) => {
       const targetIndex = current.findIndex((question) => question.id === questionId)
       if (targetIndex === -1) {
@@ -485,6 +511,10 @@ function ChecklistCreatePage() {
   }
 
   const removeQuestion = (questionId) => {
+    if (isRetired) {
+      showToast('Bảng kiểm đã ngừng hoạt động', 'warning')
+      return
+    }
     if (questions.length === 1) {
       setErrorMessage('Checklist cần có ít nhất một câu hỏi.')
       return
@@ -770,7 +800,14 @@ function ChecklistCreatePage() {
                   {isDetailMode && (
                     <button
                       className="ccp-manage-button ccp-manage-button--permissions"
-                      onClick={() => navigate(`/admin/quality/checklist-assignments?formId=${id}`)}
+                      disabled={isRetired}
+                      onClick={() => {
+                        if (isRetired) {
+                          showToast('Bảng kiểm đã ngừng hoạt động', 'warning')
+                          return
+                        }
+                        navigate(`/admin/quality/checklist-assignments?formId=${id}`)
+                      }}
                       type="button"
                     >
                       <UserSwitchOutlined /> Giao bảng kiểm
@@ -779,7 +816,14 @@ function ChecklistCreatePage() {
                   {isDetailMode && (
                     <button
                       className="ccp-manage-button ccp-manage-button--versions"
-                      onClick={() => navigate(`/admin/quality/checklists/${id}/edit`)}
+                      disabled={isRetired}
+                      onClick={() => {
+                        if (isRetired) {
+                          showToast('Bảng kiểm đã ngừng hoạt động', 'warning')
+                          return
+                        }
+                        navigate(`/admin/quality/checklists/${id}/edit`)}
+                      }
                       type="button"
                     >
                       <HistoryOutlined /> Quản lý phiên bản
@@ -788,7 +832,12 @@ function ChecklistCreatePage() {
                   {isDetailMode && simpleEditable && !isEditing && (
                     <button
                       className="ccp-edit-button"
+                      disabled={isRetired}
                       onClick={() => {
+                        if (isRetired) {
+                          showToast('Bảng kiểm đã ngừng hoạt động', 'warning')
+                          return
+                        }
                         setSuccessMessage('')
                         setErrorMessage('')
                         setIsEditing(true)
@@ -803,6 +852,10 @@ function ChecklistCreatePage() {
                       className="ccp-cancel-button"
                       disabled={saving}
                       onClick={() => {
+                        if (isRetired) {
+                          showToast('Bảng kiểm đã ngừng hoạt động', 'warning')
+                          return
+                        }
                         setSuccessMessage('')
                         setIsEditing(false)
                         loadExistingChecklist()
@@ -816,7 +869,13 @@ function ChecklistCreatePage() {
                     <button
                       className="ccp-discard-button"
                       disabled={saving}
-                      onClick={handleDiscardPendingDraft}
+                      onClick={() => {
+                        if (isRetired) {
+                          showToast('Bảng kiểm đã ngừng hoạt động', 'warning')
+                          return
+                        }
+                        handleDiscardPendingDraft()
+                      }}
                       type="button"
                     >
                       <DeleteOutlined /> Hủy bản nháp
@@ -826,7 +885,13 @@ function ChecklistCreatePage() {
                     <button
                       className="ccp-save-button"
                       disabled={saving || loading || !simpleEditable}
-                      onClick={handleSave}
+                      onClick={() => {
+                        if (isRetired) {
+                          showToast('Bảng kiểm đã ngừng hoạt động', 'warning')
+                          return
+                        }
+                        handleSave()
+                      }}
                       type="button"
                     >
                       {saving ? <LoadingOutlined spin /> : <SaveOutlined />}
@@ -846,11 +911,15 @@ function ChecklistCreatePage() {
                 </div>
               )}
 
-              {errorMessage && (
+              {isRetired ? (
                 <div className="ccp-error" role="alert">
-                  {errorMessage}
+                  Bảng kiểm đã ngừng hoạt động
                 </div>
-              )}
+              ) : errorMessage ? (
+                <div className="ccp-error" role="alert">
+                  {errorMessage === 'Form not found' ? 'Bảng kiểm đã ngừng hoạt động' : errorMessage}
+                </div>
+              ) : null}
 
               {loading ? (
                 <div className="ccp-loading">

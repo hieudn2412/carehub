@@ -82,7 +82,9 @@ public class FormServiceImpl implements FormService {
     @Override
     @Transactional(readOnly = true)
     public FormResponse get(Long id) {
-        return mapper.toResponse(findActive(id));
+        Form form = formRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Form not found"));
+        return mapper.toResponse(form);
     }
 
     @Override
@@ -139,6 +141,17 @@ public class FormServiceImpl implements FormService {
         formRepository.save(form);
     }
 
+    @Override
+    @Transactional
+    public FormResponse restore(Long id) {
+        Form form = formRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Form not found"));
+        form.setDeleted(false);
+        form.setStatus(form.getCurrentPublishedVersion() != null ? FormStatus.PUBLISHED : FormStatus.DRAFT);
+        Form saved = formRepository.save(form);
+        return mapper.toResponse(saved);
+    }
+
     private Form findActive(Long id) {
         return formRepository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Form not found"));
@@ -184,8 +197,6 @@ public class FormServiceImpl implements FormService {
         return assignmentItemRepository.countActiveRecipientsByFormIds(
                         formIds,
                         FormAssignmentStatus.ACTIVE,
-                        FormStatus.PUBLISHED,
-                        FormVersionStatus.PUBLISHED,
                         now
                 ).stream()
                 .collect(Collectors.toMap(

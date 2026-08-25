@@ -108,7 +108,7 @@ function QuestionDocumentDetailPage() {
         cognitiveMix,
       }))
       const job = apiData(response)
-      showToast('Tạo phiên sinh câu hỏi thành công.', 'success')
+      showToast('Tạo câu hỏi từ tài liệu thành công.', 'success')
       navigate(`/admin/evaluation/document-question-jobs/${job.id}`)
     } catch (error) {
       showToast(apiErrorMessage(error), 'error')
@@ -343,7 +343,7 @@ function QuestionDocumentDetailPage() {
       {showJobModal && documentDetail && (
         <div className="qdoc-modal-backdrop">
           <div className="qdoc-modal" role="dialog" aria-modal="true" aria-labelledby="detail-create-job-title">
-            <h2 id="detail-create-job-title">Tạo phiên sinh câu hỏi</h2>
+            <h2 id="detail-create-job-title">Tạo câu hỏi từ tài liệu</h2>
             <p className="qdoc-modal-subtitle">{documentDetail.filename}</p>
             <div className="qdoc-modal-stats">
               <InfoRow label="Tổng đoạn nội dung" value={formatNumber(chunks.length)} />
@@ -375,13 +375,16 @@ function QuestionDocumentDetailPage() {
                       value={cognitiveMix[field.key]}
                       disabled={isCreatingJob}
                       onFocus={(event) => event.target.select()}
-                      onChange={(event) => setCognitiveMix((current) => ({
-                        ...current,
-                        [field.key]: Math.max(0, Math.min(100, Number(event.target.value) || 0)),
-                      }))}
-                      aria-label={`Tỷ lệ mức ${field.label} - ${field.hint}`}
+                      onClick={(event) => event.currentTarget.select()}
+                      onChange={(event) => {
+                        const raw = event.target.value
+                        const parsed = Number.parseInt(raw, 10)
+                        const normalized = Number.isNaN(parsed) ? 0 : Math.max(0, Math.min(100, parsed))
+                        if (raw !== '' && raw !== String(normalized)) event.target.value = String(normalized)
+                        setCognitiveMix((current) => ({ ...current, [field.key]: raw === '' ? 0 : normalized }))
+                      }}
+                      aria-label={`Tỷ lệ mức ${field.label}`}
                     />
-                    <small>{field.hint}</small>
                   </label>
                 ))}
               </div>
@@ -425,7 +428,7 @@ function QuestionDocumentDetailPage() {
               </button>
               <button type="button" className="qdoc-primary-btn" onClick={createJob} disabled={isCreatingJob}>
                 {isCreatingJob ? <LoadingOutlined /> : <PlayCircleOutlined />}
-                <span>{isCreatingJob ? 'Đang tạo câu hỏi từ tài liệu...' : 'Tạo phiên'}</span>
+                <span>{isCreatingJob ? 'Đang tạo câu hỏi từ tài liệu...' : 'Tạo câu hỏi'}</span>
               </button>
             </div>
           </div>

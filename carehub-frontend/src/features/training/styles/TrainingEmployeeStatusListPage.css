@@ -212,6 +212,19 @@
   min-width: 190px;
 }
 
+.tes-scope-value {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  box-sizing: border-box;
+  padding: 0 12px;
+  border: 1px solid #d8e2ec;
+  border-radius: 9px;
+  background: #f8fafc;
+  color: #263247;
+  font-size: 13px;
+}
+
 /* Table Card */
 .tes-table-card {
   container-type: inline-size;
@@ -273,7 +286,7 @@
 }
 
 .tes-col-name {
-  width: 28%;
+  width: 22%;
   min-width: 0;
 }
 
@@ -282,8 +295,13 @@
   color: #1e293b;
 }
 
+/* Cột Chức danh thêm ở nhánh ManhTuan; xếp cùng nhóm với các cột chữ khác. */
+.tes-col-position {
+  width: 15%;
+}
+
 .tes-col-department {
-  width: 22%;
+  width: 20%;
 }
 
 .tes-col-progress {
@@ -304,6 +322,7 @@
 
 .tes-table .tes-col-code,
 .tes-table .tes-col-name,
+.tes-table .tes-col-position,
 .tes-table .tes-col-department,
 .tes-table .tes-col-status {
   overflow: hidden;
@@ -530,7 +549,8 @@
 }
 
 @container (max-width: 1120px) {
-  .tes-table .tes-col-code {
+  .tes-table .tes-col-code,
+  .tes-table .tes-col-position {
     display: none;
   }
 

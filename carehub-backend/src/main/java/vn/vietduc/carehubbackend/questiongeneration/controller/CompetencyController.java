@@ -14,10 +14,8 @@ import org.springframework.web.bind.annotation.RestController;
 import vn.vietduc.carehubbackend.common.response.ApiResponse;
 import vn.vietduc.carehubbackend.exception.ResourceNotFoundException;
 import vn.vietduc.carehubbackend.exception.ForbiddenException;
-import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencyByFieldResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencyByTechniqueResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencyClassificationResponse;
-import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencyEmployeeByFieldResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencyEmployeeByTechniqueResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencySummaryResponse;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttempt;
@@ -87,35 +85,6 @@ public class CompetencyController {
                         List.of()
                 )
         ));
-    }
-
-    @GetMapping("/by-field")
-    @PreAuthorize("hasRole('MANAGER') or @evaluationSecurity.canViewResults(authentication)")
-    public ResponseEntity<ApiResponse<CompetencyByFieldResponse>> getByField(
-            @RequestParam(required = false) Long departmentId,
-            @RequestParam(required = false) Long categoryId,
-            @RequestParam(required = false) LocalDate fromDate,
-            @RequestParam(required = false) LocalDate toDate,
-            @RequestParam(required = false) String keyword,
-            @PageableDefault(size = 10) Pageable pageable,
-            Authentication authentication) {
-        requireManagerDepartmentScope(departmentId, authentication);
-        CompetencyByFieldResponse data = competencyService.getByField(
-                departmentId, categoryId, fromDate, toDate, keyword, pageable
-        );
-        return ResponseEntity.ok(ApiResponse.success("Lấy năng lực theo lĩnh vực thành công", data));
-    }
-
-    @GetMapping("/employees/{employeeId}/by-field")
-    @PreAuthorize("hasRole('MANAGER') or @evaluationSecurity.canViewResults(authentication)")
-    public ResponseEntity<ApiResponse<CompetencyEmployeeByFieldResponse>> getEmployeeByField(
-            @PathVariable Long employeeId,
-            @RequestParam(required = false) LocalDate fromDate,
-            @RequestParam(required = false) LocalDate toDate,
-            Authentication authentication) {
-        requireManagerEmployeeScope(employeeId, authentication);
-        CompetencyEmployeeByFieldResponse data = competencyService.getEmployeeByField(employeeId, fromDate, toDate);
-        return ResponseEntity.ok(ApiResponse.success("Lấy năng lực cá nhân theo lĩnh vực thành công", data));
     }
 
     @GetMapping({"/by-technique", "/compliance"})

@@ -65,6 +65,9 @@ public class FormHistoryAccessPolicy {
         if (scope.admin()) {
             return new DepartmentScope(requestedDepartmentId, false, List.of(-1L));
         }
+        if (isManager()) {
+            return new DepartmentScope(scope.departmentId(), true, List.of(scope.departmentId()));
+        }
         List<Long> allowedDepartmentIds = assignmentItemRepository.findActiveAllowedDepartmentIds(
                 scope.actorId(),
                 formId,
@@ -108,8 +111,9 @@ public class FormHistoryAccessPolicy {
                 || submission.getSubjectContext().getSubjectUser().getDepartment() == null) {
             return false;
         }
-        Long formId = submission.getFormVersion().getForm().getId();
         Long departmentId = submission.getSubjectContext().getSubjectUser().getDepartment().getId();
+        if (isManager()) return scope.departmentId().equals(departmentId);
+        Long formId = submission.getFormVersion().getForm().getId();
         return assignmentItemRepository.findActiveAllowedDepartmentIds(
                 scope.actorId(),
                 formId,

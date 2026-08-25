@@ -64,8 +64,7 @@ public class QuestionBankImportExportService {
             "Phương án D",
             "Đáp án đúng",
             "Mức độ nhận thức",
-            "Giải thích",
-            "Nguồn câu hỏi"
+            "Giải thích"
     );
     private static final List<String> EXPORT_HEADERS = List.of(
             "Danh mục kiến thức", "Lĩnh vực chuyên môn", "Nội dung câu hỏi",
@@ -74,6 +73,7 @@ public class QuestionBankImportExportService {
             "Trạng thái", "Ngày cập nhật"
     );
     private static final int TEMPLATE_LAST_ROW = 5000;
+    private static final String DEFAULT_IMPORT_SOURCE = "Import";
     private static final Pattern CATEGORY_CODE_PATTERN = Pattern.compile("^\\s*\\[([^]]+)]");
 
     private final QuestionBankService questionBankService;
@@ -176,14 +176,13 @@ public class QuestionBankImportExportService {
             addFormulaValidation(sheet, 1, "LinhVucChuyenMon");
             addListValidation(sheet, 7, new String[]{"A", "B", "C", "D"});
             addListValidation(sheet, 8, new String[]{"Kiến thức nền tảng", "Áp dụng lâm sàng", "Tư duy và phân tích lâm sàng"});
-            addListValidation(sheet, 9, new String[]{"Dễ", "Trung bình", "Khó"});
 
             Sheet guide = workbook.createSheet("Hướng dẫn");
             List<String> instructions = List.of(
                     "Các cột bắt buộc: Danh mục kiến thức, Lĩnh vực chuyên môn, Nội dung câu hỏi, Phương án A-D, Đáp án đúng và Mức độ nhận thức.",
                     "Chọn danh mục và lĩnh vực từ danh sách; hệ thống liên kết bằng mã trong dấu [MÃ], không liên kết bằng tên.",
                     "Đáp án đúng chỉ nhận A, B, C hoặc D. Mức độ nhận thức gồm Kiến thức nền tảng, Áp dụng lâm sàng, Tư duy và phân tích lâm sàng.",
-                    "Giải thích và Nguồn câu hỏi có thể để trống; nguồn trống sẽ lấy tên file import.",
+                    "Giải thích có thể để trống; nguồn câu hỏi được mặc định là Import.",
                     "Dòng không nhận diện được danh mục sẽ bị bỏ qua; dòng sai dữ liệu sẽ được báo lỗi.",
                     "Khi gặp câu trùng, chọn chặn, bỏ qua hoặc nhập bản trùng dưới dạng bản nháp trên màn hình preview.",
                     "Không thêm câu hỏi ví dụ vào sheet Câu hỏi; số dòng Excel được dùng để đối chiếu lỗi."
@@ -191,7 +190,7 @@ public class QuestionBankImportExportService {
             for (int index = 0; index < instructions.size(); index++) {
                 guide.createRow(index).createCell(0).setCellValue(instructions.get(index));
             }
-            int[] widths = {48, 48, 60, 32, 32, 32, 32, 16, 34, 18, 55, 36};
+            int[] widths = {48, 48, 60, 32, 32, 32, 32, 16, 34, 55};
             for (int index = 0; index < widths.length; index++) {
                 sheet.setColumnWidth(index, widths[index] * 256);
             }
@@ -361,8 +360,7 @@ public class QuestionBankImportExportService {
                 }
                 rows.add(rowFromMap(
                         rowIndex + 1,
-                        key -> cellText(row, headers.get(mappedHeaderKey(key, columnMapping))),
-                        file.getOriginalFilename()
+                        key -> cellText(row, headers.get(mappedHeaderKey(key, columnMapping)))
                 ));
             }
             return new ParsedRows(rows, sourceHeaders);
@@ -387,7 +385,7 @@ public class QuestionBankImportExportService {
             rows.add(rowFromMap(rowNumber, key -> {
                 Integer valueIndex = headers.get(mappedHeaderKey(key, columnMapping));
                 return valueIndex == null || valueIndex >= values.size() ? "" : values.get(valueIndex);
-            }, file.getOriginalFilename()));
+            }));
         }
         return new ParsedRows(rows, headerValues);
     }
@@ -421,7 +419,7 @@ public class QuestionBankImportExportService {
         }
     }
 
-    private QuestionBankImportRowRequest rowFromMap(int rowNumber, ValueLookup lookup, String defaultSource) {
+    private QuestionBankImportRowRequest rowFromMap(int rowNumber, ValueLookup lookup) {
         String source = lookup.get("sourcedocument");
         String categoryReference = lookup.get("categoryreference");
         String fieldReference = lookup.get("professionalfieldreference");
@@ -436,7 +434,7 @@ public class QuestionBankImportExportService {
                 lookup.get("explanation"),
                 null,
                 "vi",
-                isBlank(source) ? defaultSource : source,
+                source,
                 "APPROVED",
                 null,
                 categoryReference,
@@ -634,7 +632,8 @@ public class QuestionBankImportExportService {
                 row.rowNumber(), row.stem(), row.optionA(), row.optionB(), row.optionC(), row.optionD(),
                 row.correctAnswer() == null ? null : row.correctAnswer().trim().toUpperCase(Locale.ROOT),
                 row.explanation(), category == null ? null : category.getName(), "vi",
-                row.sourceDocument(), "APPROVED", category == null ? row.categoryId() : category.getId(),
+                isBlank(row.sourceDocument()) ? DEFAULT_IMPORT_SOURCE : row.sourceDocument(),
+                "APPROVED", category == null ? row.categoryId() : category.getId(),
                 row.categoryReference(), row.professionalFieldId(), row.professionalFieldReference(),
                 normalizeCognitive(row.cognitiveLevel())
         );
