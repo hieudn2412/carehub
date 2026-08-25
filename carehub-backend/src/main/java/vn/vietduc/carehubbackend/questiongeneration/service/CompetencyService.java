@@ -231,7 +231,8 @@ public class CompetencyService {
         Department department = findDepartment(departmentId);
         java.time.Instant fromInstant = from.atStartOfDay(zoneId).toInstant();
         java.time.Instant toInstant = to.plusDays(1).atStartOfDay(zoneId).toInstant().minusNanos(1);
-        Page<User> userPage = formSubmissionRepository.findCompetencyTechniqueCandidates(
+        Page<FormSubmissionRepository.CompetencyTechniqueAggregateProjection> aggregatePage =
+                formSubmissionRepository.summarizeCompetencyTechnique(
                 departmentId,
                 formId,
                 normalizeKeyword(keyword),
@@ -239,53 +240,33 @@ public class CompetencyService {
                 toInstant,
                 normalizePageable(pageable)
         );
-        List<User> users = userPage.getContent();
         List<CompetencyTechniqueOptionResponse> forms =
                 formSubmissionRepository.findCompetencyTechniqueOptions(
                         departmentId, fromInstant, toInstant
                 );
-        List<FormSubmission> matched = users.isEmpty()
-                ? List.of()
-                : formSubmissionRepository.findScoredEvaluationsForTechniqueCandidates(
-                        userIds(users), formId, fromInstant, toInstant
-                );
-        Map<Long, List<FormSubmission>> grouped = matched.stream()
-                .filter(submission -> submission.getSubjectContext() != null)
-                .filter(submission -> submission.getSubjectContext().getSubjectUser() != null)
-                .collect(Collectors.groupingBy(
-                        submission -> submission.getSubjectContext().getSubjectUser().getId(),
-                        LinkedHashMap::new,
-                        Collectors.toList()
-                ));
 
         BigDecimal targetScore = targetScore();
         List<CompetencyByTechniqueItemResponse> items = new ArrayList<>();
         Form selectedForm = formId == null ? null : foundById(formId);
-        for (User subject : users) {
-            List<FormSubmission> subs = grouped.getOrDefault(subject.getId(), List.of());
-            if (subs.isEmpty()) {
-                continue;
-            }
-
-            BigDecimal sum = BigDecimal.ZERO;
-            int passCount = 0;
-            for (FormSubmission s : subs) {
-                BigDecimal score = practicalScore(s);
-                sum = sum.add(score);
-                if (s.getResult() == vn.vietduc.carehubbackend.form.submission.entity.FormSubmissionResult.PASSED) {
-                    passCount++;
-                }
-            }
-            BigDecimal avg = sum.divide(BigDecimal.valueOf(subs.size()), 2, RoundingMode.HALF_UP);
-            double passRate = subs.size() > 0
-                    ? Math.round((passCount * 100.0 / subs.size()) * 10.0) / 10.0 : 0.0;
+        for (FormSubmissionRepository.CompetencyTechniqueAggregateProjection aggregate : aggregatePage.getContent()) {
+            int evaluationCount = aggregate.getEvaluationCount() == null
+                    ? 0
+                    : Math.toIntExact(aggregate.getEvaluationCount());
+            int passCount = aggregate.getPassCount() == null
+                    ? 0
+                    : Math.toIntExact(aggregate.getPassCount());
+            BigDecimal avg = aggregate.getAverageScore() == null
+                    ? BigDecimal.ZERO
+                    : aggregate.getAverageScore().setScale(2, RoundingMode.HALF_UP);
+            double passRate = evaluationCount > 0
+                    ? Math.round((passCount * 100.0 / evaluationCount) * 10.0) / 10.0 : 0.0;
             BigDecimal complianceTarget = complianceTarget(selectedForm);
             boolean belowTarget = passRate < complianceTarget.doubleValue();
 
             items.add(new CompetencyByTechniqueItemResponse(
-                    subject.getId(), subject.getEmployeeCode(), subject.getName(),
-                    departmentName(subject),
-                    subs.size(), avg, passCount, passRate,
+                    aggregate.getEmployeeId(), aggregate.getEmployeeCode(), aggregate.getEmployeeName(),
+                    aggregate.getDepartmentName(),
+                    evaluationCount, avg, passCount, passRate,
                     meetsTarget(avg, targetScore), belowTarget
             ));
         }
@@ -298,8 +279,8 @@ public class CompetencyService {
                 departmentId, scopeName(department),
                 formId, formName, defaultComplianceTarget,
                 from.format(DATE_FMT), to.format(DATE_FMT), forms, items,
-                userPage.getNumber(), userPage.getSize(),
-                userPage.getTotalElements(), userPage.getTotalPages()
+                aggregatePage.getNumber(), aggregatePage.getSize(),
+                aggregatePage.getTotalElements(), aggregatePage.getTotalPages()
         );
     }
 

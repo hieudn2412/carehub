@@ -46,6 +46,34 @@ public interface FormSubmissionRepository extends JpaRepository<FormSubmission, 
         Double getAverageConvertedScore();
     }
 
+    interface FormSubmissionCountProjection {
+        Long getFormId();
+        long getResponseCount();
+    }
+
+    interface CompetencyTechniqueAggregateProjection {
+        Long getEmployeeId();
+        String getEmployeeCode();
+        String getEmployeeName();
+        String getDepartmentName();
+        Long getEvaluationCount();
+        Long getPassCount();
+        BigDecimal getAverageScore();
+    }
+
+    @Query("""
+            select s.formVersion.form.id as formId,
+                   count(s.id) as responseCount
+            from FormSubmission s
+            where s.formVersion.form.id in :formIds
+              and s.formVersion.form.deleted = false
+              and s.status = :submittedStatus
+            group by s.formVersion.form.id
+            """)
+    List<FormSubmissionCountProjection> countSubmittedByFormIds(
+            @Param("formIds") Collection<Long> formIds,
+            @Param("submittedStatus") FormSubmissionStatus submittedStatus);
+
     @Query(value = """
             select v.form.id as formId,
                    v.form.code as code,
@@ -195,6 +223,51 @@ public interface FormSubmissionRepository extends JpaRepository<FormSubmission, 
                    or lower(subject.employeeCode) like :keyword)
             """)
     Page<User> findCompetencyTechniqueCandidates(
+            @Param("departmentId") Long departmentId,
+            @Param("formId") Long formId,
+            @Param("keyword") String keyword,
+            @Param("fromDate") Instant fromDate,
+            @Param("toDate") Instant toDate,
+            Pageable pageable
+    );
+
+    @Query(value = """
+            select subject.id as employeeId,
+                   subject.employeeCode as employeeCode,
+                   subject.name as employeeName,
+                   subject.department.name as departmentName,
+                   count(s.id) as evaluationCount,
+                   coalesce(sum(case when s.result = 'PASSED' then 1 else 0 end), 0) as passCount,
+                   avg(coalesce(s.convertedScore, s.totalScore, 0)) as averageScore
+            from FormSubmission s
+            join s.subjectContext context
+            join context.subjectUser subject
+            where s.status = 'SUBMITTED'
+              and s.formVersion.form.deleted = false
+              and s.submittedAt between :fromDate and :toDate
+              and (:departmentId is null or subject.department.id = :departmentId)
+              and (:formId is null or s.formVersion.form.id = :formId)
+              and (:keyword is null
+                   or lower(subject.name) like :keyword
+                   or lower(subject.employeeCode) like :keyword)
+            group by subject.id, subject.employeeCode, subject.name, subject.department.name
+            order by subject.name asc, subject.id asc
+            """,
+            countQuery = """
+            select count(distinct subject.id)
+            from FormSubmission s
+            join s.subjectContext context
+            join context.subjectUser subject
+            where s.status = 'SUBMITTED'
+              and s.formVersion.form.deleted = false
+              and s.submittedAt between :fromDate and :toDate
+              and (:departmentId is null or subject.department.id = :departmentId)
+              and (:formId is null or s.formVersion.form.id = :formId)
+              and (:keyword is null
+                   or lower(subject.name) like :keyword
+                   or lower(subject.employeeCode) like :keyword)
+            """)
+    Page<CompetencyTechniqueAggregateProjection> summarizeCompetencyTechnique(
             @Param("departmentId") Long departmentId,
             @Param("formId") Long formId,
             @Param("keyword") String keyword,

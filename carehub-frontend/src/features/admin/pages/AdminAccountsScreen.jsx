@@ -141,6 +141,41 @@ function AdminAccountsScreen() {
     navigate('/admin/reference/departments')
   }
 
+  const todayDate = new Date()
+  const maxDate = new Date(todayDate.getFullYear() - 18, todayDate.getMonth(), todayDate.getDate()).toISOString().slice(0, 10)
+  const minDate = new Date(todayDate.getFullYear() - 100, todayDate.getMonth(), todayDate.getDate()).toISOString().slice(0, 10)
+
+  const handlePhoneChange = (event) => {
+    let inputVal = event.target.value
+
+    if (!inputVal) {
+      setFormPhone('')
+      return
+    }
+
+    let cleaned = inputVal.replace(/[^\d+]/g, '')
+
+    if (cleaned.startsWith('0')) {
+      cleaned = '+84' + cleaned.substring(1)
+    } else if (cleaned.length > 0 && /^[1-9]/.test(cleaned)) {
+      if (cleaned.startsWith('84')) {
+        cleaned = '+' + cleaned
+      } else {
+        cleaned = '+84' + cleaned
+      }
+    }
+
+    if (cleaned.startsWith('+840')) {
+      cleaned = '+84' + cleaned.substring(4)
+    }
+
+    if (cleaned.length > 12) {
+      cleaned = cleaned.substring(0, 12)
+    }
+
+    setFormPhone(cleaned)
+  }
+
   // Load static reference data on mount
   useEffect(() => {
     let isActive = true
@@ -310,7 +345,8 @@ function AdminAccountsScreen() {
     const empCode = formEmpCode.trim()
     const fullName = formFullName.trim()
     const email = formEmail.trim()
-    const phone = formPhone.trim()
+    const phoneRaw = formPhone.trim()
+    const phone = phoneRaw === '+84' ? '' : phoneRaw
 
     // 1. Check required fields
     if (!empCode || !fullName || !email || !formDeptId) {
@@ -340,9 +376,8 @@ function AdminAccountsScreen() {
 
     // 5. Validate Phone format if entered
     if (phone) {
-      const phoneRegex = /^[0-9]{10,11}$/
-      if (!phoneRegex.test(phone)) {
-        showToast('Số điện thoại không hợp lệ. Vui lòng nhập từ 10 đến 11 chữ số.', 'warning')
+      if (phone.length !== 12) {
+        showToast('Số điện thoại không hợp lệ. Vui lòng nhập đủ 10 số.', 'warning')
         return
       }
     }
@@ -351,9 +386,13 @@ function AdminAccountsScreen() {
     if (formBirthday) {
       const selectedDate = new Date(formBirthday)
       const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      if (selectedDate > today) {
-        showToast('Ngày sinh không thể lớn hơn ngày hiện tại.', 'warning')
+      let age = today.getFullYear() - selectedDate.getFullYear()
+      const m = today.getMonth() - selectedDate.getMonth()
+      if (m < 0 || (m === 0 && today.getDate() < selectedDate.getDate())) {
+        age--
+      }
+      if (age < 18 || age > 100) {
+        showToast('Độ tuổi không hợp lệ. Nhân viên phải từ 18 đến 100 tuổi.', 'warning')
         return
       }
     }
@@ -1031,9 +1070,10 @@ function AdminAccountsScreen() {
                     <input
                       type="text"
                       className="am-form-input"
+                      maxLength={12}
                       value={formPhone}
-                      onChange={(e) => setFormPhone(e.target.value)}
-                      placeholder="Nhập số điện thoại..."
+                      onChange={handlePhoneChange}
+                      placeholder="+84"
                     />
                   </div>
 
@@ -1087,6 +1127,8 @@ function AdminAccountsScreen() {
                         <label className="am-form-label">Ngày sinh</label>
                         <KeyboardDatePicker
                           className="am-form-input"
+                          min={minDate}
+                          max={maxDate}
                           value={formBirthday}
                           onChange={(val) => setFormBirthday(val)}
                         />

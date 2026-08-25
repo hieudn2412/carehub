@@ -224,12 +224,6 @@ class CompetencyServiceTest {
 
     @Test
     void groupsTechniqueResultsBySubjectAndAppliesDepartmentAndFormFilters() {
-        User evaluator = User.builder()
-                .id(90L)
-                .employeeCode("QL090")
-                .name("Trưởng khoa")
-                .department(department)
-                .build();
         User subject = User.builder()
                 .id(20L)
                 .employeeCode("NV020")
@@ -239,13 +233,13 @@ class CompetencyServiceTest {
         Form selectedForm = Form.builder().id(50L).title("Bảng kiểm truyền dịch").build();
         Form otherForm = Form.builder().id(60L).title("Bảng kiểm thay băng").build();
 
-        FormSubmission selectedSubmission = submission(
-                100L, evaluator, subject, selectedForm, "85.00", FormSubmissionResult.PASSED);
-        FormSubmission otherSubmission = submission(
-                101L, evaluator, subject, otherForm, "70.00", FormSubmissionResult.FAILED_SCORE);
-        when(submissionRepository.findCompetencyTechniqueCandidates(
+        when(submissionRepository.summarizeCompetencyTechnique(
                 eq(10L), eq(50L), isNull(), any(), any(), any()
-        )).thenReturn(new PageImpl<>(List.of(subject), PageRequest.of(0, 10), 1));
+        )).thenReturn(new PageImpl<>(
+                List.of(techniqueAggregate(subject, "85.00", 1L, 1L)),
+                PageRequest.of(0, 10),
+                1
+        ));
         when(submissionRepository.findCompetencyTechniqueOptions(eq(10L), any(), any()))
                 .thenReturn(List.of(
                         new vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencyTechniqueOptionResponse(
@@ -255,9 +249,6 @@ class CompetencyServiceTest {
                                 50L, selectedForm.getTitle()
                         )
                 ));
-        when(submissionRepository.findScoredEvaluationsForTechniqueCandidates(
-                any(), eq(50L), any(), any()
-        )).thenReturn(List.of(selectedSubmission));
 
         var response = service.getByTechnique(
                 10L,
@@ -280,12 +271,6 @@ class CompetencyServiceTest {
     @Test
     void techniqueWithoutDepartmentUsesAllDepartmentSubmissions() {
         Department surgery = Department.builder().id(11L).name("Khoa Ngoại").build();
-        User evaluator = User.builder()
-                .id(90L)
-                .employeeCode("QL090")
-                .name("Trưởng khoa")
-                .department(department)
-                .build();
         User subject = User.builder()
                 .id(21L)
                 .employeeCode("NV021")
@@ -293,17 +278,16 @@ class CompetencyServiceTest {
                 .department(surgery)
                 .build();
         Form form = Form.builder().id(50L).title("Bảng kiểm truyền dịch").build();
-        when(submissionRepository.findCompetencyTechniqueCandidates(
+        when(submissionRepository.summarizeCompetencyTechnique(
                 isNull(), isNull(), isNull(), any(), any(), any()
-        )).thenReturn(new PageImpl<>(List.of(subject), PageRequest.of(0, 10), 1));
+        )).thenReturn(new PageImpl<>(
+                List.of(techniqueAggregate(subject, "85.00", 1L, 1L)),
+                PageRequest.of(0, 10),
+                1
+        ));
         when(submissionRepository.findCompetencyTechniqueOptions(isNull(), any(), any()))
                 .thenReturn(List.of(new vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencyTechniqueOptionResponse(
                         form.getId(), form.getTitle()
-                )));
-        when(submissionRepository.findScoredEvaluationsForTechniqueCandidates(
-                any(), isNull(), any(), any()
-        )).thenReturn(List.of(submission(
-                        100L, evaluator, subject, form, "85.00", FormSubmissionResult.PASSED
                 )));
 
         var response = service.getByTechnique(
@@ -320,44 +304,30 @@ class CompetencyServiceTest {
         assertThat(response.items()).singleElement()
                 .extracting("employeeName", "departmentName")
                 .containsExactly("Trần Bình", "Khoa Ngoại");
-        verify(submissionRepository).findCompetencyTechniqueCandidates(
+        verify(submissionRepository).summarizeCompetencyTechnique(
                 isNull(), isNull(), isNull(), any(), any(), any()
         );
-        verify(submissionRepository).findScoredEvaluationsForTechniqueCandidates(
-                any(), isNull(), any(), any()
-        );
+        verify(submissionRepository, never()).findScoredEvaluationsForTechniqueCandidates(any(), any(), any(), any());
     }
 
     @Test
     void techniqueUsesConvertedTenPointScoreForAverageAndClassification() {
-        User evaluator = User.builder()
-                .id(90L)
-                .employeeCode("QL090")
-                .name("Trưởng khoa")
-                .department(department)
-                .build();
         User subject = User.builder()
                 .id(20L)
                 .employeeCode("NV020")
                 .name("Chu Văn Long")
                 .department(department)
                 .build();
-        Form form = Form.builder().id(50L).title("THỤT THÁO").build();
-        FormSubmission first = submission(100L, evaluator, subject, form, "1.50", FormSubmissionResult.PASSED);
-        first.setMaxScore(new BigDecimal("1.50"));
-        first.setConvertedScore(new BigDecimal("10.00"));
-        FormSubmission second = submission(101L, evaluator, subject, form, "1.35555556", FormSubmissionResult.PASSED);
-        second.setMaxScore(new BigDecimal("1.50"));
-        second.setConvertedScore(new BigDecimal("9.04"));
 
-        when(submissionRepository.findCompetencyTechniqueCandidates(
+        when(submissionRepository.summarizeCompetencyTechnique(
                 eq(10L), eq(50L), isNull(), any(), any(), any()
-        )).thenReturn(new PageImpl<>(List.of(subject), PageRequest.of(0, 10), 1));
+        )).thenReturn(new PageImpl<>(
+                List.of(techniqueAggregate(subject, "9.52", 2L, 2L)),
+                PageRequest.of(0, 10),
+                1
+        ));
         when(submissionRepository.findCompetencyTechniqueOptions(eq(10L), any(), any()))
                 .thenReturn(List.of());
-        when(submissionRepository.findScoredEvaluationsForTechniqueCandidates(
-                any(), eq(50L), any(), any()
-        )).thenReturn(List.of(first, second));
 
         var response = service.getByTechnique(
                 10L,
@@ -457,5 +427,49 @@ class CompetencyServiceTest {
                 .build();
         submission.setSubjectContext(context);
         return submission;
+    }
+
+    private FormSubmissionRepository.CompetencyTechniqueAggregateProjection techniqueAggregate(
+            User subject,
+            String averageScore,
+            Long evaluationCount,
+            Long passCount
+    ) {
+        return new FormSubmissionRepository.CompetencyTechniqueAggregateProjection() {
+            @Override
+            public Long getEmployeeId() {
+                return subject.getId();
+            }
+
+            @Override
+            public String getEmployeeCode() {
+                return subject.getEmployeeCode();
+            }
+
+            @Override
+            public String getEmployeeName() {
+                return subject.getName();
+            }
+
+            @Override
+            public String getDepartmentName() {
+                return subject.getDepartment() != null ? subject.getDepartment().getName() : null;
+            }
+
+            @Override
+            public Long getEvaluationCount() {
+                return evaluationCount;
+            }
+
+            @Override
+            public Long getPassCount() {
+                return passCount;
+            }
+
+            @Override
+            public BigDecimal getAverageScore() {
+                return new BigDecimal(averageScore);
+            }
+        };
     }
 }
