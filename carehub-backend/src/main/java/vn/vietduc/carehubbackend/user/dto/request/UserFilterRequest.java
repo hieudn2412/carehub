@@ -12,6 +12,8 @@ public class UserFilterRequest {
 
     private UserStatus status;
 
+    private Boolean deleted;
+
     private Long departmentId;
 
     private Long positionId;

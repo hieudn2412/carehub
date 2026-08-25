@@ -123,6 +123,12 @@ export const adminApi = {
     })
   },
 
+  restoreUser(id) {
+    return httpClient.patch(`/users/${id}/restore`, {}, {
+      headers: authHeaders(),
+    })
+  },
+
   lockUser(id) {
     return httpClient.patch(`/users/${id}/lock`, {}, {
       headers: authHeaders(),
