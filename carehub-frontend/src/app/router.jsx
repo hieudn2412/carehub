@@ -224,6 +224,14 @@ function AppRouter() {
       <Route path="/admin/quality/checklists/:id/builder/:versionId" element={adminElement(<FormBuilderPage />)} />
       <Route path="/admin/quality/checklists/:id/preview" element={adminElement(<FormPreviewPage />)} />
       <Route path="/admin/quality/checklists/:id/evaluate/:versionId" element={adminElement(<ManagerChecklistEvaluationPage />)} />
+      <Route
+        path="/admin/quality/history"
+        element={adminElement(<ManagerEvaluationHistoryPage historyPath="/admin/quality/history" />)}
+      />
+      <Route
+        path="/admin/quality/history/:id"
+        element={adminElement(<ManagerEvaluationHistoryDetailPage historyPath="/admin/quality/history" />)}
+      />
       <Route path="/admin/form-imports/new" element={adminElement(<FormImportWizardPage />)} />
       <Route path="/training" element={protectedElement(<TrainingFoundationPage />)} />
       <Route path="/training/records" element={protectedElement(<TrainingRecordListPage />)} />
