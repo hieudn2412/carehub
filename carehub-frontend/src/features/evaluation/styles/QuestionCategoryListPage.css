@@ -335,37 +335,37 @@
 /* Modal Backdrop & Dialog */
 .qcl-modal-backdrop {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.4);
+  inset: 0;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.42);
+  backdrop-filter: blur(3px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: var(--z-modal, 1000);
 }
 
 @keyframes modalScaleIn {
   from {
     opacity: 0;
-    transform: scale(0.95);
+    transform: translateY(8px) scale(0.98);
   }
   to {
     opacity: 1;
-    transform: scale(1);
+    transform: translateY(0) scale(1);
   }
 }
 
 .qcl-modal {
+  width: min(640px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
   background: #fff;
-  border-radius: 16px;
-  width: 640px;
-  padding: 24px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  border: 1px solid #d7e3e0;
+  border-radius: 18px;
+  box-shadow: 0 24px 70px rgba(15, 59, 51, 0.2);
   display: flex;
   flex-direction: column;
-  gap: 20px;
   animation: modalScaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
@@ -373,6 +373,10 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 16px;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5eeeb;
+  background: linear-gradient(135deg, #f8fcfb 0%, #fff 72%);
 }
 
 .qcl-modal-title-wrap {
@@ -382,20 +386,22 @@
 }
 
 .qcl-modal-title-icon {
-  background: #e0f2fe;
-  color: #0284c7;
-  border-radius: 6px;
-  width: 32px;
-  height: 32px;
+  width: 38px;
+  height: 38px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex: 0 0 auto;
+  border: 1px solid #b9e1d6;
+  border-radius: 11px;
+  background: #e8f5f0;
+  color: #0f766e;
   font-size: 16px;
   font-weight: 700;
 }
 
 .qcl-modal-title {
-  font-size: 18px;
+  font-size: 19px;
   font-weight: 700;
   color: #0f172a;
   margin: 0;
@@ -405,26 +411,36 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
   border: 1px solid #e2e8f0;
-  border-radius: 6px;
+  border-radius: 10px;
   background: #fff;
   color: #64748b;
   cursor: pointer;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
   font-size: 14px;
 }
 
 .qcl-modal-close:hover {
-  background: #f8fafc;
-  color: #334155;
+  border-color: #9acfc1;
+  background: #e8f5f0;
+  color: #0f766e;
+}
+
+.qcl-modal-close:focus-visible,
+.qcl-btn-save:focus-visible,
+.qcl-btn-cancel:focus-visible {
+  outline: 3px solid rgba(15, 118, 110, 0.2);
+  outline-offset: 2px;
 }
 
 .qcl-modal-form {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  padding: 22px 24px 24px;
 }
 
 .qcl-modal-row {
@@ -436,35 +452,73 @@
 .qcl-modal-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .qcl-modal-group label {
-  font-size: 13.5px;
+  font-size: 12.5px;
   font-weight: 600;
-  color: #334155;
+  color: #475569;
 }
 
 .required-star {
   color: #ef4444;
 }
 
-/* Red-bordered input/select */
+/* Form controls */
 .qcl-input-red {
-  border: 1.5px solid #dc2626 !important;
-  border-radius: 8px;
-  padding: 9px 12px;
+  min-height: 44px;
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #cddbd7 !important;
+  border-radius: 10px;
+  padding: 10px 12px;
   font-size: 14px;
   outline: none;
   color: #334155;
   background: #fff;
-  transition: all 0.15s ease;
-  box-sizing: border-box;
-  width: 100%;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.qcl-input-red:hover:not(:disabled) {
+  border-color: #9acfc1 !important;
 }
 
 .qcl-input-red:focus {
-  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.15) !important;
+  border-color: #0f766e !important;
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.14) !important;
+}
+
+.qcl-input-red:disabled {
+  color: #94a3b8;
+  background: #f8fafc;
+  cursor: not-allowed;
+}
+
+.qcl-modal textarea.qcl-input-red {
+  min-height: 92px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.qcl-modal .qcl-input-red.am-form-group {
+  min-height: 0;
+  gap: 0;
+  padding: 0;
+  border: 0 !important;
+  background: transparent;
+}
+
+.qcl-modal .qcl-input-red .searchable-select__control {
+  min-height: 44px;
+  border: 1px solid #cddbd7 !important;
+  border-radius: 10px;
+}
+
+.qcl-modal .qcl-input-red .searchable-select__control:hover,
+.qcl-modal .qcl-input-red .searchable-select--open .searchable-select__control {
+  border-color: #0f766e !important;
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.14) !important;
 }
 
 /* Green-bordered input/select/textarea */
@@ -521,40 +575,83 @@ select.qcl-input-green {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  border-top: 1px solid #cbd5e1;
+  border-top: 1px solid #e5eeeb;
   padding-top: 16px;
-  margin-top: 8px;
+  margin-top: 2px;
 }
 
 .qcl-btn-save {
-  padding: 10px 24px;
+  min-height: 44px;
+  padding: 10px 22px;
   font-size: 13.5px;
   font-weight: 600;
   color: #fff;
-  background: var(--focus);
-  border: none;
-  border-radius: 8px;
+  background: #0f766e;
+  border: 1px solid #0f766e;
+  border-radius: 10px;
   cursor: pointer;
-  transition: background 0.15s ease;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.2);
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+  box-shadow: 0 5px 12px rgba(15, 118, 110, 0.18);
 }
 
-.qcl-btn-save:hover {
-  background: #0062cc;
+.qcl-btn-save:hover:not(:disabled) {
+  border-color: #075e57;
+  background: #075e57;
+  transform: translateY(-1px);
 }
 
 .qcl-btn-cancel {
-  padding: 10px 24px;
+  min-height: 44px;
+  padding: 10px 22px;
   font-size: 13.5px;
   font-weight: 600;
-  color: #ffffff;
-  background: #8e8e93;
-  border: none;
-  border-radius: 8px;
+  color: #475569;
+  background: #fff;
+  border: 1px solid #cddbd7;
+  border-radius: 10px;
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
 }
 
-.qcl-btn-cancel:hover {
-  background: #7c7c80;
+.qcl-btn-cancel:hover:not(:disabled) {
+  border-color: #9acfc1;
+  background: #f3f9f7;
+  color: #0f766e;
+}
+
+.qcl-btn-save:disabled,
+.qcl-btn-cancel:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .qcl-modal-backdrop {
+    align-items: flex-end;
+    padding: 12px;
+  }
+
+  .qcl-modal {
+    max-height: calc(100vh - 24px);
+    border-radius: 16px;
+  }
+
+  .qcl-modal-header,
+  .qcl-modal-form {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .qcl-modal-row {
+    grid-template-columns: 1fr;
+  }
+
+  .qcl-modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .qcl-btn-save,
+  .qcl-btn-cancel {
+    width: 100%;
+  }
 }

@@ -137,10 +137,9 @@ function Sidebar({ alertSummary = {} }) {
       {
         label: 'Năng lực chuyên môn',
         items: [
-          { icon: <TrophyOutlined />, label: 'Năng lực chuyên môn', path: '/manager/reports/quality-dashboard' },
           // Mục này trước đây tên "Chất lượng chăm sóc" và nằm trong nhóm giám sát tuân thủ,
           // nhưng nội dung là dashboard năng lực nên thuộc về nhóm này.
-          { icon: <BarChartOutlined />, label: 'Dashboard năng lực', path: '/manager/competency-summary' },
+          { icon: <BarChartOutlined />, label: 'Năng lực chuyên môn', path: '/manager/competency-summary' },
           { icon: <FileDoneOutlined />, label: 'Kết quả năng lực chuyên môn', path: '/manager/exam-results' },
         ],
       },

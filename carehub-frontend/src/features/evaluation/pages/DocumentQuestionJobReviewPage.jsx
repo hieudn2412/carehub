@@ -22,7 +22,6 @@ import {
   apiData,
   apiErrorMessage,
   candidateStatusText,
-  parseJsonList,
   cognitiveLevelText,
   COGNITIVE_LEVELS,
   formatDateTime,
@@ -39,6 +38,11 @@ import {
 import '../styles/QuestionDocumentPages.css'
 
 const LIVE_JOB_STATUSES = new Set(['CREATED', 'GENERATING'])
+const COGNITIVE_MIX_FIELDS = [
+  { key: 'cognitiveMixFoundation', level: 'FOUNDATION', label: 'Kiến thức nền tảng' },
+  { key: 'cognitiveMixApplication', level: 'CLINICAL_APPLICATION', label: 'Áp dụng lâm sàng' },
+  { key: 'cognitiveMixReasoning', level: 'CLINICAL_REASONING_ANALYSIS', label: 'Tư duy phân tích' },
+]
 
 function DocumentQuestionJobReviewPage() {
   const { jobId } = useParams()
@@ -134,7 +138,7 @@ function DocumentQuestionJobReviewPage() {
     .map((candidate) => candidate.id)
   // Duyệt và lưu đã gộp làm một nên lưu được thẳng, chỉ trừ câu đã từ chối / đã lưu.
   const selectedSavableIds = selectedCandidates
-    .filter((candidate) => !['REJECTED', 'SAVED'].includes(candidate.status) && !hasStrongDuplicate(candidate))
+    .filter((candidate) => !['REJECTED', 'SAVED'].includes(candidate.status))
     .map((candidate) => candidate.id)
   const handleApplyFilters = () => {
     setIsFilterOpen(false)
@@ -154,6 +158,22 @@ function DocumentQuestionJobReviewPage() {
   const candidatesMissingTaxonomy = candidates.filter((candidate) => (
     !candidate.categoryId || !candidate.professionalFieldId || !candidate.cognitiveLevel
   ))
+  const cognitiveMixSummary = useMemo(() => {
+    const configured = COGNITIVE_MIX_FIELDS.map((field) => ({
+      ...field,
+      target: jobDetail?.[field.key] == null ? null : Number(jobDetail[field.key]),
+    }))
+    if (configured.some((field) => field.target == null || !Number.isFinite(field.target))) return null
+    return configured.map((field) => {
+      const actualCount = candidates.filter((candidate) => candidate.cognitiveLevel === field.level).length
+      const actualPercentage = candidates.length ? Number((actualCount * 100 / candidates.length).toFixed(1)) : 0
+      return { ...field, actualCount, actualPercentage }
+    })
+  }, [candidates, jobDetail])
+  const cognitiveMixMatches = cognitiveMixSummary?.every((field) => {
+    const expectedCount = field.target * candidates.length / 100
+    return Math.abs(field.actualCount - expectedCount) < 1
+  })
 
   async function retryFailedChunks() {
     setIsRetrying(true)
@@ -418,6 +438,32 @@ function DocumentQuestionJobReviewPage() {
                     <Metric label="Đã duyệt" value={formatNumber(candidates.filter(c => c.status === 'APPROVED' || c.status === 'SAVED').length)} />
                     <Metric label="Đã lưu vào ngân hàng" value={formatNumber(candidates.filter(c => c.status === 'SAVED').length)} />
                   </section>
+
+                  {cognitiveMixSummary && (
+                    <section className="qdoc-cognitive-review" aria-label="Đối chiếu tỷ lệ mức độ nhận thức">
+                      <div className="qdoc-cognitive-review__header">
+                        <div>
+                          <span className="qdoc-cognitive-review__eyebrow">ĐỐI CHIẾU CẤU HÌNH BAN ĐẦU</span>
+                          <h2>Tỷ lệ mức độ nhận thức</h2>
+                        </div>
+                        <span>{candidates.length} câu đã sinh</span>
+                      </div>
+                      <div className="qdoc-cognitive-review__grid">
+                        {cognitiveMixSummary.map((field) => (
+                          <div className="qdoc-cognitive-review__item" key={field.level}>
+                            <strong>{field.label}</strong>
+                            <span>Mục tiêu {field.target}%</span>
+                            <b>{field.actualCount} câu · {field.actualPercentage}%</b>
+                          </div>
+                        ))}
+                      </div>
+                      {!cognitiveMixMatches && (
+                        <p className="qdoc-cognitive-review__warning">
+                          Tỷ lệ thực tế đang lệch cấu hình ban đầu. Hệ thống phân bổ mục tiêu theo từng đoạn nội dung; đoạn lỗi hoặc câu không đủ dữ kiện có thể làm tỷ lệ thực tế thay đổi.
+                        </p>
+                      )}
+                    </section>
+                  )}
 
                   {LIVE_JOB_STATUSES.has(jobDetail.status) && (
                     <section className="qdoc-alert qdoc-alert--info">
@@ -735,11 +781,6 @@ export function CandidateCard({
   const isPotentialDuplicate = hasPotentialDuplicate(candidate)
   const canSave = !['REJECTED', 'SAVED'].includes(candidate.status)
   const statusText = candidateStatusText(candidate)
-  // Chỉ hiện khi AI critic có kết luận xấu (~1% ứng viên). Trùng lặp đã có khối riêng
-  // bên dưới nên không lặp lại ở đây.
-  const criticIssues = candidate.criticStatus === 'FAILED'
-    ? parseJsonList(candidate.warnings).filter((w) => typeof w === 'string' && w.startsWith('LLM validation:'))
-    : []
   const fieldLabel = candidate.professionalFieldCode
     ? `${candidate.professionalFieldCode} · ${candidate.professionalFieldName || 'Lĩnh vực chuyên môn'}`
     : 'Chưa có lĩnh vực chuyên môn'
@@ -797,15 +838,6 @@ export function CandidateCard({
             {candidate.explanation}
             {pageRef && (candidate.explanation ? ` (${pageRef})` : pageRef)}
           </p>
-        </div>
-      )}
-
-      {criticIssues.length > 0 && (
-        <div className="qdoc-reason-box">
-          <strong>AI kiểm định có cảnh báo</strong>
-          <ul>
-            {criticIssues.map((issue) => <li key={issue}>{issue.replace('LLM validation: ', '')}</li>)}
-          </ul>
         </div>
       )}
 

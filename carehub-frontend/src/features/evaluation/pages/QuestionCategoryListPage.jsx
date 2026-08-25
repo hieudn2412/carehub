@@ -167,7 +167,7 @@ export default function QuestionCategoryListPage() {
       .catch((error) => showToast(apiErrorMessage(error), 'error'))
   }
 
-  const breadcrumbs = [{ label: 'Danh mục câu hỏi' }]
+  const breadcrumbs = [{ label: 'Dữ liệu nền' }, { label: 'Danh mục câu hỏi' }]
   const applyFilters = () => {
     setPage(0)
     setAppliedFilters({ keyword: keyword.trim(), status })
@@ -257,14 +257,14 @@ export default function QuestionCategoryListPage() {
                     <td>
                       <div className="admin-table-actions">
                         <button
-                          className="admin-action-btn admin-action-btn--edit"
+                          className="admin-table-action admin-table-action--icon admin-table-action--primary"
                           onClick={() => handleOpenEditModal(item)}
                           title="Chỉnh sửa danh mục"
                         >
                           <EditOutlined />
                         </button>
                         <button
-                          className="admin-action-btn admin-action-btn--danger"
+                          className="admin-table-action admin-table-action--icon admin-table-action--danger"
                           onClick={() => handleDeleteCategory(item)}
                           title="Lưu trữ danh mục"
                         >

@@ -162,7 +162,7 @@ export default function ManagerDashboard() {
               available: true,
               emptyMessage: 'Chưa có kết quả năng lực trong khoa.',
               note: 'Điểm năng lực = trung bình điểm lý thuyết và điểm kỹ năng từ đầu năm.',
-              path: '/manager/reports/quality-dashboard',
+              path: '/manager/competency-summary?view=theory',
             }
           : unavailable('Không thể tải dữ liệu năng lực chuyên môn trong khoa.'),
         quality: checklistResult.status === 'fulfilled' ? {
