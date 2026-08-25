@@ -31,6 +31,8 @@ import EvaluationDashboardPage from '../features/evaluation/pages/EvaluationDash
 import EvaluationAuditLogPage from '../features/evaluation/pages/EvaluationAuditLogPage.jsx'
 import EvaluationImportHistoryPage from '../features/evaluation/pages/EvaluationImportHistoryPage.jsx'
 import ExamManagementPage from '../features/evaluation/pages/ExamManagementPage.jsx'
+import ExamAssignmentResultsPage from '../features/evaluation/pages/ExamAssignmentResultsPage.jsx'
+import ExamAssignmentResultDetailPage from '../features/evaluation/pages/ExamAssignmentResultDetailPage.jsx'
 import QuestionDocumentListPage from '../features/evaluation/pages/QuestionDocumentListPage.jsx'
 import QuestionDocumentDetailPage from '../features/evaluation/pages/QuestionDocumentDetailPage.jsx'
 import DocumentQuestionJobReviewPage from '../features/evaluation/pages/DocumentQuestionJobReviewPage.jsx'
@@ -255,6 +257,8 @@ function AppRouter() {
       <Route path="/admin/evaluation/classification-rules/new" element={evaluationElement(<ClassificationRuleFormPage />)} />
       <Route path="/admin/evaluation/classification-rules/:id/edit" element={evaluationElement(<ClassificationRuleFormPage />)} />
       <Route path="/admin/evaluation/exam-management" element={evaluationElement(<ExamManagementPage />)} />
+      <Route path="/admin/evaluation/exam-management/assignments/:assignmentId/results" element={evaluationElement(<ExamAssignmentResultsPage />)} />
+      <Route path="/admin/evaluation/exam-management/assignments/:assignmentId/results/:attemptId" element={evaluationElement(<ExamAssignmentResultDetailPage />)} />
       <Route path="/admin/evaluation/exam-management/new" element={evaluationElement(<ExamConfigPage />)} />
       <Route path="/admin/evaluation/configs" element={<Navigate to="/admin/evaluation/exam-management/new" replace />} />
       <Route path="/admin/evaluation/exam-papers" element={<Navigate to="/admin/evaluation/exam-management" replace />} />

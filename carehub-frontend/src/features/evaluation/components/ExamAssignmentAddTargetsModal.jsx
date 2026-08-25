@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CloseOutlined, LoadingOutlined, PlusOutlined, UserAddOutlined } from '@ant-design/icons'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { examAssignmentApi } from '../api/examAssignmentApi.js'
 import { apiData, apiErrorMessage, formatDateTime } from '../utils/documentQuestionUi.js'
@@ -14,6 +15,9 @@ function ExamAssignmentAddTargetsModal({ assignment, onClose, onAdded }) {
   const [detail, setDetail] = useState(null)
   const [employees, setEmployees] = useState([])
   const [selectedUserIds, setSelectedUserIds] = useState([])
+  const [employeeCodeQuery, setEmployeeCodeQuery] = useState('')
+  const [departmentFilter, setDepartmentFilter] = useState('')
+  const [positionFilter, setPositionFilter] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -59,6 +63,36 @@ function ExamAssignmentAddTargetsModal({ assignment, onClose, onAdded }) {
   const validSelectedUserIds = selectedUserIds.filter((id) => (
     availableEmployees.some((employee) => String(employeeId(employee)) === String(id))
   ))
+  const departmentOptions = useMemo(() => (
+    [...new Set(availableEmployees.map((employee) => employee.department).filter(Boolean))]
+      .sort((left, right) => left.localeCompare(right, 'vi'))
+      .map((department) => ({ value: department, label: department }))
+  ), [availableEmployees])
+  const positionOptions = useMemo(() => (
+    [...new Set(availableEmployees.map((employee) => employee.position).filter(Boolean))]
+      .sort((left, right) => left.localeCompare(right, 'vi'))
+      .map((position) => ({ value: position, label: position }))
+  ), [availableEmployees])
+  const filteredAvailableEmployees = useMemo(() => {
+    const normalizedCode = employeeCodeQuery.trim().toLowerCase()
+    return availableEmployees.filter((employee) => (
+      (!normalizedCode || String(employee.employeeCode || '').toLowerCase().includes(normalizedCode))
+      && (!departmentFilter || employee.department === departmentFilter)
+      && (!positionFilter || employee.position === positionFilter)
+    ))
+  }, [availableEmployees, departmentFilter, employeeCodeQuery, positionFilter])
+  const employeeOptions = useMemo(() => (
+    availableEmployees.map((employee) => ({
+      value: employeeId(employee),
+      label: employee.fullName || employee.name || employee.employeeCode,
+      description: `${employee.employeeCode || 'Chưa có mã'}${employee.department ? ` · ${employee.department}` : ''}`,
+      searchText: `${employee.employeeCode || ''} ${employee.department || ''} ${employee.position || ''}`,
+    }))
+  ), [availableEmployees])
+  const filteredEmployeeOptions = useMemo(() => {
+    const visibleIds = new Set(filteredAvailableEmployees.map(employeeId).map(String))
+    return employeeOptions.filter((option) => visibleIds.has(String(option.value)))
+  }, [employeeOptions, filteredAvailableEmployees])
 
   async function submit(event) {
     event.preventDefault()
@@ -120,7 +154,41 @@ function ExamAssignmentAddTargetsModal({ assignment, onClose, onAdded }) {
           </p>
 
           <form className="exp-assignment-modal__form" onSubmit={submit}>
-            <label htmlFor="exam-assignment-add-targets-select">Nhân viên cần giao bổ sung</label>
+            <div className="exp-assignment-modal__filters" aria-label="Bộ lọc nhân viên giao bổ sung">
+              <label className="exp-assignment-modal__filter-field" htmlFor="exam-assignment-add-targets-code">
+                <span>Mã nhân viên</span>
+                <input
+                  id="exam-assignment-add-targets-code"
+                  type="search"
+                  value={employeeCodeQuery}
+                  onChange={(event) => setEmployeeCodeQuery(event.target.value)}
+                  placeholder="Tìm theo mã nhân viên..."
+                  disabled={isLoading || isSubmitting}
+                />
+              </label>
+              <FilterSelectField
+                className="exp-assignment-modal__filter-field"
+                label="Khoa/phòng"
+                value={departmentFilter}
+                onChange={setDepartmentFilter}
+                options={[{ value: '', label: 'Tất cả khoa/phòng' }, ...departmentOptions]}
+                placeholder="Tất cả khoa/phòng"
+                disabled={isLoading || isSubmitting}
+              />
+              <FilterSelectField
+                className="exp-assignment-modal__filter-field"
+                label="Chức danh"
+                value={positionFilter}
+                onChange={setPositionFilter}
+                options={[{ value: '', label: 'Tất cả chức danh' }, ...positionOptions]}
+                placeholder="Tất cả chức danh"
+                disabled={isLoading || isSubmitting}
+              />
+            </div>
+            <div className="exp-assignment-modal__selection-meta">
+              <label htmlFor="exam-assignment-add-targets-select">Nhân viên cần giao bổ sung</label>
+              <span>{filteredAvailableEmployees.length} nhân viên phù hợp</span>
+            </div>
             <SearchableSelect
               multiple
               ariaLabel="Tìm và chọn nhân viên chưa được giao"
@@ -129,12 +197,8 @@ function ExamAssignmentAddTargetsModal({ assignment, onClose, onAdded }) {
               id="exam-assignment-add-targets-select"
               loading={isLoading}
               onChange={setSelectedUserIds}
-              options={availableEmployees.map((employee) => ({
-                value: employeeId(employee),
-                label: employee.fullName || employee.name || employee.employeeCode,
-                description: `${employee.employeeCode || 'Chưa có mã'}${employee.department ? ` · ${employee.department}` : ''}`,
-                searchText: `${employee.employeeCode || ''} ${employee.department || ''} ${employee.position || ''}`,
-              }))}
+              options={filteredEmployeeOptions}
+              selectedOptions={employeeOptions}
               placeholder="Tìm theo tên hoặc mã nhân viên..."
               value={validSelectedUserIds}
             />

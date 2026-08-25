@@ -83,6 +83,8 @@ const PAGE_TITLE_ROUTES = [
   ['/admin/evaluation/classification-rules/new', 'Tạo quy tắc phân loại'],
   ['/admin/evaluation/classification-rules/:id/edit', 'Cập nhật quy tắc phân loại'],
   ['/admin/evaluation/classification-rules', 'Quy tắc phân loại'],
+  ['/admin/evaluation/exam-management/assignments/:assignmentId/results/:attemptId', 'Chi tiết kết quả bài kiểm tra'],
+  ['/admin/evaluation/exam-management/assignments/:assignmentId/results', 'Kết quả bài kiểm tra'],
   ['/admin/evaluation/exam-management/new', 'Giao bài kiểm tra'],
   ['/admin/evaluation/exam-management', 'Quản lý bài kiểm tra'],
   ['/admin/evaluation/exam-assignments/new', 'Tạo phân công kiểm tra'],

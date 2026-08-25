@@ -51,6 +51,12 @@ const navSections = [
       { icon: <HistoryOutlined />, label: 'Lịch sử đồng bộ', path: '/admin/reference/sync-history' },
       { icon: <SlidersOutlined />, label: 'Hình thức đào tạo', path: '/admin/training/activity-types' },
       { icon: <DatabaseOutlined />, label: 'Lĩnh vực chuyên môn', path: '/admin/training/professional-fields' },
+      {
+        icon: <DatabaseOutlined />,
+        label: 'Danh mục câu hỏi',
+        path: '/admin/evaluation/categories',
+        requiredPermissions: [EVALUATION_PERMISSION.questionAuthor],
+      },
     ],
   },
   {
@@ -86,12 +92,6 @@ const navSections = [
           EVALUATION_PERMISSION.questionAuthor,
           EVALUATION_PERMISSION.questionReviewer,
         ],
-      },
-      {
-        icon: <DatabaseOutlined />,
-        label: 'Danh mục câu hỏi',
-        path: '/admin/evaluation/categories',
-        requiredPermissions: [EVALUATION_PERMISSION.questionAuthor],
       },
       {
         icon: <FileSearchOutlined />,
