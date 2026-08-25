@@ -295,8 +295,10 @@ function TrainingRecordFormPage() {
             </label>
 
             <label>
-              Description
+              Ghi chú / Mô tả (tối đa 500 ký tự)
               <textarea
+                maxLength={500}
+                placeholder="Mô tả nội dung đào tạo (tối đa 500 ký tự)..."
                 onChange={(event) => updateField('description', event.target.value)}
                 rows={4}
                 value={form.description}
