@@ -9,6 +9,8 @@ import vn.vietduc.carehubbackend.training.repository.TrainingRecordRepository;
 import vn.vietduc.carehubbackend.systemsettings.service.SystemSettingsService;
 import vn.vietduc.carehubbackend.training.service.TrainingAccessPolicy;
 import vn.vietduc.carehubbackend.training.service.TrainingComplianceCalculator;
+import vn.vietduc.carehubbackend.training.entity.TrainingRecord;
+import vn.vietduc.carehubbackend.training.enums.TrainingRecordStatus;
 import vn.vietduc.carehubbackend.user.entity.Department;
 import vn.vietduc.carehubbackend.user.entity.User;
 import vn.vietduc.carehubbackend.user.repository.UserRepository;
@@ -19,6 +21,7 @@ import java.util.List;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -102,6 +105,40 @@ class TrainingStatusServiceImplTest {
 
         assertThat(attentionPage.getTotalElements()).isEqualTo(2);
         assertThat(compliantPage).isEmpty();
+    }
+
+    @Test
+    void employeeStatusSupportsProgressSorting() {
+        LocalDate asOf = LocalDate.of(2026, 7, 25);
+        Department department = Department.builder().id(10L).name("Cấp cứu").build();
+        User lower = employee(2L, "NV002", department);
+        User higher = employee(3L, "NV003", department);
+        User actor = employee(1L, "ADMIN", department);
+        when(accessPolicy.currentActor()).thenReturn(actor);
+        when(accessPolicy.currentRoleCodes()).thenReturn(Set.of(TrainingAccessPolicy.ROLE_ADMIN));
+        when(userRepository.searchTrainingEmployeeCandidates(isNull(), isNull(), isNull(), isNull()))
+                .thenReturn(List.of(lower, higher));
+        when(settingsService.trainingWindowYears()).thenReturn(5);
+        when(settingsService.globalTrainingHours()).thenReturn(new BigDecimal("100"));
+        when(recordRepository.findStatusWindowRecordsForEmployees(
+                eq(List.of(2L, 3L)), eq(asOf.minusYears(5)), eq(asOf), anyList()))
+                .thenReturn(List.of(
+                        TrainingRecord.builder().employee(lower).startDate(asOf.minusDays(1))
+                                .declaredHours(new BigDecimal("20")).workflowStatus(TrainingRecordStatus.SUBMITTED).build(),
+                        TrainingRecord.builder().employee(higher).startDate(asOf.minusDays(1))
+                                .declaredHours(new BigDecimal("80")).workflowStatus(TrainingRecordStatus.SUBMITTED).build()
+                ));
+        when(complianceCalculator.resolveStatus(any(), any())).thenReturn(ComplianceStatus.NON_COMPLIANT);
+
+        var ascending = service.getEmployeeStatuses(new EmployeeTrainingStatusSearchRequest(
+                null, null, null, null, null, null, null, null, null, null, asOf
+        ), PageRequest.of(0, 20, org.springframework.data.domain.Sort.by("progressPercentage").ascending()));
+        var descending = service.getEmployeeStatuses(new EmployeeTrainingStatusSearchRequest(
+                null, null, null, null, null, null, null, null, null, null, asOf
+        ), PageRequest.of(0, 20, org.springframework.data.domain.Sort.by("progressPercentage").descending()));
+
+        assertThat(ascending.getContent()).extracting("employeeCode").containsExactly("NV002", "NV003");
+        assertThat(descending.getContent()).extracting("employeeCode").containsExactly("NV003", "NV002");
     }
 
     private User employee(Long id, String employeeCode, Department department) {

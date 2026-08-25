@@ -459,6 +459,13 @@
   width: min(760px, 100%);
 }
 
+.qbl-modal-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
 .qbl-detail-modal {
   padding: 0;
   overflow: auto;

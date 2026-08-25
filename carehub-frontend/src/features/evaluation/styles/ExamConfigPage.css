@@ -249,6 +249,25 @@
 .exam-flow__submit-card div { display: flex; flex-direction: column; gap: 4px; }
 .exam-flow__submit-card strong { color: #0f172a; font-size: 15px; }
 .exam-flow__submit-card span { color: #64748b; font-size: 13px; }
+.exp-assignment-form b { color: #dc2626; }
+.exp-assignment-form .exp-field-error {
+  display: block;
+  color: #b91c1c;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.exp-assignment-form .exp-field-card__count .exp-field-error { flex-basis: 100%; }
+.exp-assignment-form .ch-input.is-invalid,
+.exp-assignment-form .exp-number-stepper.is-invalid,
+.exp-assignment-form .exp-schedule-field.is-invalid .dt24-picker {
+  border-color: #dc2626;
+}
+.exp-assignment-form .ch-input.is-invalid:focus,
+.exp-assignment-form .exp-number-stepper.is-invalid:focus-within,
+.exp-assignment-form .exp-schedule-field.is-invalid .dt24-picker:focus-within {
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, .12);
+}
 /* bp-md */
 @media (max-width: 1024px) {
   .exam-flow__steps, .exam-flow__target-columns, .exam-flow .exp-form-grid, .exam-flow__toggle-grid, .exam-flow__difficulty-grid { grid-template-columns: 1fr; }

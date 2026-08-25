@@ -147,7 +147,7 @@ function AdminAccountsScreen() {
 
   const handlePhoneChange = (event) => {
     let inputVal = event.target.value
-    
+
     if (!inputVal) {
       setFormPhone('')
       return

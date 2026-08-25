@@ -34,7 +34,7 @@ function EditProfileModal({ isOpen, profile, onClose, onSaved }) {
 
   const handlePhoneChange = (event) => {
     let inputVal = event.target.value
-    
+
     if (!inputVal) {
       setForm((current) => ({ ...current, phone: '' }))
       return
