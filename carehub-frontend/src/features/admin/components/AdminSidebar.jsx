@@ -6,7 +6,6 @@ import {
   FileTextOutlined,
   FileAddOutlined,
   SettingOutlined,
-  ImportOutlined,
   BankOutlined,
   DatabaseOutlined,
   CheckSquareOutlined,
@@ -64,9 +63,10 @@ const navSections = [
     label: 'GIÁM SÁT TUÂN THỦ',
     items: [
       { icon: <CheckSquareOutlined />, label: 'Tuân thủ chung', path: '/admin/evaluation/compliance-by-technique' },
-      { icon: <CheckSquareOutlined />, label: 'Bảng kiểm giám sát', path: '/admin/quality/checklists' },
       { icon: <CheckSquareOutlined />, label: 'Tuân thủ theo kỹ thuật', path: '/admin/reports/checklist-dashboard' },
+      { icon: <CheckSquareOutlined />, label: 'Bảng kiểm giám sát', path: '/admin/quality/checklists' },
       { icon: <UserSwitchOutlined />, label: 'Giao bảng kiểm', path: '/admin/quality/checklist-assignments' },
+      { icon: <HistoryOutlined />, label: 'Lịch sử đánh giá', path: '/admin/quality/history' },
     ],
   },
   {
@@ -124,12 +124,6 @@ const navSections = [
         label: 'Audit đánh giá',
         path: '/admin/evaluation/audit-logs',
         requiredPermissions: [EVALUATION_PERMISSION.auditViewer],
-      },
-      {
-        icon: <ImportOutlined />,
-        label: 'Lịch sử import đánh giá',
-        path: '/admin/evaluation/imports',
-        requiredPermissions: [EVALUATION_PERMISSION.questionAuthor, EVALUATION_PERMISSION.questionReviewer],
       },
     ],
   },

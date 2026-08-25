@@ -37,6 +37,8 @@ const PAGE_TITLE_ROUTES = [
   ['/admin/quality/checklists/:id/builder/:versionId', 'Thiết kế bảng kiểm'],
   ['/admin/quality/checklists/:id/preview', 'Xem trước bảng kiểm'],
   ['/admin/quality/checklists/:id/evaluate/:versionId', 'Thực hiện đánh giá'],
+  ['/admin/quality/history/:id', 'Chi tiết lịch sử đánh giá'],
+  ['/admin/quality/history', 'Lịch sử đánh giá'],
   ['/admin/quality/checklists', 'Quản lý bảng kiểm'],
   ['/admin/form-imports/new', 'Nhập bảng kiểm'],
   ['/admin/quality/compliance-targets', 'Cài đặt mục tiêu tuân thủ'],

@@ -130,8 +130,8 @@ function Sidebar({ alertSummary = {} }) {
         items: [
           { icon: <CheckSquareOutlined />, label: 'Tuân thủ chung', path: '/manager/compliance-by-technique' },
           { icon: <CheckSquareOutlined />, label: 'Tuân thủ theo kỹ thuật', path: '/manager/reports/checklist-dashboard' },
-          { icon: <HistoryOutlined />, label: 'Lịch sử đánh giá', path: '/manager/quality/history' },
           { icon: <CheckSquareOutlined />, label: 'Bảng kiểm giám sát', path: '/manager/quality/checklists', badge: assignedCount },
+          { icon: <HistoryOutlined />, label: 'Lịch sử đánh giá', path: '/manager/quality/history' },
         ],
       },
       {
