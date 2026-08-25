@@ -247,65 +247,6 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
     );
 
     @EntityGraph(attributePaths = {"department", "position"})
-    @Query(value = """
-            SELECT u
-            FROM User u
-            WHERE u.isDeleted = false
-              AND (:departmentId IS NULL OR u.department.id = :departmentId)
-              AND (:keyword IS NULL
-                   OR LOWER(u.name) LIKE :keyword
-                   OR LOWER(u.employeeCode) LIKE :keyword)
-              AND EXISTS (
-                  SELECT a.id
-                  FROM ExamAttempt a
-                  WHERE a.user = u
-                    AND a.status IN ('SUBMITTED', 'GRADED')
-                    AND a.score IS NOT NULL
-                    AND a.submittedAt >= :fromDate
-                    AND a.submittedAt <= :toDate
-                    AND (:category IS NULL OR EXISTS (
-                        SELECT pq.id
-                        FROM ExamPaperQuestion pq
-                        WHERE pq.examPaper = a.examPaper
-                          AND pq.question.category.name = :category
-                    ))
-              )
-            ORDER BY u.name ASC, u.id ASC
-            """,
-            countQuery = """
-            SELECT COUNT(u)
-            FROM User u
-            WHERE u.isDeleted = false
-              AND (:departmentId IS NULL OR u.department.id = :departmentId)
-              AND (:keyword IS NULL
-                   OR LOWER(u.name) LIKE :keyword
-                   OR LOWER(u.employeeCode) LIKE :keyword)
-              AND EXISTS (
-                  SELECT a.id
-                  FROM ExamAttempt a
-                  WHERE a.user = u
-                    AND a.status IN ('SUBMITTED', 'GRADED')
-                    AND a.score IS NOT NULL
-                    AND a.submittedAt >= :fromDate
-                    AND a.submittedAt <= :toDate
-                    AND (:category IS NULL OR EXISTS (
-                        SELECT pq.id
-                        FROM ExamPaperQuestion pq
-                        WHERE pq.examPaper = a.examPaper
-                          AND pq.question.category.name = :category
-                    ))
-              )
-            """)
-    Page<User> findCompetencyFieldCandidates(
-            @Param("departmentId") Long departmentId,
-            @Param("keyword") String keyword,
-            @Param("category") String category,
-            @Param("fromDate") java.time.LocalDateTime fromDate,
-            @Param("toDate") java.time.LocalDateTime toDate,
-            Pageable pageable
-    );
-
-    @EntityGraph(attributePaths = {"department", "position"})
     @Query("""
             SELECT u
             FROM User u

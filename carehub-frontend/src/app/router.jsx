@@ -33,11 +33,10 @@ import EvaluationImportHistoryPage from '../features/evaluation/pages/Evaluation
 import ExamManagementPage from '../features/evaluation/pages/ExamManagementPage.jsx'
 import ExamAssignmentResultsPage from '../features/evaluation/pages/ExamAssignmentResultsPage.jsx'
 import ExamAssignmentResultDetailPage from '../features/evaluation/pages/ExamAssignmentResultDetailPage.jsx'
+import ExamAssignmentPaperPage from '../features/evaluation/pages/ExamAssignmentPaperPage.jsx'
 import QuestionDocumentListPage from '../features/evaluation/pages/QuestionDocumentListPage.jsx'
 import QuestionDocumentDetailPage from '../features/evaluation/pages/QuestionDocumentDetailPage.jsx'
 import DocumentQuestionJobReviewPage from '../features/evaluation/pages/DocumentQuestionJobReviewPage.jsx'
-import CompetencyByFieldPage from '../features/evaluation/pages/CompetencyByFieldPage.jsx'
-import CompetencyEmployeeFieldDetailPage from '../features/evaluation/pages/CompetencyEmployeeFieldDetailPage.jsx'
 import ComplianceByTechniquePage from '../features/evaluation/pages/ComplianceByTechniquePage.jsx'
 import ComplianceEmployeeTechniqueDetailPage from '../features/evaluation/pages/ComplianceEmployeeTechniqueDetailPage.jsx'
 import CompetencySummaryPage from '../features/evaluation/pages/CompetencySummaryPage.jsx'
@@ -259,14 +258,13 @@ function AppRouter() {
       <Route path="/admin/evaluation/exam-management" element={evaluationElement(<ExamManagementPage />)} />
       <Route path="/admin/evaluation/exam-management/assignments/:assignmentId/results" element={evaluationElement(<ExamAssignmentResultsPage />)} />
       <Route path="/admin/evaluation/exam-management/assignments/:assignmentId/results/:attemptId" element={evaluationElement(<ExamAssignmentResultDetailPage />)} />
+      <Route path="/admin/evaluation/exam-management/assignments/:assignmentId/paper/:paperId" element={evaluationElement(<ExamAssignmentPaperPage />)} />
       <Route path="/admin/evaluation/exam-management/new" element={evaluationElement(<ExamConfigPage />)} />
       <Route path="/admin/evaluation/configs" element={<Navigate to="/admin/evaluation/exam-management/new" replace />} />
       <Route path="/admin/evaluation/exam-papers" element={<Navigate to="/admin/evaluation/exam-management" replace />} />
       <Route path="/admin/evaluation/exam-assignments" element={<Navigate to="/admin/evaluation/exam-management?view=assignments" replace />} />
       <Route path="/admin/evaluation/exam-assignments/new" element={evaluationElement(<ExamAssignmentFormPage />)} />
       <Route path="/admin/evaluation/exam-attempts" element={<Navigate to="/admin/evaluation/exam-management?view=assignments" replace />} />
-      <Route path="/admin/evaluation/competency-by-field" element={evaluationElement(<CompetencyByFieldPage />)} />
-      <Route path="/admin/evaluation/competency-by-field/:employeeId" element={evaluationElement(<CompetencyEmployeeFieldDetailPage />)} />
       <Route path="/admin/evaluation/compliance-by-technique" element={evaluationElement(<ComplianceByTechniquePage />)} />
       <Route path="/admin/evaluation/compliance-by-technique/:employeeId" element={evaluationElement(<ComplianceEmployeeTechniqueDetailPage />)} />
       {/* Tổng hợp năng lực nằm trong nhóm năng lực chuyên môn; "Chất lượng chăm sóc"
@@ -290,9 +288,10 @@ function AppRouter() {
         path="/admin/reports/training-dashboard"
         element={adminElement(<TrainingDashboardPage />)}
       />
+      {/* Dashboard lý thuyết đã gộp thành một tab của trang Năng lực chuyên môn. */}
       <Route
         path="/admin/reports/quality-dashboard"
-        element={adminElement(<EvaluationDashboardPage />)}
+        element={<Navigate to="/admin/evaluation/competency-summary?view=theory" replace />}
       />
       <Route
         path="/admin/reports/checklist-dashboard"
@@ -328,7 +327,7 @@ function AppRouter() {
       <Route path="/manager/reports/training-dashboard" element={managerOrAdminElement(<TrainingDashboardPage role="manager" />)} />
       <Route
         path="/manager/reports/quality-dashboard"
-        element={managerOrAdminElement(<EvaluationDashboardPage role="manager" />)}
+        element={<Navigate to="/manager/competency-summary?view=theory" replace />}
       />
       <Route
         path="/manager/reports/checklist-dashboard"
@@ -342,7 +341,7 @@ function AppRouter() {
         path="/manager/reports/checklist-dashboard/results/:id"
         element={managerOrAdminElement(<ManagerEvaluationHistoryDetailPage historyPath="/manager/reports/checklist-dashboard" />)}
       />
-      <Route path="/manager/reports/exam-dashboard" element={managerOrAdminElement(<Navigate to="/manager/reports/quality-dashboard" replace />)} />
+      <Route path="/manager/reports/exam-dashboard" element={<Navigate to="/manager/competency-summary?view=theory" replace />} />
       <Route path="/manager/employees" element={managerOrAdminElement(<ManagerEmployeeListPage />)} />
       <Route path="/manager/employees/:id" element={managerOrAdminElement(<ManagerEmployeeDetailPage />)} />
 
@@ -362,8 +361,6 @@ function AppRouter() {
       />
       <Route path="/manager/quality/checklists" element={managerOrAdminElement(<ManagerChecklistListPage />)} />
       <Route path="/manager/quality/checklists/:id/evaluate" element={managerOrAdminElement(<ManagerChecklistEvaluationPage />)} />
-      <Route path="/manager/competency-by-field" element={managerOrAdminElement(<CompetencyByFieldPage />)} />
-      <Route path="/manager/competency-by-field/:employeeId" element={managerOrAdminElement(<CompetencyEmployeeFieldDetailPage />)} />
       <Route path="/manager/compliance-by-technique" element={managerOrAdminElement(<ComplianceByTechniquePage />)} />
       <Route path="/manager/compliance-by-technique/:employeeId" element={managerOrAdminElement(<ComplianceEmployeeTechniqueDetailPage />)} />
       <Route path="/manager/competency-summary" element={managerOrAdminElement(<CompetencySummaryPage />)} />

@@ -375,10 +375,14 @@ function QuestionDocumentDetailPage() {
                       value={cognitiveMix[field.key]}
                       disabled={isCreatingJob}
                       onFocus={(event) => event.target.select()}
-                      onChange={(event) => setCognitiveMix((current) => ({
-                        ...current,
-                        [field.key]: Math.max(0, Math.min(100, Number(event.target.value) || 0)),
-                      }))}
+                      onClick={(event) => event.currentTarget.select()}
+                      onChange={(event) => {
+                        const raw = event.target.value
+                        const parsed = Number.parseInt(raw, 10)
+                        const normalized = Number.isNaN(parsed) ? 0 : Math.max(0, Math.min(100, parsed))
+                        if (raw !== '' && raw !== String(normalized)) event.target.value = String(normalized)
+                        setCognitiveMix((current) => ({ ...current, [field.key]: raw === '' ? 0 : normalized }))
+                      }}
                       aria-label={`Tỷ lệ mức ${field.label}`}
                     />
                   </label>

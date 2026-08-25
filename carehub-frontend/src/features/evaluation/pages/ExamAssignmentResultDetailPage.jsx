@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeftOutlined, FileTextOutlined, LoadingOutlined, ReloadOutlined } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
-import ExamPaperPreviewModal from '../components/ExamPaperPreviewModal.jsx'
 import { examAssignmentApi } from '../api/examAssignmentApi.js'
 import { apiData, apiErrorMessage, formatNumber } from '../utils/documentQuestionUi.js'
 import './ExamResultPages.css'
@@ -58,7 +57,6 @@ export default function ExamAssignmentResultDetailPage() {
   const [results, setResults] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
-  const [previewPaperId, setPreviewPaperId] = useState(null)
 
   const loadData = useCallback(async () => {
     setIsLoading(true)
@@ -136,7 +134,7 @@ export default function ExamAssignmentResultDetailPage() {
             <button
               type="button"
               className="ear-button ear-button--secondary"
-              onClick={() => setPreviewPaperId(results?.examPaperId)}
+              onClick={() => navigate(`/admin/evaluation/exam-management/assignments/${assignmentId}/paper/${results?.examPaperId}`)}
               disabled={!results?.examPaperId}
             >
               <FileTextOutlined /> Xem mã đề
@@ -287,12 +285,6 @@ export default function ExamAssignmentResultDetailPage() {
           </>
         ) : null}
       </div>
-      {previewPaperId && (
-        <ExamPaperPreviewModal
-          paperId={previewPaperId}
-          onClose={() => setPreviewPaperId(null)}
-        />
-      )}
     </AppShell>
   )
 }

@@ -3,14 +3,12 @@ import { useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeftOutlined,
   DownloadOutlined,
-  FileTextOutlined,
   EyeOutlined,
   LoadingOutlined,
   ReloadOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
-import ExamPaperPreviewModal from '../components/ExamPaperPreviewModal.jsx'
 import { examAssignmentApi } from '../api/examAssignmentApi.js'
 import { apiData, apiErrorMessage, formatDateTime, formatNumber } from '../utils/documentQuestionUi.js'
 import './ExamResultPages.css'
@@ -54,25 +52,18 @@ export default function ExamAssignmentResultsPage() {
   const { assignmentId } = useParams()
   const { showToast } = useToast()
   const [results, setResults] = useState(null)
-  const [resultReport, setResultReport] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isExporting, setIsExporting] = useState(false)
   const [error, setError] = useState('')
-  const [previewPaperId, setPreviewPaperId] = useState(null)
 
   const loadData = useCallback(async () => {
     setIsLoading(true)
     setError('')
     try {
-      const [resultsResponse, reportResponse] = await Promise.all([
-        examAssignmentApi.getAssignmentResults(assignmentId),
-        examAssignmentApi.getResultReport(assignmentId),
-      ])
+      const resultsResponse = await examAssignmentApi.getAssignmentResults(assignmentId)
       setResults(apiData(resultsResponse, null))
-      setResultReport(apiData(reportResponse, null))
     } catch (requestError) {
       setResults(null)
-      setResultReport(null)
       setError(apiErrorMessage(requestError))
     } finally {
       setIsLoading(false)
@@ -134,10 +125,10 @@ export default function ExamAssignmentResultsPage() {
             <button
               type="button"
               className="ear-button ear-button--secondary"
-              onClick={() => setPreviewPaperId(results?.examPaperId)}
+              onClick={() => navigate(`/admin/evaluation/exam-management/assignments/${assignmentId}/paper/${results?.examPaperId}`)}
               disabled={!results?.examPaperId}
             >
-              <FileTextOutlined /> Xem mã đề
+              Xem mã đề
             </button>
           </div>
         </section>
@@ -219,81 +210,9 @@ export default function ExamAssignmentResultsPage() {
               </div>
             </section>
 
-            <section className="ear-section">
-              <div className="ear-section__heading">
-                <div>
-                  <span className="ear-section__eyebrow">PHÂN TÍCH KẾT QUẢ</span>
-                  <h2>Phân bố theo lĩnh vực và mức nhận thức</h2>
-                </div>
-                <span className="ear-section__hint">Dữ liệu lấy từ các lượt đã chấm</span>
-              </div>
-              <div className="ear-report-grid">
-                <div className="ear-report-card">
-                  <h3>Theo lĩnh vực</h3>
-                  <div className="ear-table-wrap">
-                    <table className="ear-table ear-table--compact">
-                      <thead><tr><th>Lĩnh vực</th><th>Đúng / tổng</th><th>Điểm TB</th><th>Đạt ngưỡng</th></tr></thead>
-                      <tbody>
-                        {(resultReport?.fields || []).length === 0 ? <EmptyTableRow colSpan={4}>Chưa có lượt thi đã chấm.</EmptyTableRow> : resultReport.fields.map((field) => (
-                          <tr key={field.professionalFieldId}>
-                            <td><strong>{field.professionalFieldName || '—'}</strong><small>{field.professionalFieldCode || ''}</small></td>
-                            <td>{field.correctCount}/{field.totalQuestions}</td>
-                            <td>{scoreWithScale(field.averageScore)}</td>
-                            <td>{field.passedAttempts}/{field.evaluatedAttempts}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-                <div className="ear-report-card">
-                  <h3>Theo mức nhận thức</h3>
-                  <div className="ear-table-wrap">
-                    <table className="ear-table ear-table--compact">
-                      <thead><tr><th>Mức nhận thức</th><th>Đúng / tổng</th><th>Điểm TB</th><th>Số lượt</th></tr></thead>
-                      <tbody>
-                        {(resultReport?.cognitive || []).length === 0 ? <EmptyTableRow colSpan={4}>Chưa có dữ liệu nhận thức.</EmptyTableRow> : resultReport.cognitive.map((item) => (
-                          <tr key={item.cognitiveLevel}>
-                            <td><strong>{item.cognitiveLabel || item.cognitiveLevel || '—'}</strong></td>
-                            <td>{item.correctCount}/{item.totalQuestions}</td>
-                            <td>{scoreWithScale(item.averageScore)}</td>
-                            <td>{item.evaluatedAttempts}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-              <div className="ear-report-card ear-report-card--wide">
-                <h3>Chi tiết lĩnh vực × mức nhận thức</h3>
-                <div className="ear-table-wrap">
-                  <table className="ear-table ear-table--compact">
-                    <thead><tr><th>Lĩnh vực</th><th>Mức nhận thức</th><th>Đúng / tổng</th><th>Số lượt</th><th>Ghi chú</th></tr></thead>
-                    <tbody>
-                      {(resultReport?.cells || []).length === 0 ? <EmptyTableRow colSpan={5}>Chưa có dữ liệu phân tích chi tiết.</EmptyTableRow> : resultReport.cells.map((cell) => (
-                        <tr key={`${cell.professionalFieldId}-${cell.cognitiveLevel}`}>
-                          <td>{cell.professionalFieldName || '—'}</td>
-                          <td>{cell.cognitiveLabel || cell.cognitiveLevel || '—'}</td>
-                          <td>{cell.correctCount}/{cell.totalQuestions}</td>
-                          <td>{cell.evaluatedAttempts}</td>
-                          <td>{cell.smallSample ? 'Mẫu nhỏ, chỉ tham khảo' : 'Đủ mẫu'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </section>
           </>
         ) : null}
       </div>
-      {previewPaperId && (
-        <ExamPaperPreviewModal
-          paperId={previewPaperId}
-          onClose={() => setPreviewPaperId(null)}
-        />
-      )}
     </AppShell>
   )
 }

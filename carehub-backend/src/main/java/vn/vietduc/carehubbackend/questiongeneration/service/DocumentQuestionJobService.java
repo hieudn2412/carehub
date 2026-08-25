@@ -843,7 +843,7 @@ public class DocumentQuestionJobService {
         for (int i = 0; i < questions.size(); i++) {
             GeneratedQuestion question = questions.get(i);
             ProfessionalField questionProfessionalField = resolveGeneratedProfessionalField(job, question.professionalFieldCode());
-            CognitiveLevel questionCognitiveLevel = resolveGeneratedCognitiveLevel(job, question.cognitiveLevel());
+            CognitiveLevel questionCognitiveLevel = resolveGeneratedCognitiveLevel(job, chunk.getChunkIndex(), question.cognitiveLevel());
             String generationKey = job.getPipelineVersion() == GenerationPipelineVersion.GROUNDED_V4
                     ? generationKeyService.groundedCandidateKey(
                             provider,
@@ -1156,8 +1156,7 @@ public class DocumentQuestionJobService {
             CognitiveLevel target = levelForChunk(job, chunkIndex == null ? 0 : chunkIndex);
             return ("Mức mục tiêu cho chunk này: %s (%s). Tỷ lệ toàn phiên do hệ thống phân bổ "
                     + "sẵn theo từng chunk — dễ %d%%, trung bình %d%%, khó %d%% — nên chỉ cần bám "
-                    + "đúng mức mục tiêu ở trên. Nếu chunk không đủ dữ kiện cho mức này thì hạ mức "
-                    + "và KHÔNG bịa thêm tình huống ngoài nguồn chỉ để đạt mức.")
+                    + "đúng mức mục tiêu ở trên và KHÔNG bịa thêm tình huống ngoài nguồn chỉ để đạt mức.")
                     .formatted(
                             target.name(),
                             cognitiveLevelInVietnamese(target),
@@ -1262,7 +1261,10 @@ public class DocumentQuestionJobService {
                 .orElse(null);
     }
 
-    private CognitiveLevel resolveGeneratedCognitiveLevel(DocumentQuestionJob job, String value) {
+    private CognitiveLevel resolveGeneratedCognitiveLevel(DocumentQuestionJob job, Integer chunkIndex, String value) {
+        if (hasCognitiveMix(job)) {
+            return levelForChunk(job, chunkIndex == null ? 0 : chunkIndex);
+        }
         if (job.getTargetCognitiveLevel() != null
                 && job.getTargetCognitiveLevel() != TargetCognitiveLevel.AUTO) {
             return CognitiveLevel.valueOf(job.getTargetCognitiveLevel().name());

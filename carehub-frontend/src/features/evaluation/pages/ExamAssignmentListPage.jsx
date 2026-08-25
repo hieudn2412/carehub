@@ -3,8 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { DeleteOutlined, EyeOutlined, FileTextOutlined, FolderOpenOutlined, PlusCircleOutlined, ReloadOutlined, SearchOutlined, StopOutlined, FilterOutlined, UserAddOutlined } from '@ant-design/icons'
 import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
 import AppShell from '../../../shared/components/AppShell.jsx'
-import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
-import ExamPaperPreviewModal from '../components/ExamPaperPreviewModal.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import ExamAssignmentAddTargetsModal from '../components/ExamAssignmentAddTargetsModal.jsx'
 import { examAssignmentApi } from '../api/examAssignmentApi.js'
@@ -21,7 +19,6 @@ function ExamAssignmentListPage() {
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [pendingArchive, setPendingArchive] = useState(null)
   const [pendingAddTargets, setPendingAddTargets] = useState(null)
-  const [previewPaperId, setPreviewPaperId] = useState(null)
 
   const loadAssignments = useCallback(async () => {
     setIsLoading(true)
@@ -133,19 +130,16 @@ function ExamAssignmentListPage() {
                 </div>
                 {isFilterOpen && (
                   <div className="admin-control-toolbar__panel" id="exam-assignment-filter-panel">
-                    <FilterSelectField
-                      className="admin-control-toolbar__field"
-                      label="Trạng thái"
-                      value={status}
-                      onChange={setStatus}
-                      options={[
-                        { value: '', label: 'Tất cả trạng thái' },
-                        { value: 'DRAFT', label: 'Bản nháp' },
-                        { value: 'OPEN', label: 'Đang mở' },
-                        { value: 'CLOSED', label: 'Đã đóng' },
-                        { value: 'ARCHIVED', label: 'Đã lưu trữ' },
-                      ]}
-                    />
+                    <label className="admin-control-toolbar__field" htmlFor="exam-assignment-status-filter">
+                      <span>Trạng thái</span>
+                      <select id="exam-assignment-status-filter" value={status} onChange={(event) => setStatus(event.target.value)}>
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="DRAFT">Bản nháp</option>
+                        <option value="OPEN">Đang mở</option>
+                        <option value="CLOSED">Đã đóng</option>
+                        <option value="ARCHIVED">Đã lưu trữ</option>
+                      </select>
+                    </label>
                   </div>
                   )}
                 </div>
@@ -188,7 +182,7 @@ function ExamAssignmentListPage() {
                             <button
                               type="button"
                               className="admin-table-action admin-table-action--icon"
-                              onClick={() => setPreviewPaperId(assignment.examPaperId)}
+                              onClick={() => navigate(`/admin/evaluation/exam-management/assignments/${assignment.id}/paper/${assignment.examPaperId}`)}
                               disabled={!assignment.examPaperId}
                               title="Xem mã đề"
                             ><FileTextOutlined /></button>
@@ -231,12 +225,6 @@ function ExamAssignmentListPage() {
           assignment={pendingAddTargets}
           onAdded={handleTargetsAdded}
           onClose={() => setPendingAddTargets(null)}
-        />
-      )}
-      {previewPaperId && (
-        <ExamPaperPreviewModal
-          paperId={previewPaperId}
-          onClose={() => setPreviewPaperId(null)}
         />
       )}
     </AppShell>

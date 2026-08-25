@@ -103,11 +103,14 @@ const navSections = [
           EVALUATION_PERMISSION.assignmentManager,
         ],
       },
-      // Dashboard năng lực trước đây nằm ở mục "Chất lượng chăm sóc" — nội dung là năng lực
-      // chuyên môn nên chuyển về đúng nhóm này.
+    ],
+  },
+  {
+    label: 'NĂNG LỰC CHUYÊN MÔN',
+    items: [
       {
         icon: <LineChartOutlined />,
-        label: 'Dashboard năng lực',
+        label: 'Năng lực chuyên môn',
         path: '/admin/evaluation/competency-summary',
         requiredPermissions: [EVALUATION_PERMISSION.resultViewer],
       },
@@ -158,6 +161,7 @@ const navGroups = [
       navSections[3],
       navSections[4],
       navSections[5],
+      navSections[6],
     ],
   },
   {
@@ -166,7 +170,7 @@ const navGroups = [
     icon: <SettingOutlined />,
     sections: [
       navSections[2],
-      ...navSections.slice(6),
+      ...navSections.slice(7),
     ],
   },
 ]

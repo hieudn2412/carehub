@@ -778,7 +778,7 @@
 }
 
 .exp-assignment-modal__filter-field > span,
-.exp-assignment-modal__selection-meta label {
+.exp-assignment-modal__selection-meta .exp-assignment-modal__selection-label {
   display: block;
   margin-bottom: 6px;
   color: #334155;
@@ -798,17 +798,26 @@
   font-size: 13px;
 }
 
-.exp-assignment-modal__filter-field input[type='search']:focus {
+.exp-assignment-modal__filter-field select {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #0f172a;
+  font: inherit;
+  font-size: 13px;
+}
+
+.exp-assignment-modal__filter-field select:focus {
   border-color: #0f766e;
   outline: 3px solid rgb(15 118 110 / 14%);
 }
 
-.exp-assignment-modal__filter-field .filter-select-field__label {
-  display: none;
-}
-
-.exp-assignment-modal__filter-field .filter-select-field__control {
-  min-height: 40px;
+.exp-assignment-modal__filter-field input[type='search']:focus {
+  border-color: #0f766e;
+  outline: 3px solid rgb(15 118 110 / 14%);
 }
 
 .exp-assignment-modal__selection-meta {
@@ -819,7 +828,7 @@
   margin-top: 5px;
 }
 
-.exp-assignment-modal__selection-meta label {
+.exp-assignment-modal__selection-meta .exp-assignment-modal__selection-label {
   margin-bottom: 0;
 }
 
@@ -835,8 +844,54 @@
   font-weight: 700;
 }
 
-.exp-assignment-modal__form .searchable-select {
-  min-height: 44px;
+.exp-assignment-modal__employee-list {
+  display: grid;
+  max-height: 300px;
+  gap: 6px;
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid #dbe5ef;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.exp-assignment-modal__employee-option {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: start;
+  padding: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.exp-assignment-modal__employee-option:has(input:checked) {
+  border-color: #99f6e4;
+  background: #f0fdfa;
+}
+
+.exp-assignment-modal__employee-option input {
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+}
+
+.exp-assignment-modal__employee-option span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.exp-assignment-modal__employee-option strong {
+  color: #0f172a;
+  font-size: 13px;
+}
+
+.exp-assignment-modal__employee-option small {
+  color: #64748b;
+  font-size: 11px;
 }
 
 .exp-assignment-modal__footer {

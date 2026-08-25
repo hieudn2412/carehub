@@ -187,17 +187,8 @@ public class QuestionDocumentService {
             throw new ConflictException("Không thể xóa tài liệu đã được liên kết với câu hỏi trong ngân hàng");
         }
 
-        List<DocumentChunk> chunks = chunkRepository.findByDocumentOrderByChunkIndexAsc(document);
-        if (!chunks.isEmpty()) {
-            chunkRepository.deleteAllInBatch(chunks);
-        }
-
-        List<DocumentSection> sections = sectionRepository.findByDocumentOrderByOrderIndexDesc(document);
-        if (!sections.isEmpty()) {
-            sections.forEach(section -> section.setParent(null));
-            sectionRepository.saveAllAndFlush(sections);
-            sectionRepository.deleteAllInBatch(sections);
-        }
+        chunkRepository.deleteAllByDocument(document);
+        sectionRepository.deleteAllByDocument(document);
 
         String storagePath = document.getStoragePath();
         String filename = document.getFilename();

@@ -11,14 +11,6 @@ export const competencyApi = {
     return httpClient.get(`/competency/employees/${employeeId}`, { headers: authHeaders() })
   },
 
-  getByField(params) {
-    return httpClient.get('/competency/by-field', { headers: authHeaders(), params })
-  },
-
-  getEmployeeByField(employeeId, params) {
-    return httpClient.get(`/competency/employees/${employeeId}/by-field`, { headers: authHeaders(), params })
-  },
-
   getByTechnique(params) {
     return httpClient.get('/competency/by-technique', { headers: authHeaders(), params })
   },
@@ -56,13 +48,6 @@ export const examAssignmentApi = {
   getAssignmentResults(assignmentId) {
     return httpClient.get(`/exam-assignments/${assignmentId}/results`, {
       headers: authHeaders(),
-    })
-  },
-
-  getResultReport(assignmentId) {
-    return httpClient.get('/evaluation-results', {
-      headers: authHeaders(),
-      params: { assignmentId },
     })
   },
 
