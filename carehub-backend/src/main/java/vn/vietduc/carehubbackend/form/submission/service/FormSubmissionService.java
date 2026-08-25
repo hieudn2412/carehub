@@ -318,7 +318,9 @@ public class FormSubmissionService {
             LocalDate dateTo,
             Pageable pageable
     ) {
-        Long effectiveSubmittedBy = isAdmin() ? submittedByUserId : securityUtils.getCurrentUserId();
+        Long effectiveSubmittedBy = submittedByUserId != null && isAdmin()
+                ? submittedByUserId
+                : securityUtils.getCurrentUserId();
         FormSubmissionHistoryCriteria criteria = FormSubmissionHistoryCriteria.of(
                 keyword, effectiveSubmittedBy, departmentId, result, dateFrom, dateTo);
         return submissionRepository.searchEvaluationsHistory(
@@ -345,7 +347,9 @@ public class FormSubmissionService {
             LocalDate dateFrom,
             LocalDate dateTo
     ) {
-        Long effectiveSubmittedBy = isAdmin() ? submittedByUserId : securityUtils.getCurrentUserId();
+        Long effectiveSubmittedBy = submittedByUserId != null && isAdmin()
+                ? submittedByUserId
+                : securityUtils.getCurrentUserId();
         FormSubmissionHistoryCriteria criteria = FormSubmissionHistoryCriteria.of(
                 keyword, effectiveSubmittedBy, departmentId, result, dateFrom, dateTo);
         var summary = submissionRepository.summarizeEvaluationsHistory(

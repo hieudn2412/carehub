@@ -66,7 +66,6 @@ public interface FormSubmissionRepository extends JpaRepository<FormSubmission, 
                    count(s.id) as responseCount
             from FormSubmission s
             where s.formVersion.form.id in :formIds
-              and s.formVersion.form.deleted = false
               and s.status = :submittedStatus
             group by s.formVersion.form.id
             """)

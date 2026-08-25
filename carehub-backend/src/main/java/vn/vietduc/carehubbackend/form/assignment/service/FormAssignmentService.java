@@ -283,6 +283,25 @@ public class FormAssignmentService {
                 .toList();
     }
 
+    @Transactional
+    public List<FormAssignmentDepartmentScopeResponse> updateAllowedDepartmentsForItem(
+            Long itemId,
+            UpdateFormAssignmentDepartmentScopeRequest request
+    ) {
+        if (request.departmentIds().stream().distinct().count() != request.departmentIds().size()) {
+            throw ValidationException.field("departmentIds", "Danh sách khoa/phòng không được trùng lặp");
+        }
+        FormAssignmentItem item = itemRepository.findDetailById(itemId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy quyền giao bảng kiểm"));
+        if (item.getStatus() != FormAssignmentStatus.ACTIVE || item.getAssignment().getStatus() != FormAssignmentStatus.ACTIVE) {
+            throw ValidationException.field("assignmentItemId", "Chỉ có thể cập nhật phạm vi của quyền đang hiệu lực");
+        }
+        replaceAllowedDepartments(item, loadDepartments(request.departmentIds()));
+        return itemRepository.saveAndFlush(item).getAllowedDepartments().stream()
+                .map(this::departmentScope)
+                .toList();
+    }
+
     @Transactional(readOnly = true)
     public Page<FormAssignmentCandidateResponse> formCandidates(String keyword, Long ownerDepartmentId, Pageable pageable) {
         return formRepository.search(
