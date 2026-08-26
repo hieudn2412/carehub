@@ -32,12 +32,13 @@ export default defineConfig({
     },
     coverage: {
       provider: 'v8',
-      include: [
-        'src/shared/api/**',
-        'src/features/auth/utils/**',
-        'src/features/auth/services/**',
-        'src/features/auth/hooks/**',
-        'src/features/training/utils/**',
+      reporter: ['text', 'html', 'lcov'],
+      reportOnFailure: true,
+      include: ['src/**/*.{js,jsx}'],
+      exclude: [
+        'src/**/*.test.{js,jsx}',
+        'src/test/**',
+        'src/main.jsx',
       ],
     },
   },
