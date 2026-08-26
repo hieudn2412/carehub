@@ -24,6 +24,10 @@ export const authApi = {
     return httpClient.post('/auth/forgot-password', payload)
   },
 
+  verifyResetOtp(payload) {
+    return httpClient.post('/auth/verify-reset-otp', payload)
+  },
+
   resetPassword(payload) {
     return httpClient.post('/auth/reset-password', payload)
   },
