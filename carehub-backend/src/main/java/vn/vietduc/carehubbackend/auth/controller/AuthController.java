@@ -16,6 +16,7 @@ import vn.vietduc.carehubbackend.auth.service.PasswordResetService;
 import vn.vietduc.carehubbackend.common.response.ApiResponse;
 import vn.vietduc.carehubbackend.auth.dto.request.ForgotPasswordRequest;
 import vn.vietduc.carehubbackend.auth.dto.request.ResetPasswordRequest;
+import vn.vietduc.carehubbackend.auth.dto.request.VerifyOtpRequest;
 
 import java.time.Duration;
 
@@ -53,6 +54,12 @@ public class AuthController {
     public ResponseEntity<ApiResponse<Void>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         passwordResetService.forgotPassword(request);
         return ResponseEntity.ok(ApiResponse.success("OTP sent", null));
+    }
+
+    @PostMapping("/verify-reset-otp")
+    public ResponseEntity<ApiResponse<Void>> verifyResetOtp(@Valid @RequestBody VerifyOtpRequest request) {
+        passwordResetService.verifyResetOtp(request);
+        return ResponseEntity.ok(ApiResponse.success("OTP verified", null));
     }
 
     @PostMapping("/reset-password")
