@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import vn.vietduc.carehubbackend.common.response.ApiResponse;
 import vn.vietduc.carehubbackend.form.assignment.dto.BulkFormAssignmentItemIdsRequest;
 import vn.vietduc.carehubbackend.form.assignment.dto.BulkFormAssignmentValidityRequest;
+import vn.vietduc.carehubbackend.form.assignment.dto.UpdateFormAssignmentDepartmentScopeRequest;
 import vn.vietduc.carehubbackend.form.assignment.service.FormAssignmentService;
 
 import vn.vietduc.carehubbackend.form.assignment.dto.FormAssignmentDepartmentScopeResponse;
@@ -24,6 +25,15 @@ public class FormAssignmentItemController {
     @GetMapping("/{id}/allowed-departments")
     public ApiResponse<List<FormAssignmentDepartmentScopeResponse>> allowedDepartmentsForItem(@PathVariable Long id) {
         return ApiResponse.success("Get allowed departments successfully", service.allowedDepartmentsForItem(id));
+    }
+
+    @PutMapping("/{id}/allowed-departments")
+    public ApiResponse<List<FormAssignmentDepartmentScopeResponse>> updateAllowedDepartmentsForItem(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateFormAssignmentDepartmentScopeRequest request
+    ) {
+        return ApiResponse.success("Update allowed departments successfully",
+                service.updateAllowedDepartmentsForItem(id, request));
     }
 
     @PatchMapping("/bulk-validity")

@@ -506,10 +506,14 @@ function TrainingHoursFormScreen() {
       }
     }
 
+    if (form.notes && form.notes.length > 500) {
+      e.notes = 'Ghi chú không được vượt quá 500 ký tự'
+    }
+
     setErrors(e)
     if (Object.keys(e).length > 0) {
       if (e.name || e.date || e.hours) setMobileStep(0)
-      else if (e.type || e.professionalFieldId || e.customProfessionalField) setMobileStep(1)
+      else if (e.type || e.professionalFieldId || e.customProfessionalField || e.notes) setMobileStep(1)
     }
     return Object.keys(e).length === 0;
   }
@@ -530,6 +534,9 @@ function TrainingHoursFormScreen() {
       if (form.professionalFieldId === 'OTHER' && !form.customProfessionalField.trim()) {
         stepErrors.customProfessionalField = 'Vui lòng nhập tên lĩnh vực chuyên môn khác'
       }
+      if (form.notes && form.notes.length > 500) {
+        stepErrors.notes = 'Ghi chú không được vượt quá 500 ký tự'
+      }
     }
 
     if (Object.keys(stepErrors).length > 0) {
@@ -541,7 +548,7 @@ function TrainingHoursFormScreen() {
       const nextErrors = { ...currentErrors }
       const resolvedKeys = mobileStep === 0
         ? ['name', 'date', 'hours']
-        : ['type', 'professionalFieldId', 'customProfessionalField']
+        : ['type', 'professionalFieldId', 'customProfessionalField', 'notes']
       resolvedKeys.forEach(key => delete nextErrors[key])
       return nextErrors
     })
@@ -901,16 +908,27 @@ function TrainingHoursFormScreen() {
 
                   {/* Notes */}
                   <div style={{ marginBottom: 20 }}>
-                    <label style={{ fontSize: 13, fontWeight: 500, color: '#374151', display: 'block', marginBottom: 6 }}>
-                      Ghi chú / Mô tả
-                    </label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                      <label style={{ fontSize: 13, fontWeight: 500, color: '#374151', margin: 0 }}>
+                        Ghi chú / Mô tả
+                      </label>
+                      <span style={{ fontSize: 12, color: (form.notes || '').length >= 500 ? '#ef4444' : '#6b7280' }}>
+                        {(form.notes || '').length}/500
+                      </span>
+                    </div>
                     <textarea
                       value={form.notes}
                       onChange={e => setForm({ ...form, notes: e.target.value })}
-                      placeholder="Mô tả ngắn gọn về nội dung..."
+                      placeholder="Mô tả ngắn gọn về nội dung (tối đa 500 ký tự)..."
                       rows={4}
+                      maxLength={500}
                       style={{ ...fieldStyle('notes'), resize: 'vertical' }}
                     />
+                    {errors.notes && (
+                      <div style={{ marginTop: 4, fontSize: 12, color: '#ef4444' }}>
+                        {errors.notes}
+                      </div>
+                    )}
                   </div>
                   </div>
 
