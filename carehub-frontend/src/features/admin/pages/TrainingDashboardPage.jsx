@@ -15,8 +15,6 @@ import {
   CartesianGrid,
   Cell,
   LabelList,
-  Pie,
-  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -355,11 +353,6 @@ function DashboardContent({ role }) {
     }
     return data
   }, [summary, typeSort, typeLimit])
-
-  const completionData = [
-    { name: 'Đạt', value: metrics.completed, color: '#10a77d' },
-    { name: 'Chưa đạt', value: metrics.total - metrics.completed, color: '#ef4444' },
-  ]
 
   async function handleExport() {
     setExporting(true)

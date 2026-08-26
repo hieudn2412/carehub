@@ -306,7 +306,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
     }
     load()
     return () => { active = false }
-  }, [effectiveDepartmentId, isManager, page, reloadKey, requestParams, size, view])
+  }, [effectiveDepartmentId, isManager, ownDepartmentId, page, reloadKey, requestParams, size, view])
 
   useEffect(() => {
     if (!filteredSelectedFormId) return

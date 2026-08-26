@@ -292,7 +292,17 @@ describe('ChecklistQualityDashboardPage', () => {
     renderDashboard(<ChecklistQualityDashboardPage role="manager" />)
 
     expect(await screen.findByRole('heading', { name: 'Danh sách bảng kiểm' })).toBeInTheDocument()
+    await waitFor(() => {
+      expect(adminApi.getQualityChecklistDashboard).toHaveBeenCalledWith(expect.objectContaining({
+        departmentId: '7',
+      }))
+    })
     fireEvent.click(screen.getByRole('button', { name: /Bộ lọc/i }))
+    await waitFor(() => {
+      expect(adminApi.getQualityChecklistFilterOptions).toHaveBeenCalledWith(expect.objectContaining({
+        departmentId: '7',
+      }))
+    })
 
     expect(screen.getByText('Khoa/phòng')).toBeInTheDocument()
     const selects = screen.getAllByRole('combobox')
