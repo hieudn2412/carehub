@@ -72,6 +72,7 @@ public class QualityChecklistDashboardService {
         String cte = eligibleFormsCte(scope) + ",\n" + aggregateCte(scope);
         String latestCondition = effectiveView == QualityChecklistView.LATEST
                 ? "and a.last_submitted_at is not null\n" : "";
+        String targetCondition = targetCondition();
         List<QualityChecklistPerformanceResponse> content = jdbc.query(cte + """
                 select
                     ef.form_id,
@@ -100,7 +101,7 @@ public class QualityChecklistDashboardService {
                 left join form_compliance_targets dt
                   on dt.form_template_id = ef.form_id and dt.department_id = :targetDepartmentId
                 where 1 = 1
-                """ + latestCondition + """
+                """ + latestCondition + targetCondition + """
                 order by a.last_submitted_at desc nulls last, ef.form_title asc, ef.form_id asc
                 limit :limit offset :offset
                 """, params, (rs, ignored) -> QualityChecklistPerformanceResponse.builder()
@@ -125,7 +126,13 @@ public class QualityChecklistDashboardService {
                 : jdbc.queryForObject(cte + """
                     select count(*)
                     from eligible_forms ef
-                    """, params, Long.class);
+                    left join aggregate_submissions a on a.form_id = ef.form_id
+                    left join form_compliance_targets ht
+                      on ht.form_template_id = ef.form_id and ht.department_id is null
+                    left join form_compliance_targets dt
+                      on dt.form_template_id = ef.form_id and dt.department_id = :targetDepartmentId
+                    where 1 = 1
+                    """ + targetCondition, params, Long.class);
         return new PageImpl<>(content, normalized, total == null ? 0 : total);
     }
 
@@ -135,7 +142,7 @@ public class QualityChecklistDashboardService {
         Scope scope = scope(requestedDepartmentId);
         Period period = period(fromDate, toDate);
         DashboardFormFilter emptyFilter = new DashboardFormFilter(fromDate, toDate, scope.metricDepartmentId(),
-                null, null, null, null);
+                null, null, null, null, null);
         MapSqlParameterSource params = params(scope, period, null, emptyFilter);
         String eligible = eligibleFormsCte(scope);
         List<DashboardFormFilterOptionsResponse.FormOption> forms = jdbc.query(eligible + """
@@ -261,6 +268,21 @@ public class QualityChecklistDashboardService {
                 """;
     }
 
+    private String targetCondition() {
+        String target = "coalesce(dt.target_percent, ht.target_percent, 80.00)";
+        String rate = "(a.passed_count * 100.0 / nullif(a.monitoring_count, 0))";
+        return """
+                and (
+                    :targetStatus is null
+                    or (:targetStatus = 'MET' and coalesce(a.monitoring_count, 0) > 0 and %s > %s)
+                    or (:targetStatus = 'NOT_MET' and (
+                        coalesce(a.monitoring_count, 0) = 0
+                        or %s <= %s
+                    ))
+                )
+                """.formatted(rate, target, rate, target);
+    }
+
     private String scopedSubmissionSelect(Scope scope) {
         String departmentPredicate = scope.metricDepartmentId() == null
                 ? "" : "and (subject_user.department_id = :metricDepartmentId or subject_user.id is null)";
@@ -292,6 +314,7 @@ public class QualityChecklistDashboardService {
         String normalizedKeyword = keyword == null || keyword.isBlank()
                 ? null : "%" + keyword.trim().toLowerCase() + "%";
         String result = filter.resultStatus() == null ? null : filter.resultStatus().name();
+        String targetStatus = filter.targetStatus() == null ? null : filter.targetStatus().name();
         return new MapSqlParameterSource()
                 .addValue("actorId", scope.actorId(), Types.BIGINT)
                 .addValue("now", OffsetDateTime.ofInstant(Instant.now(clock), ZoneOffset.UTC), Types.TIMESTAMP_WITH_TIMEZONE)
@@ -303,7 +326,8 @@ public class QualityChecklistDashboardService {
                 .addValue("formId", filter.formId(), Types.BIGINT)
                 .addValue("subjectUserId", filter.subjectUserId(), Types.BIGINT)
                 .addValue("submittedByUserId", scope.role() == Role.USER ? scope.actorId() : filter.submittedByUserId(), Types.BIGINT)
-                .addValue("resultStatus", result, Types.VARCHAR);
+                .addValue("resultStatus", result, Types.VARCHAR)
+                .addValue("targetStatus", targetStatus, Types.VARCHAR);
     }
 
     private Scope scope(Long requestedDepartmentId) {

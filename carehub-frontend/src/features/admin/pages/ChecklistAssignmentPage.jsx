@@ -10,6 +10,7 @@ import {
   LoadingOutlined,
   PlusOutlined,
   ReloadOutlined,
+  SaveOutlined,
   SearchOutlined,
   StopOutlined,
   TeamOutlined,
@@ -20,6 +21,7 @@ import Modal from '../../../shared/components/Modal.jsx'
 import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import DateTimePicker24h from '../../../shared/components/DateTimePicker24h.jsx'
+import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { adminApi } from '../api/adminApi'
 import { getChecklistDisplayCode } from '../utils/formCode.js'
 import { formatRoleLabels } from '../../../shared/utils/roleLabels.js'
@@ -137,6 +139,14 @@ function buildDepartmentOption(department) {
   }
 }
 
+function departmentIdOf(department) {
+  return String(department?.departmentId ?? department?.id ?? department?.value ?? '')
+}
+
+function departmentNameOf(department) {
+  return department?.departmentName || department?.name || department?.label || `Khoa #${departmentIdOf(department)}`
+}
+
 function SelectionLimitNotice({ formsCount, assigneesCount }) {
   const largeAssigneeWarning = assigneesCount > 100
   return (
@@ -176,6 +186,7 @@ function WizardSelectedList({ title, count, options, emptyText, onRemove }) {
 }
 
 function ChecklistAssignmentPage() {
+  const { showToast } = useToast()
   const [searchParams, setSearchParams] = useSearchParams()
   const initialFormId = searchParams.get('formId')
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') === TAB_ASSIGNEES ? TAB_ASSIGNEES : TAB_FORMS)
@@ -208,6 +219,8 @@ function ChecklistAssignmentPage() {
   const [drawerValidUntil, setDrawerValidUntil] = useState('')
   const [drawerSubmitting, setDrawerSubmitting] = useState(false)
   const [deptModalItem, setDeptModalItem] = useState(null)
+  const [deptScopeSearch, setDeptScopeSearch] = useState('')
+  const [deptScopeSaving, setDeptScopeSaving] = useState(false)
   const initialFormIdHandledRef = useRef(false)
 
   const [wizardOpen, setWizardOpen] = useState(false)
@@ -237,6 +250,47 @@ function ChecklistAssignmentPage() {
     })),
   ], [departments])
   const wizardDepartmentOptions = useMemo(() => departments.map(buildDepartmentOption), [departments])
+
+  const deptModalSelectedIds = useMemo(
+    () => new Set((deptModalItem?.selectedDepartmentIds || []).map(String)),
+    [deptModalItem?.selectedDepartmentIds],
+  )
+  const deptModalSelectedDepartments = useMemo(() => (
+    (departments || [])
+      .filter((department) => deptModalSelectedIds.has(String(department.id)))
+      .map((department) => ({
+        departmentId: department.id,
+        departmentName: department.name,
+        code: department.code,
+      }))
+  ), [departments, deptModalSelectedIds])
+  const deptModalAvailableDepartments = useMemo(() => (
+    (departments || [])
+      .filter((department) => !deptModalSelectedIds.has(String(department.id)))
+      .map((department) => ({
+        departmentId: department.id,
+        departmentName: department.name,
+        code: department.code,
+      }))
+  ), [departments, deptModalSelectedIds])
+
+  const normalizedDeptScopeSearch = deptScopeSearch.trim().toLowerCase()
+  const filterModalDepartments = useCallback((items) => {
+    if (!normalizedDeptScopeSearch) return items
+    return items.filter((department) => [
+      department.departmentName || department.name,
+      department.code,
+    ].filter(Boolean).some((text) => String(text).toLowerCase().includes(normalizedDeptScopeSearch)))
+  }, [normalizedDeptScopeSearch])
+
+  const visibleSelectedDepartments = useMemo(
+    () => filterModalDepartments(deptModalSelectedDepartments),
+    [deptModalSelectedDepartments, filterModalDepartments],
+  )
+  const visibleAvailableDepartments = useMemo(
+    () => filterModalDepartments(deptModalAvailableDepartments),
+    [deptModalAvailableDepartments, filterModalDepartments],
+  )
 
   const activeFilters = activeTab === TAB_FORMS ? formFilters : assigneeFilters
 
@@ -323,7 +377,7 @@ function ChecklistAssignmentPage() {
     }
   }, [activeTab, assigneeFilters, debouncedKeyword, formFilters, page, refreshKey])
 
-  const loadDrawerItems = useCallback(async (nextDrawer) => {
+  const loadDrawerItems = useCallback(async (nextDrawer = drawer) => {
     if (!nextDrawer) return
     setDrawerLoading(true)
     setSelectedItemIds([])
@@ -350,7 +404,7 @@ function ChecklistAssignmentPage() {
     } finally {
       setDrawerLoading(false)
     }
-  }, [])
+  }, [drawer])
 
   useEffect(() => {
     if (initialFormIdHandledRef.current) return
@@ -367,6 +421,7 @@ function ChecklistAssignmentPage() {
     setDrawerItems([])
     setSelectedItemIds([])
     setDrawerValidUntil('')
+    setDeptModalItem(null)
   }, [])
 
   useEffect(() => {
@@ -380,17 +435,97 @@ function ChecklistAssignmentPage() {
 
   const handleOpenDeptModal = async (item) => {
     const count = item.allowedDepartmentCount ?? (item.allowedDepartments?.length || 0)
-    if (count === 0) {
-      setDeptModalItem({ ...item, isAll: true, loading: false, departments: [] })
-      return
-    }
-    setDeptModalItem({ ...item, isAll: false, loading: true, departments: [] })
+    const isAll = count === 0
+    setDeptScopeSearch('')
+    setDeptModalItem({
+      ...item,
+      isAll,
+      loading: !isAll,
+      departments: isAll ? departments : (item.allowedDepartments || []),
+      selectedDepartmentIds: isAll ? departments.map((d) => String(d.id)) : (item.allowedDepartments || []).map(departmentIdOf).filter(Boolean),
+      error: '',
+    })
+    if (isAll) return
     try {
       const response = await adminApi.getFormAssignmentItemAllowedDepartments(item.assignmentItemId)
       const depts = response.data?.data || []
-      setDeptModalItem((curr) => (curr && curr.assignmentItemId === item.assignmentItemId ? { ...curr, loading: false, departments: depts } : curr))
-    } catch {
-      setDeptModalItem((curr) => (curr && curr.assignmentItemId === item.assignmentItemId ? { ...curr, loading: false, error: 'Không thể tải danh sách khoa/phòng.' } : curr))
+      setDeptModalItem((curr) => (curr && curr.assignmentItemId === item.assignmentItemId ? {
+        ...curr,
+        loading: false,
+        departments: depts,
+        selectedDepartmentIds: depts.map(departmentIdOf).filter(Boolean),
+      } : curr))
+    } catch (requestError) {
+      const errorMsg = requestError?.response?.data?.message || 'Không thể tải danh sách khoa/phòng.'
+      setDeptModalItem((curr) => (curr && curr.assignmentItemId === item.assignmentItemId ? {
+        ...curr,
+        loading: false,
+        error: errorMsg,
+      } : curr))
+      showToast(errorMsg, 'error')
+    }
+  }
+
+  const addDeptToModalScope = (departmentId) => {
+    const id = String(departmentId)
+    setDeptModalItem((current) => {
+      if (!current || current.selectedDepartmentIds?.includes(id)) return current
+      return { ...current, selectedDepartmentIds: [...(current.selectedDepartmentIds || []), id], isAll: false }
+    })
+  }
+
+  const removeDeptFromModalScope = (departmentId) => {
+    const id = String(departmentId)
+    setDeptModalItem((current) => {
+      if (!current) return current
+      return {
+        ...current,
+        selectedDepartmentIds: (current.selectedDepartmentIds || []).filter((value) => String(value) !== id),
+        isAll: false,
+      }
+    })
+  }
+
+  const saveDeptModalScope = async () => {
+    if (!deptModalItem?.assignmentItemId) return
+    const departmentIds = (deptModalItem.selectedDepartmentIds || []).map(Number).filter(Number.isFinite)
+    if (departmentIds.length === 0) {
+      const warnMsg = 'Vui lòng chọn ít nhất một khoa/phòng.'
+      setDeptModalItem((current) => current ? { ...current, error: warnMsg } : current)
+      showToast(warnMsg, 'warning')
+      return
+    }
+    setDeptScopeSaving(true)
+    setDeptModalItem((current) => current ? { ...current, error: '' } : current)
+    try {
+      const response = await adminApi.updateFormAssignmentItemAllowedDepartments(deptModalItem.assignmentItemId, { departmentIds })
+      const updatedDepartments = response.data?.data || []
+      const updatedCount = updatedDepartments.length
+      setDrawerItems((current) => current.map((item) => (
+        item.assignmentItemId === deptModalItem.assignmentItemId
+          ? { ...item, allowedDepartmentCount: updatedCount, allowedDepartments: updatedDepartments }
+          : item
+      )))
+      setDeptModalItem((current) => current ? {
+        ...current,
+        isAll: false,
+        departments: updatedDepartments,
+        selectedDepartmentIds: updatedDepartments.map(departmentIdOf).filter(Boolean),
+        error: '',
+      } : current)
+      const successMsg = 'Lưu phạm vi khoa/phòng thành công!'
+      setMessage(successMsg)
+      showToast(successMsg, 'success')
+      setRefreshKey((current) => current + 1)
+    } catch (requestError) {
+      const errorMsg = requestError?.response?.data?.message || 'Lưu phạm vi khoa/phòng thất bại.'
+      setDeptModalItem((current) => current ? {
+        ...current,
+        error: errorMsg,
+      } : current)
+      showToast(errorMsg, 'error')
+    } finally {
+      setDeptScopeSaving(false)
     }
   }
 
@@ -442,7 +577,9 @@ function ChecklistAssignmentPage() {
 
   const mutateDrawerItems = async (mode) => {
     if (selectedItemIds.length === 0) {
-      setError('Vui lòng chọn ít nhất một quyền để thao tác.')
+      const warnMsg = 'Vui lòng chọn ít nhất một quyền để thao tác.'
+      setError(warnMsg)
+      showToast(warnMsg, 'warning')
       return
     }
     setDrawerSubmitting(true)
@@ -454,17 +591,23 @@ function ChecklistAssignmentPage() {
           assignmentItemIds: selectedItemIds.map(Number),
           validUntil: toIsoOrNull(drawerValidUntil),
         })
-        setMessage(`Đã cập nhật hạn cho ${selectedItemIds.length} quyền.`)
+        const successMsg = `Đã cập nhật hạn cho ${selectedItemIds.length} quyền thành công.`
+        setMessage(successMsg)
+        showToast(successMsg, 'success')
       } else {
         await adminApi.bulkRevokeFormAssignmentItems({
           assignmentItemIds: selectedItemIds.map(Number),
         })
-        setMessage(`Đã thu hồi ${selectedItemIds.length} quyền.`)
+        const successMsg = `Đã thu hồi ${selectedItemIds.length} quyền thành công.`
+        setMessage(successMsg)
+        showToast(successMsg, 'success')
       }
       setRefreshKey((current) => current + 1)
       await loadDrawerItems()
     } catch (requestError) {
-      setError(requestError?.response?.data?.message || 'Không thể cập nhật quyền đã chọn.')
+      const errorMsg = requestError?.response?.data?.message || (mode === 'revoke' ? 'Thu hồi quyền thất bại.' : 'Không thể cập nhật hạn quyền đã chọn.')
+      setError(errorMsg)
+      showToast(errorMsg, 'error')
     } finally {
       setDrawerSubmitting(false)
     }
@@ -587,7 +730,9 @@ function ChecklistAssignmentPage() {
       const candidateMap = new Map([...assigneeCandidateOptions, ...options].map((option) => [String(option.value), option]))
       setAssigneeCandidateOptions(Array.from(candidateMap.values()))
     } catch (requestError) {
-      setWizardError(extractApiErrorMessage(requestError, 'Không thể chọn tất cả quản lý.'))
+      const errorMsg = extractApiErrorMessage(requestError, 'Không thể chọn tất cả quản lý.')
+      setWizardError(errorMsg)
+      showToast(errorMsg, 'error')
     } finally {
       setManagerCandidateLoading(false)
     }
@@ -640,11 +785,15 @@ function ChecklistAssignmentPage() {
         validUntil: toIsoOrNull(validUntil),
       })
       const result = response.data?.data || {}
-      setMessage(`Đã xử lý ${result.totalPairs || 0} cặp quyền. Tạo mới ${result.createdCount || result.newCount || 0}, cập nhật ${result.updatedCount || 0}, khôi phục ${result.restoredCount || 0}.`)
+      const successMsg = `Đã giao bảng kiểm thành công! (Tạo mới ${result.createdCount || result.newCount || 0}, cập nhật ${result.updatedCount || 0}, khôi phục ${result.restoredCount || 0})`
+      setMessage(successMsg)
+      showToast('Giao bảng kiểm thành công!', 'success')
       closeWizard()
       setRefreshKey((current) => current + 1)
     } catch (requestError) {
-      setWizardError(extractApiErrorMessage(requestError, 'Không thể giao bảng kiểm. Vui lòng kiểm tra lại lựa chọn.'))
+      const errorMsg = extractApiErrorMessage(requestError, 'Không thể giao bảng kiểm. Vui lòng kiểm tra lại lựa chọn.')
+      setWizardError(errorMsg)
+      showToast(errorMsg, 'error')
     } finally {
       setWizardSubmitting(false)
     }
@@ -1146,45 +1295,96 @@ function ChecklistAssignmentPage() {
       {deptModalItem && (
         <Modal
           title={`Khoa/phòng áp dụng: ${drawer?.type === TAB_FORMS ? (deptModalItem.assigneeName || deptModalItem.fullName) : deptModalItem.formTitle}`}
-          onClose={() => setDeptModalItem(null)}
+          onClose={() => { if (!deptScopeSaving) setDeptModalItem(null) }}
           size="md"
           footer={
-            <button
-              type="button"
-              className="cap-button"
-              style={{ padding: '6px 16px', borderRadius: 6, background: '#f1f5f9', border: '1px solid #cbd5e1', cursor: 'pointer', fontWeight: 600 }}
-              onClick={() => setDeptModalItem(null)}
-            >
-              Đóng
-            </button>
+            <div className="cap-scope-modal__footer">
+              <button
+                type="button"
+                className="cap-scope-modal__secondary"
+                disabled={deptScopeSaving}
+                onClick={() => setDeptModalItem(null)}
+              >
+                Đóng
+              </button>
+              <button
+                type="button"
+                className="cap-scope-modal__primary"
+                disabled={deptScopeSaving || deptModalItem.loading || (deptModalItem.selectedDepartmentIds || []).length === 0}
+                onClick={saveDeptModalScope}
+              >
+                {deptScopeSaving ? <LoadingOutlined spin /> : <SaveOutlined />} Lưu phạm vi
+              </button>
+            </div>
           }
         >
           {deptModalItem.loading ? (
-            <div style={{ textAlign: 'center', padding: '36px 16px', color: '#087f6a' }}>
-              <LoadingOutlined spin style={{ fontSize: 28, marginBottom: 10 }} />
-              <div style={{ fontSize: 13, color: '#64748b' }}>Đang tải danh sách khoa/phòng...</div>
-            </div>
-          ) : deptModalItem.isAll || (!deptModalItem.departments || deptModalItem.departments.length === 0) ? (
-            <div style={{ textAlign: 'center', padding: '24px 16px' }}>
-              <CheckCircleOutlined style={{ fontSize: 40, color: '#16a34a', marginBottom: 12 }} />
-              <h4 style={{ margin: 0, fontSize: 16, color: '#0f172a', fontWeight: 700 }}>Áp dụng cho tất cả khoa/phòng</h4>
-              <p style={{ margin: '8px 0 0', color: '#64748b', fontSize: 13, lineHeight: 1.5 }}>
-                Được phân quyền thực hiện giám sát đánh giá đối với nhân viên của tất cả các khoa/phòng trong toàn viện.
-              </p>
+            <div className="cap-scope-modal__loading">
+              <LoadingOutlined spin />
+              <div>Đang tải danh sách khoa/phòng...</div>
             </div>
           ) : (
-            <div>
-              <p style={{ margin: '0 0 14px', fontSize: 13, color: '#64748b' }}>
-                Danh sách các khoa/phòng được phân quyền ({(deptModalItem.departments || []).length} khoa):
-              </p>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10, maxHeight: 320, overflowY: 'auto', padding: 2 }}>
-                {(deptModalItem.departments || []).map((dept, idx) => (
-                  <div key={dept.departmentId || idx} style={{ padding: '10px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <ApartmentOutlined style={{ color: '#087f6a', fontSize: 16 }} />
-                    <span style={{ fontWeight: 600, color: '#1e293b' }}>{dept.departmentName || `Khoa #${dept.departmentId}`}</span>
-                  </div>
-                ))}
+            <div className="cap-scope-modal">
+              {deptModalItem.error && (
+                <div className="cap-scope-modal__error" role="alert">{deptModalItem.error}</div>
+              )}
+              <label className="cap-scope-modal__search">
+                <SearchOutlined />
+                <input
+                  type="search"
+                  value={deptScopeSearch}
+                  onChange={(event) => setDeptScopeSearch(event.target.value)}
+                  placeholder="Tìm khoa/phòng theo tên hoặc mã..."
+                />
+              </label>
+              <div className="cap-scope-modal__summary">
+                <span>Đang áp dụng <strong>{deptModalSelectedDepartments.length}</strong> khoa/phòng</span>
+                {deptModalItem.isAll && <em>Ban đầu là toàn viện, lưu lại để cố định phạm vi mới.</em>}
               </div>
+              <section className="cap-scope-modal__section">
+                <h4>Khoa/phòng đang áp dụng</h4>
+                <div className="cap-scope-modal__grid">
+                  {visibleSelectedDepartments.length === 0 ? (
+                    <p className="cap-scope-modal__empty">
+                      {deptModalSelectedDepartments.length === 0 ? 'Chưa chọn khoa/phòng nào.' : 'Không có khoa/phòng phù hợp từ khóa.'}
+                    </p>
+                  ) : visibleSelectedDepartments.map((dept) => (
+                    <div className="cap-scope-modal__dept is-selected" key={`selected-${dept.departmentId}`}>
+                      <ApartmentOutlined />
+                      <span>{departmentNameOf(dept)}</span>
+                      <button
+                        type="button"
+                        aria-label={`Xóa ${departmentNameOf(dept)} khỏi phạm vi`}
+                        onClick={() => removeDeptFromModalScope(dept.departmentId)}
+                      >
+                        <CloseOutlined />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+              <section className="cap-scope-modal__section">
+                <h4>Thêm khoa/phòng</h4>
+                <div className="cap-scope-modal__grid">
+                  {visibleAvailableDepartments.length === 0 ? (
+                    <p className="cap-scope-modal__empty">
+                      {deptModalAvailableDepartments.length === 0 ? 'Tất cả khoa/phòng đã được thêm.' : 'Không có khoa/phòng phù hợp từ khóa.'}
+                    </p>
+                  ) : visibleAvailableDepartments.map((dept) => (
+                    <div className="cap-scope-modal__dept" key={`available-${dept.departmentId}`}>
+                      <ApartmentOutlined />
+                      <span>{departmentNameOf(dept)}</span>
+                      <button
+                        type="button"
+                        aria-label={`Thêm ${departmentNameOf(dept)} vào phạm vi`}
+                        onClick={() => addDeptToModalScope(dept.departmentId)}
+                      >
+                        <PlusOutlined />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </section>
             </div>
           )}
         </Modal>

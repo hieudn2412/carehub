@@ -89,8 +89,6 @@ vi.mock('recharts', () => {
   }
 })
 
-const TODAY = new Date().toISOString().slice(0, 10)
-
 const summary = {
   totals: {
     employeeCount: 120, configuredCount: 100, notConfiguredCount: 20,
@@ -162,7 +160,7 @@ describe('TrainingDashboardPage - chỉ số tổng hợp', () => {
   it('gọi API tổng hợp với bộ lọc rỗng ở lần tải đầu', async () => {
     await renderAdmin()
     expect(training.getTrainingDashboardSummary).toHaveBeenCalledWith({
-      departmentId: undefined, professionalFieldId: undefined, complianceStatus: undefined, asOf: TODAY,
+      departmentId: undefined, professionalFieldId: undefined, complianceStatus: undefined,
     })
   })
 
@@ -268,13 +266,12 @@ describe('TrainingDashboardPage - bộ lọc', () => {
     await waitFor(() => expect(screen.getByLabelText('Lĩnh vực chuyên môn').querySelector('option[value="9"]')).not.toBeNull())
     fireEvent.change(screen.getByLabelText('Lĩnh vực chuyên môn'), { target: { value: '9' } })
     fireEvent.change(screen.getByLabelText('Trạng thái'), { target: { value: 'COMPLIANT' } })
-    fireEvent.change(screen.getByLabelText('Tính đến ngày'), { target: { value: '2026-01-31' } })
     fireEvent.click(screen.getByRole('button', { name: 'Áp dụng' }))
 
     await waitFor(() => expect(training.getTrainingDashboardSummary).toHaveBeenLastCalledWith({
-      departmentId: '1', professionalFieldId: '9', complianceStatus: 'COMPLIANT', asOf: '2026-01-31',
+      departmentId: '1', professionalFieldId: '9', complianceStatus: 'COMPLIANT',
     }))
-    expect(screen.getByTestId('active-filter-count')).toHaveTextContent('4')
+    expect(screen.getByTestId('active-filter-count')).toHaveTextContent('3')
     // bảng lọc tự đóng sau khi áp dụng
     expect(screen.queryByLabelText('Khoa/Phòng')).not.toBeInTheDocument()
   })
@@ -315,7 +312,7 @@ describe('TrainingDashboardPage - bộ lọc', () => {
 })
 
 describe('TrainingDashboardPage - chế độ quản lý khoa', () => {
-  it('lấy khoa từ hồ sơ và thay biểu đồ khoa bằng bảng nhân sự', async () => {
+  it('lấy khoa từ hồ sơ, ẩn biểu đồ theo khoa và giữ hai biểu đồ đào tạo', async () => {
     await renderManager()
 
     expect(staff.getProfile).toHaveBeenCalled()
@@ -323,20 +320,24 @@ describe('TrainingDashboardPage - chế độ quản lý khoa', () => {
     await waitFor(() => expect(training.getTrainingDashboardSummary).toHaveBeenLastCalledWith(
       expect.objectContaining({ departmentId: 3 }),
     ))
-    expect(screen.getByRole('heading', { name: 'Nhân sự trong khoa' })).toBeInTheDocument()
-    expect(screen.getAllByText('Khoa Hồi sức').length).toBeGreaterThan(0)
+    expect(training.getTrainingDashboardSummary.mock.calls.at(-1)[0]).not.toHaveProperty('asOf')
+    expect(screen.queryByText('Tính đến ngày')).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Tỷ lệ hoàn thành theo khoa' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: 'Tổng giờ đào tạo theo lĩnh vực' })).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Tổng giờ đào tạo theo lĩnh vực' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Tổng giờ đào tạo theo hình thức' })).toBeInTheDocument()
   })
 
-  it('truyền bộ lọc hiện hành xuống bảng nhân sự', async () => {
+  it('áp dụng trạng thái trong đúng phạm vi khoa của quản lý', async () => {
     await renderManager()
     openFilters()
     fireEvent.change(screen.getByLabelText('Trạng thái'), { target: { value: 'NON_COMPLIANT' } })
     fireEvent.click(screen.getByRole('button', { name: 'Áp dụng' }))
 
-    await waitFor(() => expect(screen.getByTestId('dept-staff-table'))
-      .toHaveTextContent('"complianceStatus":"NON_COMPLIANT"'))
+    await waitFor(() => expect(training.getTrainingDashboardSummary).toHaveBeenLastCalledWith({
+      departmentId: 3,
+      professionalFieldId: undefined,
+      complianceStatus: 'NON_COMPLIANT',
+    }))
   })
 
   it('không đếm bộ lọc khoa với tài khoản quản lý khoa', async () => {
@@ -352,9 +353,9 @@ describe('TrainingDashboardPage - chế độ quản lý khoa', () => {
     expect(training.getTrainingDashboardSummary).not.toHaveBeenCalled()
   })
 
-  it('ẩn nút xem chi tiết với tài khoản quản lý khoa', async () => {
+  it('hiện nút xem chi tiết với tài khoản quản lý khoa', async () => {
     await renderManager()
-    expect(screen.queryByRole('button', { name: /Xem chi tiết/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Xem chi tiết/ })).toBeInTheDocument()
   })
 })
 

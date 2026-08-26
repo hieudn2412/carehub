@@ -317,6 +317,11 @@
   color: #ea580c;
 }
 
+.am-badge--status-deleted {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
 .am-badge__dot {
   width: 6px;
   height: 6px;

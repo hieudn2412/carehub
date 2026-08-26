@@ -105,18 +105,23 @@ function TrainingEmployeeStatusListPage() {
     return accessToken ? getRolesFromAccessToken(accessToken) : []
   })
 
-  const isAdmin = hasAnyRole(roles, [AUTH_ROLE.admin])
+  const isManager = !hasAnyRole(roles, [AUTH_ROLE.admin]) && hasAnyRole(roles, [AUTH_ROLE.manager])
 
   const [employees, setEmployees] = useState([])
   const [departments, setDepartments] = useState([])
+  const [positions, setPositions] = useState([])
   const [professionalFields, setProfessionalFields] = useState([])
   const [loading, setLoading] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState('')
 
   const [keyword, setKeyword] = useState(() => searchParams.get('keyword') || '')
-  const [departmentId, setDepartmentId] = useState(() => searchParams.get('departmentId') || '')
+  const [departmentId, setDepartmentId] = useState(() => isManager ? '' : searchParams.get('departmentId') || '')
+  const [jobPositionId, setJobPositionId] = useState(() => searchParams.get('jobPositionId') || '')
   const [professionalFieldId, setProfessionalFieldId] = useState(() => searchParams.get('professionalFieldId') || '')
+  const [progressSort, setProgressSort] = useState(() => (
+    ['asc', 'desc'].includes(searchParams.get('progressSort')) ? searchParams.get('progressSort') : ''
+  ))
   const [complianceStatus, setComplianceStatus] = useState(() => {
     if (searchParams.get('compliant') === 'true') return 'COMPLIANT'
     if (searchParams.get('compliant') === 'false') return 'NON_COMPLIANT'
@@ -131,8 +136,10 @@ function TrainingEmployeeStatusListPage() {
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [appliedFilters, setAppliedFilters] = useState(() => ({
     keyword: searchParams.get('keyword') || '',
-    departmentId: searchParams.get('departmentId') || '',
+    departmentId: isManager ? '' : searchParams.get('departmentId') || '',
+    jobPositionId: searchParams.get('jobPositionId') || '',
     professionalFieldId: searchParams.get('professionalFieldId') || '',
+    progressSort: ['asc', 'desc'].includes(searchParams.get('progressSort')) ? searchParams.get('progressSort') : '',
     complianceStatus: searchParams.get('compliant') === 'true'
       ? 'COMPLIANT'
       : searchParams.get('compliant') === 'false' ? 'NON_COMPLIANT' : '',
@@ -141,10 +148,15 @@ function TrainingEmployeeStatusListPage() {
   useEffect(() => {
     Promise.allSettled([
       trainingApi.getDepartments(),
+      trainingApi.getPositions(),
       trainingApi.getRecordOptions(),
-    ]).then(([departmentResult, optionResult]) => {
+    ]).then(([departmentResult, positionResult, optionResult]) => {
       if (departmentResult.status === 'fulfilled' && departmentResult.value.data?.success) {
         setDepartments(departmentResult.value.data.data || [])
+      }
+      if (positionResult.status === 'fulfilled') {
+        const positionData = positionResult.value.data?.data
+        setPositions(Array.isArray(positionData) ? positionData : [])
       }
       if (optionResult.status === 'fulfilled') {
         setProfessionalFields(responseData(optionResult.value).professionalFields || [])
@@ -173,7 +185,11 @@ function TrainingEmployeeStatusListPage() {
         size: 10,
         keyword: appliedFilters.keyword || undefined,
         departmentId: appliedFilters.departmentId || undefined,
+        jobPositionId: appliedFilters.jobPositionId || undefined,
         professionalFieldId: appliedFilters.professionalFieldId || undefined,
+        sort: appliedFilters.progressSort
+          ? `progressPercentage,${appliedFilters.progressSort}`
+          : undefined,
         ...getComplianceParams(appliedFilters.complianceStatus),
       }
       trainingApi.getEmployeeTrainingStatuses(params)
@@ -204,7 +220,11 @@ function TrainingEmployeeStatusListPage() {
       const rows = await fetchAllEmployeeStatuses({
         keyword: appliedFilters.keyword || undefined,
         departmentId: appliedFilters.departmentId || undefined,
+        jobPositionId: appliedFilters.jobPositionId || undefined,
         professionalFieldId: appliedFilters.professionalFieldId || undefined,
+        sort: appliedFilters.progressSort
+          ? `progressPercentage,${appliedFilters.progressSort}`
+          : undefined,
         ...getComplianceParams(appliedFilters.complianceStatus),
       })
       downloadEmployeeTrainingCsv(rows.map(normalizeEmployee))
@@ -238,16 +258,27 @@ function TrainingEmployeeStatusListPage() {
 
   const applyFilters = () => {
     setPage(1)
-    setAppliedFilters({ keyword: keyword.trim(), departmentId, professionalFieldId, complianceStatus })
+    setAppliedFilters({
+      keyword: keyword.trim(),
+      departmentId: isManager ? '' : departmentId,
+      jobPositionId,
+      professionalFieldId,
+      progressSort,
+      complianceStatus,
+    })
   }
 
   const resetFilters = () => {
     setKeyword('')
     setDepartmentId('')
+    setJobPositionId('')
     setProfessionalFieldId('')
+    setProgressSort('')
     setComplianceStatus('')
     setPage(1)
-    setAppliedFilters({ keyword: '', departmentId: '', professionalFieldId: '', complianceStatus: '' })
+    setAppliedFilters({
+      keyword: '', departmentId: '', jobPositionId: '', professionalFieldId: '', progressSort: '', complianceStatus: '',
+    })
   }
 
   return (
@@ -260,20 +291,18 @@ function TrainingEmployeeStatusListPage() {
               </div>
 
               <AppliedFilterToolbar
-                activeCount={[departmentId, professionalFieldId, complianceStatus].filter(Boolean).length}
+                activeCount={[!isManager && departmentId, jobPositionId, professionalFieldId, complianceStatus, progressSort].filter(Boolean).length}
                 actions={<div className="tes-toolbar-actions">
                     <div className="tes-total-label">{totalElements} nhân viên</div>
-                    {isAdmin && (
-                      <button
-                        className="tes-export-button"
-                        disabled={exporting || loading || totalElements === 0}
-                        onClick={handleExport}
-                        type="button"
-                      >
-                        {exporting ? <LoadingOutlined spin /> : <DownloadOutlined />}
-                        {exporting ? 'Đang xuất...' : 'Xuất kết quả'}
-                      </button>
-                    )}
+                    <button
+                      className="tes-export-button"
+                      disabled={exporting || loading || totalElements === 0}
+                      onClick={handleExport}
+                      type="button"
+                    >
+                      {exporting ? <LoadingOutlined spin /> : <DownloadOutlined />}
+                      {exporting ? 'Đang xuất...' : 'Xuất kết quả'}
+                    </button>
                   </div>}
                 className="tes-filter-bar"
                 isOpen={isFilterOpen}
@@ -288,23 +317,45 @@ function TrainingEmployeeStatusListPage() {
                 searchPlaceholder="Tìm theo tên/mã nhân viên..."
                 searchValue={keyword}
               >
-                <FilterSelectField
-                  ariaLabel="Khoa/phòng"
-                  className="tes-department-filter"
-                  label="Khoa/phòng"
-                  onChange={setDepartmentId}
-                  options={[
-                    { value: '', label: 'Tất cả khoa/phòng' },
-                    ...departments.map((department) => ({
-                      value: department.id,
-                      label: department.name,
-                      searchText: department.code,
-                    })),
-                  ]}
-                  placeholder="Tất cả khoa/phòng"
-                  searchPlaceholder="Gõ tên khoa/phòng..."
-                  value={departmentId}
-                />
+                {isManager ? (
+                  <label className="admin-control-toolbar__field tes-department-filter">
+                    <span>Khoa/phòng</span>
+                    <div className="tes-scope-value">Khoa của tôi</div>
+                  </label>
+                ) : (
+                  <FilterSelectField
+                    ariaLabel="Khoa/phòng"
+                    className="tes-department-filter"
+                    label="Khoa/phòng"
+                    onChange={setDepartmentId}
+                    options={[
+                      { value: '', label: 'Tất cả khoa/phòng' },
+                      ...departments.map((department) => ({
+                        value: department.id,
+                        label: department.name,
+                        searchText: department.code,
+                      })),
+                    ]}
+                    placeholder="Tất cả khoa/phòng"
+                    searchPlaceholder="Gõ tên khoa/phòng..."
+                    value={departmentId}
+                  />
+                )}
+                {positions.length > 0 && (
+                  <FilterSelectField
+                    ariaLabel="Chức danh"
+                    className="tes-filter-field"
+                    label="Chức danh"
+                    onChange={setJobPositionId}
+                    options={[
+                      { value: '', label: 'Tất cả chức danh' },
+                      ...positions.map((position) => ({ value: position.id, label: position.name })),
+                    ]}
+                    placeholder="Tất cả chức danh"
+                    searchPlaceholder="Gõ tên chức danh..."
+                    value={jobPositionId}
+                  />
+                )}
                 {professionalFields.length > 0 && (
                   <FilterSelectField
                     ariaLabel="Lĩnh vực chuyên môn"
@@ -338,6 +389,20 @@ function TrainingEmployeeStatusListPage() {
                   searchable={false}
                   value={complianceStatus}
                 />
+                <FilterSelectField
+                  ariaLabel="Sắp xếp theo tiến độ"
+                  className="tes-filter-field"
+                  label="Sắp xếp theo tiến độ"
+                  onChange={setProgressSort}
+                  options={[
+                    { value: '', label: 'Mặc định' },
+                    { value: 'asc', label: 'Tiến độ tăng dần' },
+                    { value: 'desc', label: 'Tiến độ giảm dần' },
+                  ]}
+                  placeholder="Mặc định"
+                  searchable={false}
+                  value={progressSort}
+                />
               </AppliedFilterToolbar>
 
               {exportError && <div className="tes-export-error" role="alert">{exportError}</div>}
@@ -357,6 +422,7 @@ function TrainingEmployeeStatusListPage() {
                         <tr>
                           <th className="tes-col-code">Mã NV</th>
                           <th className="tes-col-name">Họ và tên</th>
+                          <th className="tes-col-position">Chức danh</th>
                           <th className="tes-col-department">Khoa/Phòng</th>
                           <th className="tes-col-progress">Tiến độ</th>
                           <th className="tes-col-status">Trạng thái</th>
@@ -371,6 +437,7 @@ function TrainingEmployeeStatusListPage() {
                             <tr key={item.employeeId + '-' + idx}>
                               <td className="tes-col-code tes-td-code">{item.employeeCode}</td>
                               <td className="tes-col-name">{item.employeeName}</td>
+                              <td className="tes-col-position">{item.jobPositionName}</td>
                               <td className="tes-col-department">{item.departmentName}</td>
                               <td className="tes-col-progress">
                                 <div className="tes-progress-cell">

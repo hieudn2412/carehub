@@ -55,7 +55,6 @@ const IMPORT_MAPPING_FIELDS = [
   { key: 'correctAnswer', label: 'Đáp án đúng' },
   { key: 'cognitiveLevel', label: 'Mức độ nhận thức (bắt buộc)' },
   { key: 'explanation', label: 'Giải thích' },
-  { key: 'sourceDocument', label: 'Nguồn câu hỏi' },
 ]
 
 function mapBackendQuestion(question) {
@@ -593,10 +592,14 @@ function QuestionBankListPage() {
         </div>
       </AppShell>
       {isImportModalOpen && (
-        <div className="qbl-modal-backdrop">
-          <div className="qbl-modal qbl-modal--wide" role="dialog" aria-modal="true" aria-labelledby="import-question-bank-title">
-            <h2 id="import-question-bank-title">Import ngân hàng câu hỏi</h2>
-            <p className="qbl-modal-subtitle">Dùng mẫu Excel tiếng Việt để chọn danh mục cho từng dòng. File XLSX/XLS/CSV ngoài mẫu vẫn có thể mapping thủ công. Cột &quot;Mức độ nhận thức&quot; là bắt buộc; file không còn dùng cột &quot;Độ khó&quot;.</p>
+        <div className="qbl-modal-backdrop" onClick={closeImportModal}>
+          <div className="qbl-modal qbl-modal--wide" role="dialog" aria-modal="true" aria-labelledby="import-question-bank-title" onClick={(event) => event.stopPropagation()}>
+            <div className="qbl-modal-heading">
+              <h2 id="import-question-bank-title">Import ngân hàng câu hỏi</h2>
+              <button type="button" className="qbl-detail-close" onClick={closeImportModal} aria-label="Đóng cửa sổ import">
+                <CloseOutlined />
+              </button>
+            </div>
 
             <label className="qbl-field">
               <span>File import</span>
@@ -694,9 +697,6 @@ function QuestionBankListPage() {
               <button type="button" className="qbl-btn-secondary" onClick={downloadImportTemplate} disabled={isExporting || isImporting}>
                 {isExporting ? <LoadingOutlined /> : <DownloadOutlined />}
                 <span>Tải file mẫu</span>
-              </button>
-              <button type="button" className="qbl-btn-secondary" onClick={closeImportModal} disabled={isImporting}>
-                Đóng
               </button>
               <button type="button" className="qbl-btn-secondary" onClick={previewImport} disabled={isImporting || !importFile}>
                 {isImporting ? <LoadingOutlined /> : <UploadOutlined />}

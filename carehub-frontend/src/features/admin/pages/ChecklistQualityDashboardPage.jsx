@@ -148,7 +148,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
   const [page, setPage] = useState(0)
   const [size, setSize] = useState(10)
   const [processId, setProcessId] = useState(() => numericParam(searchParams.get('processId') || searchParams.get('formId')))
-  const [resultStatus, setResultStatus] = useState(() => searchParams.get('resultStatus') || searchParams.get('result') || '')
+  const [targetStatus, setTargetStatus] = useState(() => searchParams.get('targetStatus') || '')
   const [subjectUserId, setSubjectUserId] = useState(() => numericParam(searchParams.get('subjectUserId')))
   const [submittedByUserId, setSubmittedByUserId] = useState(() => numericParam(searchParams.get('submittedByUserId')))
   const [selectedFormId, setSelectedFormId] = useState(() => numericParam(searchParams.get('selectedFormId')))
@@ -170,10 +170,10 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
     departmentId,
     fromDate,
     processId,
-    resultStatus,
     search: search.trim(),
     submittedByUserId,
     subjectUserId,
+    targetStatus,
     toDate,
   })
 
@@ -223,7 +223,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
   const effectiveToDate = appliedRoleFilters.toDate
   const effectiveDepartmentId = isManager ? (ownDepartmentId || appliedRoleFilters.departmentId) : appliedRoleFilters.departmentId
   const effectiveProcessId = appliedRoleFilters.processId
-  const effectiveResultStatus = appliedRoleFilters.resultStatus
+  const effectiveTargetStatus = appliedRoleFilters.targetStatus
   const effectiveSubjectUserId = appliedRoleFilters.subjectUserId
   const effectiveSubmittedByUserId = appliedRoleFilters.submittedByUserId
 
@@ -233,12 +233,12 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
     effectiveToDate !== today,
     isAdmin && effectiveDepartmentId,
     effectiveProcessId,
-    effectiveResultStatus,
     effectiveSubjectUserId,
+    effectiveTargetStatus,
     !isUser && effectiveSubmittedByUserId,
   ].filter(Boolean).length, [
-    effectiveDepartmentId, effectiveFromDate, effectiveProcessId, effectiveResultStatus,
-    effectiveSearch, effectiveSubjectUserId, effectiveSubmittedByUserId, effectiveToDate, isAdmin, isUser,
+    effectiveDepartmentId, effectiveFromDate, effectiveProcessId, effectiveSearch,
+    effectiveSubjectUserId, effectiveSubmittedByUserId, effectiveTargetStatus, effectiveToDate, isAdmin, isUser,
   ])
   const view = activeFilterCount > 0 || forceFilteredView ? 'FILTERED' : 'LATEST'
 
@@ -249,18 +249,18 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
     toDate: effectiveToDate,
     departmentId: isAdmin ? effectiveDepartmentId || undefined : isManager ? ownDepartmentId || undefined : undefined,
     formId: effectiveProcessId || undefined,
-    resultStatus: effectiveResultStatus || undefined,
     subjectUserId: effectiveSubjectUserId || undefined,
     submittedByUserId: !isUser && effectiveSubmittedByUserId ? effectiveSubmittedByUserId : undefined,
+    targetStatus: effectiveTargetStatus || undefined,
   }), [
-    effectiveDepartmentId, effectiveFromDate, effectiveProcessId, effectiveResultStatus,
-    effectiveSearch, effectiveSubjectUserId, effectiveToDate, isAdmin, isManager,
+    effectiveDepartmentId, effectiveFromDate, effectiveProcessId, effectiveSearch,
+    effectiveSubjectUserId, effectiveTargetStatus, effectiveToDate, isAdmin, isManager,
     isUser, effectiveSubmittedByUserId, ownDepartmentId, view,
   ])
 
   useEffect(() => { setPage(0) }, [
-    effectiveDepartmentId, effectiveFromDate, effectiveProcessId, effectiveResultStatus,
-    effectiveSearch, effectiveSubjectUserId, effectiveSubmittedByUserId, effectiveToDate, view,
+    effectiveDepartmentId, effectiveFromDate, effectiveProcessId, effectiveSearch,
+    effectiveSubjectUserId, effectiveSubmittedByUserId, effectiveTargetStatus, effectiveToDate, view,
   ])
 
   useEffect(() => {
@@ -399,9 +399,9 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
     if (isAdmin) setDepartmentId('')
     if (isManager) setDepartmentId(ownDepartmentId)
     setProcessId('')
-    setResultStatus('')
     setSubjectUserId('')
     setSubmittedByUserId('')
+    setTargetStatus('')
     setFilteredSelectedFormId('')
     setForceFilteredView(true)
     setSelectedDetailForm(null)
@@ -414,10 +414,10 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
         departmentId: isAdmin ? '' : isManager ? ownDepartmentId : departmentId,
         fromDate: yearStart,
         processId: '',
-        resultStatus: '',
         search: '',
         submittedByUserId: '',
         subjectUserId: '',
+        targetStatus: '',
         toDate: today,
       })
     }
@@ -440,10 +440,10 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
       departmentId,
       fromDate,
       processId,
-      resultStatus,
       search: search.trim(),
       submittedByUserId,
       subjectUserId,
+      targetStatus,
       toDate,
     })
     setIsFilterOpen(false)
@@ -495,7 +495,6 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
       params.set('selectedFormId', item.formId)
       if (effectiveSearch) params.set('dashboardKeyword', effectiveSearch)
       if ((isAdmin || isManager) && effectiveDepartmentId) params.set('departmentId', effectiveDepartmentId)
-      if (effectiveResultStatus) params.set('result', effectiveResultStatus)
       if (effectiveSubjectUserId) params.set('subjectUserId', effectiveSubjectUserId)
       if (!isUser && effectiveSubmittedByUserId) params.set('submittedByUserId', effectiveSubmittedByUserId)
       navigate(`${basePath}/forms/${item.formId}/versions/${versionId}?${params.toString()}`)
@@ -537,16 +536,14 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
           showDescriptions={false}
         />
       </SelectFilter>}
-      <SelectFilter label="Kết quả" icon={<CheckCircleOutlined />}>
+      <SelectFilter label="Mục tiêu" icon={<CheckCircleOutlined />}>
         <SearchableSelect
-          value={resultStatus}
-          onChange={setResultStatus}
+          value={targetStatus}
+          onChange={setTargetStatus}
           options={[
-            { value: '', label: 'Tất cả kết quả' },
-            { value: 'PASSED', label: 'Đạt' },
-            { value: 'FAILED', label: 'Chưa đạt' },
-            { value: 'FAILED_SCORE', label: 'Chưa đạt điểm sàn' },
-            { value: 'FAILED_CRITICAL', label: 'Không đạt câu trọng yếu' }
+            { value: '', label: 'Tất cả mục tiêu' },
+            { value: 'MET', label: 'Đạt mục tiêu' },
+            { value: 'NOT_MET', label: 'Chưa đạt mục tiêu' },
           ]}
           searchable={false}
           showDescriptions={false}
@@ -686,7 +683,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
               {detailForm.monitoringCount > 0 ? (
                 <span
                   className={`checklist-quality-detail__rate ${
-                    Number(detailForm.complianceRate) >= Number(detailForm.targetPercent ?? 80)
+                    Number(detailForm.complianceRate) > Number(detailForm.targetPercent ?? 80)
                       ? 'checklist-quality-detail__rate--pass'
                       : 'checklist-quality-detail__rate--fail'
                   }`}

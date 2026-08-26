@@ -16,12 +16,12 @@ app:
     # default prevents an ordinary IDE run from mutating a database or starting
     # background work unexpectedly.
     seed-enabled: ${APP_NOTIFICATION_SEED_ENABLED:false}
-    scheduling-enabled: ${APP_NOTIFICATION_SCHEDULING_ENABLED:false}
+    scheduling-enabled: ${APP_NOTIFICATION_SCHEDULING_ENABLED:true}
     # The legacy constraint fixer performs ALTER TABLE at startup. It is only
     # needed when the notification schema/seed worker is explicitly enabled.
     schema-fix-enabled: ${APP_NOTIFICATION_SCHEMA_FIX_ENABLED:false}
     rabbit-listener-enabled: ${RABBITMQ_LISTENER_ENABLED:false}
-    scan-cron: ${APP_NOTIFICATION_SCAN_CRON:0 0 7 * * *}
+    scan-cron: ${APP_NOTIFICATION_SCAN_CRON:0 30 8 * * *}
     zone: ${APP_NOTIFICATION_ZONE:Asia/Bangkok}
 
   exam:

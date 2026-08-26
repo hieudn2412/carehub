@@ -132,10 +132,10 @@ class QuestionBankImportExportServiceTest {
     }
 
     @Test
-    void previewVietnameseHeadersResolvesByStableCodeAndDefaultsSourceToFilename() {
+    void previewVietnameseHeadersResolvesByStableCodeAndDefaultsSourceToImport() {
         MockMultipartFile file = csv("""
-                Danh mục kiến thức,Nội dung câu hỏi,Phương án A,Phương án B,Phương án C,Phương án D,Đáp án đúng,Độ khó,Giải thích,Nguồn câu hỏi
-                [DM_01] Tên cũ,Ai cần báo bác sĩ?,A,B,C,D,A,Trung bình,,
+                Danh mục kiến thức,Nội dung câu hỏi,Phương án A,Phương án B,Phương án C,Phương án D,Đáp án đúng,Mức độ nhận thức,Giải thích
+                [DM_01] Tên cũ,Ai cần báo bác sĩ?,A,B,C,D,A,Áp dụng lâm sàng,
                 """);
 
         var preview = service.preview(file, "admin");
@@ -145,7 +145,7 @@ class QuestionBankImportExportServiceTest {
         assertThat(preview.rows().get(0).categoryName()).isEqualTo("Chủ đề");
         assertThat(preview.rows().get(0).professionalFieldCode()).isNull();
         assertThat(preview.rows().get(0).cognitiveLevel()).isEqualTo("CLINICAL_APPLICATION");
-        assertThat(preview.rows().get(0).sourceDocument()).isEqualTo("questions.csv");
+        assertThat(preview.rows().get(0).sourceDocument()).isEqualTo("Import");
     }
 
     @Test
@@ -258,14 +258,15 @@ class QuestionBankImportExportServiceTest {
 
         try (XSSFWorkbook workbook = new XSSFWorkbook(new ByteArrayInputStream(body))) {
             assertThat(workbook.getNumberOfSheets()).isEqualTo(3);
-            assertThat(workbook.getSheet("Câu hỏi").getRow(0).getPhysicalNumberOfCells()).isEqualTo(11);
+            assertThat(workbook.getSheet("Câu hỏi").getRow(0).getPhysicalNumberOfCells()).isEqualTo(10);
             assertThat(workbook.getSheet("Câu hỏi").getRow(0).getCell(0).getStringCellValue()).isEqualTo("Danh mục kiến thức");
             assertThat(workbook.getSheet("Câu hỏi").getRow(0).getCell(1).getStringCellValue()).isEqualTo("Lĩnh vực chuyên môn");
             assertThat(workbook.getSheet("Câu hỏi").getRow(0).getCell(7).getStringCellValue()).isEqualTo("Đáp án đúng");
+            assertThat(workbook.getSheet("Câu hỏi").getRow(0).getCell(9).getStringCellValue()).isEqualTo("Giải thích");
             assertThat((Object) workbook.getSheet("Câu hỏi").getRow(1)).isNull();
             assertThat(workbook.getSheet("Danh mục tham chiếu").getRow(1).getCell(0).getStringCellValue()).contains("[DM_01]");
             assertThat(workbook.getSheet("Hướng dẫn").getRow(0).getCell(0).getStringCellValue()).contains("cột bắt buộc");
-            assertThat(workbook.getSheet("Câu hỏi").getDataValidations()).hasSize(5);
+            assertThat(workbook.getSheet("Câu hỏi").getDataValidations()).hasSize(4);
         }
     }
 

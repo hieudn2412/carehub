@@ -61,8 +61,6 @@ class FormHistoryAccessPolicyTest {
         when(securityUtils.getCurrentUserId()).thenReturn(2L);
         when(userRepository.findByIdAndIsDeletedFalse(2L)).thenReturn(Optional.of(manager));
         when(assignmentItemRepository.existsEverAssignedToManager(2L, 18L)).thenReturn(true);
-        lenient().when(assignmentItemRepository.findActiveAllowedDepartmentIds(
-                anyLong(), anyLong(), any(), any(), any(), any())).thenReturn(List.of(7L));
 
         var service = policy();
         var scope = service.requireHistoryScope();
@@ -70,12 +68,15 @@ class FormHistoryAccessPolicyTest {
         assertFalse(scope.admin());
         assertEquals(7L, scope.departmentId());
         assertEquals(7L, service.resolveDepartmentScope(99L));
+        assertEquals(List.of(7L), service.resolveDepartmentScope(18L, 99L).departmentIds());
         assertDoesNotThrow(() -> service.requireFormAccess(18L));
         assertThrows(ResourceNotFoundException.class, () -> service.requireFormAccess(19L));
+        verify(assignmentItemRepository, never()).findActiveAllowedDepartmentIds(
+                anyLong(), anyLong(), any(), any(), any(), any());
     }
 
     @Test
-    void managerReadsOnlySubmittedResultsFromOwnDepartment() {
+    void managerStillReadsSubmittedResultsFromOwnDepartmentAfterScoringPermissionIsRevoked() {
         authenticate("ROLE_MANAGER");
         Department ownDepartment = Department.builder().id(7L).name("Khoa Nội").build();
         User manager = User.builder().id(2L).name("Manager").department(ownDepartment).build();
@@ -90,12 +91,11 @@ class FormHistoryAccessPolicyTest {
         submission.setSubjectContext(FormSubmissionContext.builder().submission(submission).subjectUser(subject).build());
         when(securityUtils.getCurrentUserId()).thenReturn(2L);
         when(userRepository.findByIdAndIsDeletedFalse(2L)).thenReturn(Optional.of(manager));
-        when(assignmentItemRepository.existsEverAssignedToManager(2L, 18L)).thenReturn(true);
-        when(assignmentItemRepository.findActiveAllowedDepartmentIds(
-                anyLong(), anyLong(), any(), any(), any(), any())).thenReturn(List.of(7L));
 
         var service = policy();
         assertTrue(service.managerCanRead(submission));
+        verify(assignmentItemRepository, never()).findActiveAllowedDepartmentIds(
+                anyLong(), anyLong(), any(), any(), any(), any());
 
         submission.setStatus(FormSubmissionStatus.DRAFT);
         assertFalse(service.managerCanRead(submission));

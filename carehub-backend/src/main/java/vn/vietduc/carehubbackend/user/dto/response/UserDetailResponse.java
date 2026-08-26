@@ -24,6 +24,7 @@ public record UserDetailResponse(
         Boolean gender,
         List<Role> roles,
         UserStatus status,
+        Boolean deleted,
         LocalDateTime lastLogin,
         LocalDateTime lastChangePassword,
         LocalDateTime createdAt,

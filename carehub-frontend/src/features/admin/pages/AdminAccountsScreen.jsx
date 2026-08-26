@@ -20,7 +20,8 @@ import {
   UnlockOutlined,
   DeleteOutlined,
   KeyOutlined,
-  DownloadOutlined
+  DownloadOutlined,
+  RollbackOutlined
 } from '@ant-design/icons'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { formatRoleLabel, formatRoleLabels } from '../../../shared/utils/roleLabels.js'
@@ -82,12 +83,14 @@ function AdminAccountsScreen() {
   const [deptFilter, setDeptFilter] = useState('all')
   const [roleFilter, setRoleFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [deletedFilter, setDeletedFilter] = useState('active')
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [appliedFilters, setAppliedFilters] = useState({
     search: '',
     departmentId: 'all',
     roleId: 'all',
     status: 'all',
+    deleted: 'active',
   })
 
   // Selected User Detail Modal State
@@ -139,6 +142,41 @@ function AdminAccountsScreen() {
   const goToDepartmentReference = () => {
     setIsFormModalOpen(false)
     navigate('/admin/reference/departments')
+  }
+
+  const todayDate = new Date()
+  const maxDate = new Date(todayDate.getFullYear() - 18, todayDate.getMonth(), todayDate.getDate()).toISOString().slice(0, 10)
+  const minDate = new Date(todayDate.getFullYear() - 100, todayDate.getMonth(), todayDate.getDate()).toISOString().slice(0, 10)
+
+  const handlePhoneChange = (event) => {
+    let inputVal = event.target.value
+
+    if (!inputVal) {
+      setFormPhone('')
+      return
+    }
+
+    let cleaned = inputVal.replace(/[^\d+]/g, '')
+
+    if (cleaned.startsWith('0')) {
+      cleaned = '+84' + cleaned.substring(1)
+    } else if (cleaned.length > 0 && /^[1-9]/.test(cleaned)) {
+      if (cleaned.startsWith('84')) {
+        cleaned = '+' + cleaned
+      } else {
+        cleaned = '+84' + cleaned
+      }
+    }
+
+    if (cleaned.startsWith('+840')) {
+      cleaned = '+84' + cleaned.substring(4)
+    }
+
+    if (cleaned.length > 12) {
+      cleaned = cleaned.substring(0, 12)
+    }
+
+    setFormPhone(cleaned)
   }
 
   // Load static reference data on mount
@@ -197,6 +235,7 @@ function AdminAccountsScreen() {
       departmentId: appliedFilters.departmentId !== 'all' ? appliedFilters.departmentId : undefined,
       roleId: appliedFilters.roleId !== 'all' ? appliedFilters.roleId : undefined,
       status: appliedFilters.status !== 'all' ? appliedFilters.status : undefined,
+      deleted: appliedFilters.deleted === 'deleted' ? true : undefined,
     }
 
     adminApi.getUsers(params)
@@ -310,7 +349,8 @@ function AdminAccountsScreen() {
     const empCode = formEmpCode.trim()
     const fullName = formFullName.trim()
     const email = formEmail.trim()
-    const phone = formPhone.trim()
+    const phoneRaw = formPhone.trim()
+    const phone = phoneRaw === '+84' ? '' : phoneRaw
 
     // 1. Check required fields
     if (!empCode || !fullName || !email || !formDeptId) {
@@ -340,9 +380,8 @@ function AdminAccountsScreen() {
 
     // 5. Validate Phone format if entered
     if (phone) {
-      const phoneRegex = /^[0-9]{10,11}$/
-      if (!phoneRegex.test(phone)) {
-        showToast('Số điện thoại không hợp lệ. Vui lòng nhập từ 10 đến 11 chữ số.', 'warning')
+      if (phone.length !== 12) {
+        showToast('Số điện thoại không hợp lệ. Vui lòng nhập đủ 10 số.', 'warning')
         return
       }
     }
@@ -351,9 +390,13 @@ function AdminAccountsScreen() {
     if (formBirthday) {
       const selectedDate = new Date(formBirthday)
       const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      if (selectedDate > today) {
-        showToast('Ngày sinh không thể lớn hơn ngày hiện tại.', 'warning')
+      let age = today.getFullYear() - selectedDate.getFullYear()
+      const m = today.getMonth() - selectedDate.getMonth()
+      if (m < 0 || (m === 0 && today.getDate() < selectedDate.getDate())) {
+        age--
+      }
+      if (age < 18 || age > 100) {
+        showToast('Độ tuổi không hợp lệ. Nhân viên phải từ 18 đến 100 tuổi.', 'warning')
         return
       }
     }
@@ -461,12 +504,12 @@ function AdminAccountsScreen() {
   const handleDeleteUser = (userId) => {
     setConfirmModal({
       isOpen: true,
-      title: 'Xóa tài khoản',
-      message: 'CẢNH BÁO: Bạn có chắc chắn muốn xóa vĩnh viễn tài khoản này? Thao tác này không thể hoàn tác.',
+      title: 'Ngừng sử dụng tài khoản',
+      message: 'Bạn có chắc chắn muốn ngừng sử dụng tài khoản này? Người dùng sẽ không thể đăng nhập, nhưng dữ liệu lịch sử vẫn được giữ lại.',
       onConfirm: () => {
         adminApi.deleteUser(userId)
           .then(() => {
-            showToast('Đã xóa tài khoản thành công.', 'success')
+            showToast('Đã ngừng sử dụng tài khoản thành công.', 'success')
             setSelectedUserId(null)
             loadUsers()
           })
@@ -537,6 +580,7 @@ function AdminAccountsScreen() {
       departmentId: appliedFilters.departmentId !== 'all' ? appliedFilters.departmentId : undefined,
       roleId: appliedFilters.roleId !== 'all' ? appliedFilters.roleId : undefined,
       status: appliedFilters.status !== 'all' ? appliedFilters.status : undefined,
+      deleted: appliedFilters.deleted === 'deleted' ? true : undefined,
     }
 
     adminApi.exportUsers(params)
@@ -553,7 +597,7 @@ function AdminAccountsScreen() {
           u.fullName || '',
           getDeptName(u.departmentId),
           formatRoleLabels(getVisibleRoles(u.roles), 'Chưa cấu hình'),
-          u.status === 'ACTIVE' ? 'Hoạt động' : (u.status === 'LOCKED' ? 'Đã khoá' : 'Ngưng hoạt động')
+          u.deleted ? 'Đã ngừng sử dụng' : (u.status === 'ACTIVE' ? 'Hoạt động' : (u.status === 'LOCKED' ? 'Đã khoá' : 'Ngưng hoạt động'))
         ])
 
         const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(e => e.map(val => `"${val.replace(/"/g, '""')}"`).join(','))].join('\n')
@@ -580,6 +624,29 @@ function AdminAccountsScreen() {
       departmentId: deptFilter,
       roleId: roleFilter,
       status: statusFilter,
+      deleted: deletedFilter,
+    })
+  }
+
+  const handleRestoreUser = (userId) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Khôi phục tài khoản',
+      message: 'Khôi phục tài khoản này? Tài khoản sẽ hoạt động trở lại với mã nhân viên và email cũ.',
+      onConfirm: () => {
+        adminApi.restoreUser(userId)
+          .then(() => {
+            showToast('Đã khôi phục tài khoản thành công.', 'success')
+            setSelectedUserId(null)
+            setDeletedFilter('active')
+            setAppliedFilters((current) => ({ ...current, deleted: 'active' }))
+            setPage(1)
+          })
+          .catch(err => {
+            console.error(err)
+            showToast(err.response?.data?.message || 'Không thể khôi phục tài khoản.', 'error')
+          })
+      }
     })
   }
 
@@ -588,8 +655,9 @@ function AdminAccountsScreen() {
     setDeptFilter('all')
     setRoleFilter('all')
     setStatusFilter('all')
+    setDeletedFilter('active')
     setPage(1)
-    setAppliedFilters({ search: '', departmentId: 'all', roleId: 'all', status: 'all' })
+    setAppliedFilters({ search: '', departmentId: 'all', roleId: 'all', status: 'all', deleted: 'active' })
   }
 
   // Render Pill badges for roles
@@ -617,7 +685,15 @@ function AdminAccountsScreen() {
   }
 
   // Render status badge with colored dot
-  const renderStatus = (status) => {
+  const renderStatus = (status, deleted = false) => {
+    if (deleted) {
+      return (
+        <span className="am-badge am-badge--status-deleted">
+          <span className="am-badge__dot" />
+          Đã ngừng sử dụng
+        </span>
+      )
+    }
     let mod = 'inactive'
     let label = 'Ngưng hoạt động'
     if (status === 'ACTIVE') {
@@ -665,7 +741,7 @@ function AdminAccountsScreen() {
 
               {/* Filters Block */}
               <AppliedFilterToolbar
-                activeCount={[deptFilter !== 'all', roleFilter !== 'all', statusFilter !== 'all'].filter(Boolean).length}
+                activeCount={[deptFilter !== 'all', roleFilter !== 'all', statusFilter !== 'all', deletedFilter !== 'active'].filter(Boolean).length}
                 actions={<div className="am-toolbar-actions">
                     <span className="am-results-count">{totalElements} kết quả</span>
                     <button className="am-btn-primary" onClick={handleOpenCreateModal}>
@@ -736,6 +812,17 @@ function AdminAccountsScreen() {
                       options={[{ value: 'all', label: 'Tất cả trạng thái' }, { value: 'ACTIVE', label: 'Hoạt động' }, { value: 'INACTIVE', label: 'Ngưng hoạt động' }, { value: 'LOCKED', label: 'Đã khoá' }]}
                       placeholder="Tất cả trạng thái"
                     />
+                    <FilterSelectField
+                      className="am-filter-field"
+                      label="Loại tài khoản"
+                      value={deletedFilter}
+                      onChange={setDeletedFilter}
+                      options={[
+                        { value: 'active', label: 'Đang sử dụng' },
+                        { value: 'deleted', label: 'Đã ngừng sử dụng' },
+                      ]}
+                      placeholder="Đang sử dụng"
+                    />
               </AppliedFilterToolbar>
 
               {/* Table Card */}
@@ -771,7 +858,7 @@ function AdminAccountsScreen() {
                           <td><strong>{u.fullName || 'Chưa đặt tên'}</strong></td>
                           <td>{getDeptName(u.departmentId)}</td>
                           <td>{renderRoles(u.roles)}</td>
-                          <td>{renderStatus(u.status)}</td>
+                          <td>{renderStatus(u.status, u.deleted)}</td>
                           <td>
                             <button
                               aria-label={`Xem chi tiết tài khoản ${u.employeeCode || u.username || u.id}`}
@@ -912,7 +999,7 @@ function AdminAccountsScreen() {
                     <div className="am-detail-item">
                       <span className="am-detail-label">Trạng thái</span>
                       <span className="am-detail-value">
-                        {renderStatus(selectedUserDetail.status)}
+                        {renderStatus(selectedUserDetail.status, selectedUserDetail.deleted)}
                       </span>
                     </div>
 
@@ -929,24 +1016,32 @@ function AdminAccountsScreen() {
 
                   {/* Admin Actions Block */}
                   <div className="am-detail-actions">
-                    <button className="am-btn-secondary am-btn-sm" onClick={() => handleOpenEditModal(selectedUserDetail.id)}>
-                      <EditOutlined /> Sửa thông tin
-                    </button>
-                    {selectedUserDetail.status === 'LOCKED' ? (
-                      <button className="am-btn-secondary am-btn-sm" onClick={() => handleUnlockUser(selectedUserDetail.id)}>
-                        <UnlockOutlined /> Mở khoá
+                    {selectedUserDetail.deleted ? (
+                      <button className="am-btn-secondary am-btn-sm" onClick={() => handleRestoreUser(selectedUserDetail.id)}>
+                        <RollbackOutlined /> Khôi phục tài khoản
                       </button>
                     ) : (
-                      <button className="am-btn-secondary am-btn-sm" onClick={() => handleLockUser(selectedUserDetail.id)}>
-                        <LockOutlined /> Khoá tài khoản
-                      </button>
+                      <>
+                        <button className="am-btn-secondary am-btn-sm" onClick={() => handleOpenEditModal(selectedUserDetail.id)}>
+                          <EditOutlined /> Sửa thông tin
+                        </button>
+                        {selectedUserDetail.status === 'LOCKED' ? (
+                          <button className="am-btn-secondary am-btn-sm" onClick={() => handleUnlockUser(selectedUserDetail.id)}>
+                            <UnlockOutlined /> Mở khoá
+                          </button>
+                        ) : (
+                          <button className="am-btn-secondary am-btn-sm" onClick={() => handleLockUser(selectedUserDetail.id)}>
+                            <LockOutlined /> Khoá tài khoản
+                          </button>
+                        )}
+                        <button className="am-btn-secondary am-btn-sm" onClick={() => handleResetPassword(selectedUserDetail.id)}>
+                          <KeyOutlined /> Đổi mật khẩu tự động
+                        </button>
+                        <button className="am-modal-btn am-btn-sm" style={{ background: '#fef2f2', color: '#b91c1c', borderColor: '#fca5a5' }} onClick={() => handleDeleteUser(selectedUserDetail.id)}>
+                          <DeleteOutlined /> Ngừng sử dụng
+                        </button>
+                      </>
                     )}
-                    <button className="am-btn-secondary am-btn-sm" onClick={() => handleResetPassword(selectedUserDetail.id)}>
-                      <KeyOutlined /> Đổi mật khẩu tự động
-                    </button>
-                    <button className="am-modal-btn am-btn-sm" style={{ background: '#fef2f2', color: '#b91c1c', borderColor: '#fca5a5' }} onClick={() => handleDeleteUser(selectedUserDetail.id)}>
-                      <DeleteOutlined /> Xoá tài khoản
-                    </button>
                   </div>
 
                   {newGeneratedPassword && (
@@ -998,6 +1093,7 @@ function AdminAccountsScreen() {
                       value={formEmpCode}
                       onChange={(e) => setFormEmpCode(e.target.value)}
                       placeholder="VD: NV-00042"
+                      disabled={Boolean(editingUser)}
                       required
                     />
                   </div>
@@ -1031,9 +1127,10 @@ function AdminAccountsScreen() {
                     <input
                       type="text"
                       className="am-form-input"
+                      maxLength={12}
                       value={formPhone}
-                      onChange={(e) => setFormPhone(e.target.value)}
-                      placeholder="Nhập số điện thoại..."
+                      onChange={handlePhoneChange}
+                      placeholder="+84"
                     />
                   </div>
 
@@ -1087,6 +1184,8 @@ function AdminAccountsScreen() {
                         <label className="am-form-label">Ngày sinh</label>
                         <KeyboardDatePicker
                           className="am-form-input"
+                          min={minDate}
+                          max={maxDate}
                           value={formBirthday}
                           onChange={(val) => setFormBirthday(val)}
                         />

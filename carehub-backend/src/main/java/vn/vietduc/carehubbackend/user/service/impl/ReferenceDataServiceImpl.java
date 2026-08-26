@@ -98,7 +98,7 @@ public class ReferenceDataServiceImpl implements ReferenceDataService {
     public void deleteDepartment(Long id) {
         Department department = findDepartment(id);
         if (userRepository.existsByDepartment_IdAndIsDeletedFalse(id)) {
-            throw new BadRequestException("Cannot delete department assigned to users");
+            throw new BadRequestException("Không thể xóa phòng ban đang có nhân viên");
         }
         departmentRepository.delete(department);
     }
@@ -121,7 +121,7 @@ public class ReferenceDataServiceImpl implements ReferenceDataService {
     @Transactional
     public PositionResponse createPosition(PositionRequest request) {
         if (positionRepository.existsByName(request.getName())) {
-            throw new ConflictException("Position name already exists");
+            throw new ConflictException("Tên chức vụ đã tồn tại");
         }
 
         Position position = Position.builder()
@@ -136,7 +136,7 @@ public class ReferenceDataServiceImpl implements ReferenceDataService {
     public PositionResponse updatePosition(Long id, PositionRequest request) {
         Position position = findPosition(id);
         if (positionRepository.existsByNameAndIdNot(request.getName(), id)) {
-            throw new ConflictException("Position name already exists");
+            throw new ConflictException("Tên chức vụ đã tồn tại");
         }
 
         position.setName(request.getName().trim());
@@ -148,7 +148,7 @@ public class ReferenceDataServiceImpl implements ReferenceDataService {
     public void deletePosition(Long id) {
         Position position = findPosition(id);
         if (userRepository.existsByPosition_IdAndIsDeletedFalse(id)) {
-            throw new BadRequestException("Cannot delete position assigned to users");
+            throw new BadRequestException("Không thể xóa chức vụ đang được gán cho nhân viên");
         }
         positionRepository.delete(position);
     }
@@ -171,7 +171,7 @@ public class ReferenceDataServiceImpl implements ReferenceDataService {
     @Transactional
     public EducationLevelResponse createEducationLevel(EducationLevelRequest request) {
         if (educationLevelRepository.existsByEducationCode(request.getEducationCode())) {
-            throw new ConflictException("Education code already exists");
+            throw new ConflictException("Mã trình độ học vấn đã tồn tại");
         }
 
         EducationLevel educationLevel = EducationLevel.builder()
@@ -187,7 +187,7 @@ public class ReferenceDataServiceImpl implements ReferenceDataService {
     public EducationLevelResponse updateEducationLevel(Long id, EducationLevelRequest request) {
         EducationLevel educationLevel = findEducationLevel(id);
         if (educationLevelRepository.existsByEducationCodeAndIdNot(request.getEducationCode(), id)) {
-            throw new ConflictException("Education code already exists");
+            throw new ConflictException("Mã trình độ học vấn đã tồn tại");
         }
 
         educationLevel.setEducationCode(request.getEducationCode().trim());
@@ -200,7 +200,7 @@ public class ReferenceDataServiceImpl implements ReferenceDataService {
     public void deleteEducationLevel(Long id) {
         EducationLevel educationLevel = findEducationLevel(id);
         if (userRepository.existsByEducationLevel_IdAndIsDeletedFalse(id)) {
-            throw new BadRequestException("Cannot delete education level assigned to users");
+            throw new BadRequestException("Không thể xóa trình độ học vấn đang được gán cho nhân viên");
         }
         educationLevelRepository.delete(educationLevel);
     }

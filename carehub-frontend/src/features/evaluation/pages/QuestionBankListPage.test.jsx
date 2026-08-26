@@ -689,7 +689,7 @@ describe('QuestionBankListPage - import câu hỏi', () => {
     fireEvent.click(screen.getByRole('button', { name: /Xem trước/ }))
     await screen.findByText('Hợp lệ')
 
-    fireEvent.click(screen.getByRole('button', { name: 'Đóng' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Đóng cửa sổ import' }))
     expect(screen.queryByText('Import ngân hàng câu hỏi')).not.toBeInTheDocument()
 
     openImport()
@@ -705,7 +705,9 @@ describe('QuestionBankListPage - import câu hỏi', () => {
     pickFile()
     fireEvent.click(screen.getByRole('button', { name: /Xem trước/ }))
 
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Đóng' })).toBeDisabled())
+    await waitFor(() => expect(screen.getByRole('button', { name: /Xem trước/ })).toBeDisabled())
+    expect(screen.getByRole('button', { name: /Nhập các dòng đã preview/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Đóng cửa sổ import' })).toBeEnabled()
     await act(async () => {
       resolvePreview({ data: { data: { totalRows: 0, rows: [], sourceHeaders: [] } } })
     })
@@ -720,5 +722,20 @@ describe('QuestionBankListPage - import câu hỏi', () => {
 
     await screen.findByText('Tổng dòng: 0')
     expect(screen.getByRole('button', { name: /Nhập các dòng đã preview/ })).toBeDisabled()
+  })
+
+  it('đóng cửa sổ import khi bấm ra ngoài', async () => {
+    render(<MemoryRouter><QuestionBankListPage /></MemoryRouter>)
+
+    await screen.findByText('Câu hỏi đang hoạt động')
+    fireEvent.click(screen.getByRole('button', { name: 'Nhập dữ liệu câu hỏi' }))
+
+    const dialog = screen.getByRole('dialog', { name: 'Import ngân hàng câu hỏi' })
+    expect(screen.queryByText(/Dùng mẫu Excel tiếng Việt/)).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Đóng cửa sổ import' })).toBeInTheDocument()
+
+    fireEvent.click(dialog.parentElement)
+
+    expect(screen.queryByRole('dialog', { name: 'Import ngân hàng câu hỏi' })).not.toBeInTheDocument()
   })
 })

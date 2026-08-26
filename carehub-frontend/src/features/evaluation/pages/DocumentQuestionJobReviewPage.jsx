@@ -38,6 +38,11 @@ import {
 import '../styles/QuestionDocumentPages.css'
 
 const LIVE_JOB_STATUSES = new Set(['CREATED', 'GENERATING'])
+const COGNITIVE_MIX_FIELDS = [
+  { key: 'cognitiveMixFoundation', level: 'FOUNDATION', label: 'Kiến thức nền tảng' },
+  { key: 'cognitiveMixApplication', level: 'CLINICAL_APPLICATION', label: 'Áp dụng lâm sàng' },
+  { key: 'cognitiveMixReasoning', level: 'CLINICAL_REASONING_ANALYSIS', label: 'Tư duy phân tích' },
+]
 
 function DocumentQuestionJobReviewPage() {
   const { jobId } = useParams()
@@ -133,7 +138,7 @@ function DocumentQuestionJobReviewPage() {
     .map((candidate) => candidate.id)
   // Duyệt và lưu đã gộp làm một nên lưu được thẳng, chỉ trừ câu đã từ chối / đã lưu.
   const selectedSavableIds = selectedCandidates
-    .filter((candidate) => !['REJECTED', 'SAVED'].includes(candidate.status) && !hasStrongDuplicate(candidate))
+    .filter((candidate) => !['REJECTED', 'SAVED'].includes(candidate.status))
     .map((candidate) => candidate.id)
   const handleApplyFilters = () => {
     setIsFilterOpen(false)
@@ -153,6 +158,22 @@ function DocumentQuestionJobReviewPage() {
   const candidatesMissingTaxonomy = candidates.filter((candidate) => (
     !candidate.categoryId || !candidate.professionalFieldId || !candidate.cognitiveLevel
   ))
+  const cognitiveMixSummary = useMemo(() => {
+    const configured = COGNITIVE_MIX_FIELDS.map((field) => ({
+      ...field,
+      target: jobDetail?.[field.key] == null ? null : Number(jobDetail[field.key]),
+    }))
+    if (configured.some((field) => field.target == null || !Number.isFinite(field.target))) return null
+    return configured.map((field) => {
+      const actualCount = candidates.filter((candidate) => candidate.cognitiveLevel === field.level).length
+      const actualPercentage = candidates.length ? Number((actualCount * 100 / candidates.length).toFixed(1)) : 0
+      return { ...field, actualCount, actualPercentage }
+    })
+  }, [candidates, jobDetail])
+  const cognitiveMixMatches = cognitiveMixSummary?.every((field) => {
+    const expectedCount = field.target * candidates.length / 100
+    return Math.abs(field.actualCount - expectedCount) < 1
+  })
 
   async function retryFailedChunks() {
     setIsRetrying(true)
@@ -176,7 +197,7 @@ function DocumentQuestionJobReviewPage() {
     try {
       const response = await documentQuestionApi.cancelQuestionJob(jobId)
       setJobDetail(apiData(response))
-      showToast('Đã hủy phiên tạo câu hỏi.', 'success')
+      showToast('Đã dừng tạo câu hỏi.', 'success')
     } catch (error) {
       showToast(apiErrorMessage(error), 'error')
     }
@@ -367,7 +388,7 @@ function DocumentQuestionJobReviewPage() {
   const breadcrumbs = [
     { label: 'Đánh giá' },
     { label: 'Tạo câu hỏi từ tài liệu', link: '/admin/evaluation/question-documents' },
-    { label: 'Review phiên tạo' },
+    { label: 'Duyệt câu hỏi từ tài liệu' },
   ]
 
   return (
@@ -378,10 +399,10 @@ function DocumentQuestionJobReviewPage() {
     >
       <div className="qdoc-page">
               {isLoading ? (
-                <section className="qdoc-panel qdoc-loading-panel">Đang tải phiên tạo câu hỏi...</section>
+                <section className="qdoc-panel qdoc-loading-panel">Đang tải câu hỏi từ tài liệu...</section>
               ) : !jobDetail ? (
                 <section className="qdoc-panel qdoc-loading-panel">
-                  <p>{loadError || 'Không tìm thấy phiên tạo câu hỏi.'}</p>
+                  <p>{loadError || 'Không tìm thấy dữ liệu tạo câu hỏi.'}</p>
                   <button type="button" className="qdoc-primary-btn" onClick={() => loadJob()}>
                     <ReloadOutlined />
                     <span>Thử tải lại</span>
@@ -393,7 +414,7 @@ function DocumentQuestionJobReviewPage() {
                     <div className="qdoc-detail-heading">
                       <FileBadge />
                       <div>
-                        <h1>Review phiên tạo câu hỏi #{jobDetail.id}</h1>
+                        <h1>Duyệt câu hỏi từ tài liệu #{jobDetail.id}</h1>
                         <div className="qdoc-detail-meta">
                           <span className={`qdoc-badge qdoc-badge--${statusTone(jobDetail.status)}`}>
                             {jobStatusText(jobDetail)}
@@ -406,7 +427,7 @@ function DocumentQuestionJobReviewPage() {
                       {LIVE_JOB_STATUSES.has(jobDetail.status) && (
                         <button type="button" className="qdoc-secondary-btn qdoc-secondary-btn--danger" onClick={cancelJob}>
                           <StopOutlined />
-                          <span>Hủy phiên</span>
+                          <span>Dừng tạo câu hỏi</span>
                         </button>
                       )}
                     </div>
@@ -418,10 +439,36 @@ function DocumentQuestionJobReviewPage() {
                     <Metric label="Đã lưu vào ngân hàng" value={formatNumber(candidates.filter(c => c.status === 'SAVED').length)} />
                   </section>
 
+                  {cognitiveMixSummary && (
+                    <section className="qdoc-cognitive-review" aria-label="Đối chiếu tỷ lệ mức độ nhận thức">
+                      <div className="qdoc-cognitive-review__header">
+                        <div>
+                          <span className="qdoc-cognitive-review__eyebrow">ĐỐI CHIẾU CẤU HÌNH BAN ĐẦU</span>
+                          <h2>Tỷ lệ mức độ nhận thức</h2>
+                        </div>
+                        <span>{candidates.length} câu đã sinh</span>
+                      </div>
+                      <div className="qdoc-cognitive-review__grid">
+                        {cognitiveMixSummary.map((field) => (
+                          <div className="qdoc-cognitive-review__item" key={field.level}>
+                            <strong>{field.label}</strong>
+                            <span>Mục tiêu {field.target}%</span>
+                            <b>{field.actualCount} câu · {field.actualPercentage}%</b>
+                          </div>
+                        ))}
+                      </div>
+                      {!cognitiveMixMatches && (
+                        <p className="qdoc-cognitive-review__warning">
+                          Tỷ lệ thực tế đang lệch cấu hình ban đầu. Hệ thống phân bổ mục tiêu theo từng đoạn nội dung; đoạn lỗi hoặc câu không đủ dữ kiện có thể làm tỷ lệ thực tế thay đổi.
+                        </p>
+                      )}
+                    </section>
+                  )}
+
                   {LIVE_JOB_STATUSES.has(jobDetail.status) && (
                     <section className="qdoc-alert qdoc-alert--info">
                       <LoadingOutlined />
-                      <span>Phiên tạo câu hỏi đang xử lý nền. Trang sẽ tự cập nhật sau vài giây.</span>
+                      <span>Hệ thống đang tạo câu hỏi. Trang sẽ tự cập nhật sau vài giây.</span>
                     </section>
                   )}
 
@@ -436,7 +483,7 @@ function DocumentQuestionJobReviewPage() {
                     <section className="qdoc-alert qdoc-alert--info qdoc-alert--action">
                       <div>
                         <ReloadOutlined />
-                        <span>Phiên trước chưa tạo được câu hỏi mới. Bạn có thể chạy lại để thử với cấu hình hiện tại.</span>
+                        <span>Chưa tạo được câu hỏi mới. Bạn có thể chạy lại với cấu hình hiện tại.</span>
                       </div>
                       <button type="button" className="qdoc-secondary-btn" onClick={retryFailedChunks} disabled={isRetrying}>
                         {isRetrying ? <LoadingOutlined /> : <ReloadOutlined />}
@@ -698,9 +745,9 @@ function DocumentQuestionJobReviewPage() {
       )}
       <ConfirmModal
         isOpen={isCancelConfirmOpen}
-        title="Hủy phiên tạo câu hỏi?"
-        message="Phiên đang chạy sẽ dừng xử lý các đoạn còn lại. Những câu hỏi đã tạo trước đó vẫn được giữ lại để bạn tiếp tục duyệt."
-        confirmText="Hủy phiên"
+        title="Dừng tạo câu hỏi?"
+        message="Hệ thống sẽ dừng xử lý các đoạn còn lại. Những câu hỏi đã tạo trước đó vẫn được giữ lại để bạn tiếp tục duyệt."
+        confirmText="Dừng tạo câu hỏi"
         danger
         onCancel={() => setIsCancelConfirmOpen(false)}
         onConfirm={confirmCancelJob}
