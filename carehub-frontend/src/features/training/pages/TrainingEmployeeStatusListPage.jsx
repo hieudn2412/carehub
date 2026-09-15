@@ -235,9 +235,6 @@ function TrainingEmployeeStatusListPage() {
     }
   }
 
-  const progressPct = (submitted, required) =>
-    required > 0 ? Math.min(Math.round((submitted / required) * 100), 100) : 0
-
   const statusCfg = {
     COMPLIANT: { label: 'Đạt', cls: 'tes-badge--compliant', barClass: 'tes-progress--compliant' },
     NON_COMPLIANT: { label: 'Chưa đạt', cls: 'tes-badge--non-compliant', barClass: 'tes-progress--non-compliant' },
@@ -432,7 +429,7 @@ function TrainingEmployeeStatusListPage() {
                       <tbody>
                         {employees.map((item, idx) => {
                           const cfg = statusCfg[item.complianceStatus] || statusCfg.NON_COMPLIANT
-                          const pct = progressPct(item.submittedHours, item.requiredHours)
+                          const pct = Math.round(Math.min(Math.max(item.progressPercentage, 0), 100))
                           return (
                             <tr key={item.employeeId + '-' + idx}>
                               <td className="tes-col-code tes-td-code">{item.employeeCode}</td>
@@ -441,7 +438,7 @@ function TrainingEmployeeStatusListPage() {
                               <td className="tes-col-department">{item.departmentName}</td>
                               <td className="tes-col-progress">
                                 <div className="tes-progress-cell">
-                                  <span className="tes-progress-label">{item.submittedHours}/{item.requiredHours}h</span>
+                                  <span className="tes-progress-label">{item.submittedHours}/{item.requiredHours}h · {pct}%</span>
                                   <div className="tes-progress-track">
                                     <div
                                       className={`tes-progress-fill ${cfg.barClass}`}
