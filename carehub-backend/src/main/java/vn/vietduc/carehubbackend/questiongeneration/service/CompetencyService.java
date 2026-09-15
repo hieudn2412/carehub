@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,7 @@ import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamAttemptBrie
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.FormSubmissionBriefResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.KnowledgeCompetencyItemResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.SkillCompetencyItemResponse;
+import vn.vietduc.carehubbackend.questiongeneration.dto.request.EvaluationResultFilter;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttempt;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionCategoryRepository;
@@ -72,6 +74,7 @@ public class CompetencyService {
             LocalDate fromDate,
             LocalDate toDate,
             String keyword,
+            EvaluationResultFilter resultFilter,
             Pageable pageable
     ) {
         LocalDate from = fromDate != null ? fromDate : LocalDate.of(LocalDate.now().getYear(), 1, 1);
@@ -81,6 +84,8 @@ public class CompetencyService {
         Department department = findDepartment(departmentId);
         java.time.Instant fromInstant = from.atStartOfDay(zoneId).toInstant();
         java.time.Instant toInstant = to.plusDays(1).atStartOfDay(zoneId).toInstant().minusNanos(1);
+        Pageable normalizedPageable = normalizePageable(pageable);
+        // ponytail: trạng thái phụ thuộc điểm đã tổng hợp; lọc trong bộ nhớ cho tới khi báo cáo quá lớn.
         Page<FormSubmissionRepository.CompetencyTechniqueAggregateProjection> aggregatePage =
                 formSubmissionRepository.summarizeCompetencyTechnique(
                 departmentId,
@@ -88,7 +93,7 @@ public class CompetencyService {
                 normalizeKeyword(keyword),
                 fromInstant,
                 toInstant,
-                normalizePageable(pageable)
+                resultFilter == null ? normalizedPageable : Pageable.unpaged()
         );
         List<CompetencyTechniqueOptionResponse> forms =
                 formSubmissionRepository.findCompetencyTechniqueOptions(
@@ -122,15 +127,20 @@ public class CompetencyService {
         }
 
         items.sort(Comparator.comparing(CompetencyByTechniqueItemResponse::employeeName));
+        Page<CompetencyByTechniqueItemResponse> resultPage = resultFilter == null
+                ? new PageImpl<>(items, normalizedPageable, aggregatePage.getTotalElements())
+                : page(items.stream()
+                        .filter(item -> matchesResult(item.evaluationCount() > 0, item.isPassed(), resultFilter))
+                        .toList(), normalizedPageable);
 
         String formName = selectedForm != null ? selectedForm.getTitle() : null;
 
         return new CompetencyByTechniqueResponse(
                 departmentId, scopeName(department),
                 formId, formName, defaultComplianceTarget,
-                from.format(DATE_FMT), to.format(DATE_FMT), forms, items,
-                aggregatePage.getNumber(), aggregatePage.getSize(),
-                aggregatePage.getTotalElements(), aggregatePage.getTotalPages()
+                from.format(DATE_FMT), to.format(DATE_FMT), forms, resultPage.getContent(),
+                resultPage.getNumber(), resultPage.getSize(),
+                resultPage.getTotalElements(), resultPage.getTotalPages()
         );
     }
 
@@ -225,6 +235,7 @@ public class CompetencyService {
             LocalDate fromDate,
             LocalDate toDate,
             String keyword,
+            EvaluationResultFilter resultFilter,
             Pageable pageable
     ) {
         LocalDate from = fromDate != null ? fromDate : LocalDate.of(LocalDate.now().getYear(), 1, 1);
@@ -234,10 +245,12 @@ public class CompetencyService {
 
         Department department = findDepartment(departmentId);
         BigDecimal targetScore = targetScore();
+        Pageable normalizedPageable = normalizePageable(pageable);
+        // ponytail: trạng thái phụ thuộc cả lý thuyết và thực hành; lọc trong bộ nhớ cho tới khi báo cáo quá lớn.
         Page<User> userPage = userRepository.findCompetencySummaryCandidates(
                 departmentId,
                 normalizeKeyword(keyword),
-                normalizePageable(pageable)
+                resultFilter == null ? normalizedPageable : Pageable.unpaged()
         );
         List<User> users = userPage.getContent();
         Map<Long, List<ExamAttempt>> attemptsByUser = users.isEmpty()
@@ -333,15 +346,20 @@ public class CompetencyService {
         }
 
         items.sort(Comparator.comparing(CompetencySummaryItemResponse::employeeName));
+        Page<CompetencySummaryItemResponse> resultPage = resultFilter == null
+                ? new PageImpl<>(items, normalizedPageable, userPage.getTotalElements())
+                : page(items.stream()
+                        .filter(item -> matchesResult(item.overallScore() != null, item.isPassed(), resultFilter))
+                        .toList(), normalizedPageable);
 
         return new CompetencySummaryResponse(
                 departmentId, scopeName(department),
                 from.format(DATE_FMT), to.format(DATE_FMT),
                 SUMMARY_WEIGHT, SUMMARY_WEIGHT,
                 targetScore,
-                items,
-                userPage.getNumber(), userPage.getSize(),
-                userPage.getTotalElements(), userPage.getTotalPages()
+                resultPage.getContent(),
+                resultPage.getNumber(), resultPage.getSize(),
+                resultPage.getTotalElements(), resultPage.getTotalPages()
         );
     }
 
@@ -368,6 +386,16 @@ public class CompetencyService {
 
     private static boolean meetsTarget(BigDecimal score, BigDecimal target) {
         return CompetencyScoring.meetsTarget(score, target);
+    }
+
+    private boolean matchesResult(boolean hasResult, boolean passed, EvaluationResultFilter filter) {
+        return hasResult && (filter == EvaluationResultFilter.PASSED ? passed : !passed);
+    }
+
+    private <T> Page<T> page(List<T> items, Pageable pageable) {
+        int from = (int) Math.min(pageable.getOffset(), items.size());
+        int to = Math.min(from + pageable.getPageSize(), items.size());
+        return new PageImpl<>(items.subList(from, to), pageable, items.size());
     }
 
     private BigDecimal complianceTarget(Form form) {

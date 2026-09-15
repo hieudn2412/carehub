@@ -38,6 +38,8 @@ env.properties
 !.env.example
 !.env.sample
 !.env.template
+!.env.dev.example
+!.env.prod.example
 *.pem
 *.key
 *.p12
@@ -45,6 +47,9 @@ env.properties
 
 # IDE
 .idea/
+.vs/
+*.suo
+*.user
 *.iml
 *.iws
 *.ipr
@@ -55,6 +60,12 @@ env.properties
 .factorypath
 .apt_generated/
 .sts4-cache/
+
+# Static analysis (SonarQube) - artefact quet cuc bo + cau hinh scanner ca nhan
+.scannerwork/
+sonar-project.properties
+.sonar/
+.sonarlint/
 
 # OS files
 .DS_Store
