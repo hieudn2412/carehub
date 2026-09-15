@@ -9,6 +9,8 @@ import {
   EyeOutlined,
   LeftOutlined,
   RightOutlined,
+  DownloadOutlined,
+  LoadingOutlined,
 } from '@ant-design/icons'
 import {
   BarChart,
@@ -35,8 +37,10 @@ import { currentYearDateRange, validateHistoricalDateRange } from '../../../shar
 import '../styles/EvaluationDashboardPage.css'
 import PassFailBadge from '../../../shared/components/PassFailBadge.jsx'
 import { EvaluationDashboardContent } from './EvaluationDashboardPage.jsx'
+import { downloadCsv, exportFileName } from '../../../shared/utils/tableExport.js'
 
 const PAGE_SIZE = 10
+const EXPORT_PAGE_SIZE = 100
 const defaultDateRange = currentYearDateRange()
 const today = defaultDateRange.toDate
 const yearStart = defaultDateRange.fromDate
@@ -50,6 +54,21 @@ const REPORT_TITLES = {
   summary: 'Năng lực chuyên môn',
   technique: 'Kỹ năng thực hành',
   theory: 'Kỹ năng lý thuyết',
+}
+
+async function loadAllRows(request, params) {
+  const firstPage = apiData(await request({ ...params, page: 0, size: EXPORT_PAGE_SIZE }), null)
+  if (!firstPage) return []
+  const totalPages = Math.max(1, Number(firstPage.totalPages) || 1)
+  const remainingPages = await Promise.all(
+    Array.from({ length: totalPages - 1 }, (_, index) => (
+      request({ ...params, page: index + 1, size: EXPORT_PAGE_SIZE })
+    )),
+  )
+  return [
+    ...(firstPage.items || []),
+    ...remainingPages.flatMap((response) => apiData(response, {})?.items || []),
+  ]
 }
 
 function CompetencySummaryPage() {
@@ -69,6 +88,7 @@ function CompetencySummaryPage() {
   )
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const [departments, setDepartments] = useState([])
   const [departmentId, setDepartmentId] = useState('')
   const [fromDate, setFromDate] = useState(yearStart)
@@ -81,6 +101,7 @@ function CompetencySummaryPage() {
   // Technique specific states
   const [forms, setForms] = useState([])
   const [selectedFormId, setSelectedFormId] = useState('')
+  const [resultStatus, setResultStatus] = useState('')
 
   // Search filter
   const [searchTerm, setSearchTerm] = useState('')
@@ -90,6 +111,7 @@ function CompetencySummaryPage() {
     fromDate: yearStart,
     searchTerm: '',
     selectedFormId: '',
+    resultStatus: '',
     toDate: today,
   })
 
@@ -102,6 +124,7 @@ function CompetencySummaryPage() {
   const effectiveToDate = appliedFilters.toDate
   const effectiveSearchTerm = appliedFilters.searchTerm
   const effectiveSelectedFormId = appliedFilters.selectedFormId
+  const effectiveResultStatus = appliedFilters.resultStatus
 
   useEffect(() => {
     async function init() {
@@ -154,6 +177,7 @@ function CompetencySummaryPage() {
           fromDate: effectiveFromDate || undefined,
           toDate: effectiveToDate || undefined,
           keyword: effectiveSearchTerm || undefined,
+          resultStatus: effectiveResultStatus || undefined,
           page,
           size: PAGE_SIZE,
         })
@@ -166,6 +190,7 @@ function CompetencySummaryPage() {
           fromDate: effectiveFromDate || undefined,
           toDate: effectiveToDate || undefined,
           keyword: effectiveSearchTerm || undefined,
+          resultStatus: effectiveResultStatus || undefined,
           page,
           size: PAGE_SIZE,
         })
@@ -180,7 +205,7 @@ function CompetencySummaryPage() {
     }
   }, [
     reportType, departmentId, effectiveDepartmentId, effectiveFromDate, effectiveToDate,
-    effectiveSelectedFormId, effectiveSearchTerm, page, isAdmin, showToast,
+    effectiveSelectedFormId, effectiveSearchTerm, effectiveResultStatus, page, isAdmin, showToast,
   ])
 
   useEffect(() => {
@@ -189,7 +214,7 @@ function CompetencySummaryPage() {
     return () => window.clearTimeout(timer)
   }, [
     departmentId, reportType, effectiveFromDate, effectiveToDate,
-    effectiveSelectedFormId, effectiveSearchTerm, page, isAdmin, loadData,
+    effectiveSelectedFormId, effectiveSearchTerm, effectiveResultStatus, page, isAdmin, loadData,
   ])
 
   const handleSort = (column) => {
@@ -241,6 +266,68 @@ function CompetencySummaryPage() {
     return items
   }
 
+  const sortSummaryItems = (items) => [...items].sort((a, b) => {
+    const aValue = sortColumn === 'examScore' ? (a.examScore ?? a.knowledgeAverage) : a[sortColumn]
+    const bValue = sortColumn === 'examScore' ? (b.examScore ?? b.knowledgeAverage) : b[sortColumn]
+    const difference = (Number(aValue) || 0) - (Number(bValue) || 0)
+    return sortDirection === 'asc' ? difference : -difference
+  })
+
+  async function handleExport() {
+    setExporting(true)
+    try {
+      const params = {
+        departmentId: effectiveDepartmentId || undefined,
+        fromDate: effectiveFromDate || undefined,
+        toDate: effectiveToDate || undefined,
+        keyword: effectiveSearchTerm || undefined,
+        resultStatus: effectiveResultStatus || undefined,
+        ...(reportType === 'technique' && { formId: effectiveSelectedFormId || undefined }),
+      }
+      const items = await loadAllRows(
+        reportType === 'summary' ? competencyApi.getSummary : competencyApi.getByTechnique,
+        params,
+      )
+      if (reportType === 'summary') {
+        downloadCsv(
+          exportFileName('nang-luc-chuyen-mon'),
+          ['Mã NV', 'Họ tên', 'Khoa / Phòng', 'Điểm lý thuyết', 'Điểm thực hành', 'Tổng điểm', 'Kết quả', 'Từ ngày', 'Đến ngày'],
+          sortSummaryItems(items).map((item) => [
+            item.employeeCode,
+            item.employeeName,
+            item.departmentName,
+            item.examScore ?? item.knowledgeAverage,
+            item.skillAverage,
+            item.overallScore,
+            item.overallScore == null ? 'Chưa có dữ liệu' : item.isPassed ? 'Đạt' : 'Chưa đạt',
+            effectiveFromDate,
+            effectiveToDate,
+          ]),
+        )
+      } else {
+        downloadCsv(
+          exportFileName('ky-nang-thuc-hanh'),
+          ['Mã NV', 'Họ tên', 'Khoa / Phòng', 'Số lượt', 'Điểm trung bình', 'Tỷ lệ đạt (%)', 'Kết quả', 'Từ ngày', 'Đến ngày'],
+          items.map((item) => [
+            item.employeeCode,
+            item.employeeName,
+            item.departmentName || data?.departmentName,
+            item.evaluationCount ?? 0,
+            item.averageScore,
+            item.passRate,
+            item.isPassed ? 'Đạt' : 'Chưa đạt',
+            effectiveFromDate,
+            effectiveToDate,
+          ]),
+        )
+      }
+    } catch (error) {
+      showToast(apiErrorMessage(error), 'error')
+    } finally {
+      setExporting(false)
+    }
+  }
+
   const complianceTarget = data?.complianceTarget || 80.0
   const belowCount = data?.items ? data.items.filter(i => i.belowTarget).length : 0
   const totalCount = data?.items ? data.items.length : 0
@@ -250,6 +337,7 @@ function CompetencySummaryPage() {
     effectiveFromDate && effectiveFromDate !== yearStart,
     effectiveToDate && effectiveToDate !== today,
     reportType === 'technique' && effectiveSelectedFormId,
+    effectiveResultStatus,
   ].filter(Boolean).length
 
   const visiblePages = () => {
@@ -340,6 +428,7 @@ function CompetencySummaryPage() {
       fromDate,
       searchTerm: searchTerm.trim(),
       selectedFormId,
+      resultStatus,
       toDate,
     })
     setPage(0)
@@ -351,8 +440,9 @@ function CompetencySummaryPage() {
     setToDate(today)
     setSearchTerm('')
     setSelectedFormId('')
+    setResultStatus('')
     if (isAdmin) setDepartmentId('')
-    setAppliedFilters({ departmentId: '', fromDate: yearStart, searchTerm: '', selectedFormId: '', toDate: today })
+    setAppliedFilters({ departmentId: '', fromDate: yearStart, searchTerm: '', selectedFormId: '', resultStatus: '', toDate: today })
     setFilterError('')
     setPage(0)
   }
@@ -376,6 +466,11 @@ function CompetencySummaryPage() {
   const toolbarActions = (
     <div className="competency-dashboard-toolbar__actions">
       <span>{totalElements} kết quả</span>
+      <button type="button" className="competency-dashboard-export" onClick={handleExport}
+        disabled={loading || exporting || totalElements === 0}>
+        {exporting ? <LoadingOutlined spin /> : <DownloadOutlined />}
+        {exporting ? 'Đang xuất...' : 'Xuất Excel'}
+      </button>
       <button type="button" className="competency-dashboard-reload" onClick={loadData}
         disabled={loading} aria-label="Tải lại dữ liệu" title="Tải lại">
         <ReloadOutlined spin={loading} />
@@ -407,6 +502,9 @@ function CompetencySummaryPage() {
           setSelectedFormId(value)
           if (!isManager) setPage(0)
         }} options={[{ value: '', label: 'Tất cả kỹ thuật' }, ...forms.map((form) => ({ value: form.id, label: form.title }))]} placeholder="Tất cả kỹ thuật" searchable searchPlaceholder="Tìm tên kỹ thuật..." />}
+      <FilterSelectField label="Trạng thái kết quả" value={resultStatus} onChange={setResultStatus}
+        options={[{ value: '', label: 'Tất cả kết quả' }, { value: 'PASSED', label: 'Đạt' }, { value: 'FAILED', label: 'Chưa đạt' }]}
+        placeholder="Tất cả kết quả" />
       {reportType === 'summary' && data && <div className="competency-dashboard-weight">
         <span>Trọng số hiện tại</span><strong>Lý thuyết {knowledgeWeight}% · Thực hành {skillWeight}%</strong>
       </div>}
