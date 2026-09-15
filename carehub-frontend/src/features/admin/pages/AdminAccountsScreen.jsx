@@ -20,9 +20,11 @@ import {
   UnlockOutlined,
   DeleteOutlined,
   KeyOutlined,
-  DownloadOutlined
+  DownloadOutlined,
+  RollbackOutlined
 } from '@ant-design/icons'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
+import { formatRoleLabel, formatRoleLabels } from '../../../shared/utils/roleLabels.js'
 import '../styles/AdminAccountsScreen.css'
 
 function normalizeReferenceList(payload) {
@@ -30,6 +32,15 @@ function normalizeReferenceList(payload) {
   if (Array.isArray(payload?.content)) return payload.content
   if (Array.isArray(payload?.data)) return payload.data
   return []
+}
+
+function isRemovedSystemRole(role) {
+  const code = String(role?.code || '').trim().toUpperCase()
+  return code === 'SYSTEM_JOB' || code === 'ROLE_SYSTEM_JOB'
+}
+
+function getVisibleRoles(userRoles) {
+  return (Array.isArray(userRoles) ? userRoles : []).filter(role => !isRemovedSystemRole(role))
 }
 
 function AdminAccountsScreen() {
@@ -72,12 +83,14 @@ function AdminAccountsScreen() {
   const [deptFilter, setDeptFilter] = useState('all')
   const [roleFilter, setRoleFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [deletedFilter, setDeletedFilter] = useState('active')
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [appliedFilters, setAppliedFilters] = useState({
     search: '',
     departmentId: 'all',
     roleId: 'all',
     status: 'all',
+    deleted: 'active',
   })
 
   // Selected User Detail Modal State
@@ -111,7 +124,7 @@ function AdminAccountsScreen() {
   const [formEduLevelId, setFormEduLevelId] = useState('')
   const [formBirthday, setFormBirthday] = useState('')
   const [formGender, setFormGender] = useState(true) // true = Nam, false = Nữ
-  const [formRoleIds, setFormRoleIds] = useState([]) // Array of selected role IDs
+  const [formRoleId, setFormRoleId] = useState('')
   const [formStatus, setFormStatus] = useState('ACTIVE')
 
   // Password reset success banner state
@@ -129,6 +142,41 @@ function AdminAccountsScreen() {
   const goToDepartmentReference = () => {
     setIsFormModalOpen(false)
     navigate('/admin/reference/departments')
+  }
+
+  const todayDate = new Date()
+  const maxDate = new Date(todayDate.getFullYear() - 18, todayDate.getMonth(), todayDate.getDate()).toISOString().slice(0, 10)
+  const minDate = new Date(todayDate.getFullYear() - 100, todayDate.getMonth(), todayDate.getDate()).toISOString().slice(0, 10)
+
+  const handlePhoneChange = (event) => {
+    let inputVal = event.target.value
+
+    if (!inputVal) {
+      setFormPhone('')
+      return
+    }
+
+    let cleaned = inputVal.replace(/[^\d+]/g, '')
+
+    if (cleaned.startsWith('0')) {
+      cleaned = '+84' + cleaned.substring(1)
+    } else if (cleaned.length > 0 && /^[1-9]/.test(cleaned)) {
+      if (cleaned.startsWith('84')) {
+        cleaned = '+' + cleaned
+      } else {
+        cleaned = '+84' + cleaned
+      }
+    }
+
+    if (cleaned.startsWith('+840')) {
+      cleaned = '+84' + cleaned.substring(4)
+    }
+
+    if (cleaned.length > 12) {
+      cleaned = cleaned.substring(0, 12)
+    }
+
+    setFormPhone(cleaned)
   }
 
   // Load static reference data on mount
@@ -155,7 +203,7 @@ function AdminAccountsScreen() {
     adminApi.getRoles()
       .then(res => {
         if (!isActive) return
-        setRoles(normalizeReferenceList(res.data?.data))
+        setRoles(normalizeReferenceList(res.data?.data).filter(role => !isRemovedSystemRole(role)))
       })
       .catch(err => console.error('Lỗi khi tải vai trò:', err))
 
@@ -187,6 +235,7 @@ function AdminAccountsScreen() {
       departmentId: appliedFilters.departmentId !== 'all' ? appliedFilters.departmentId : undefined,
       roleId: appliedFilters.roleId !== 'all' ? appliedFilters.roleId : undefined,
       status: appliedFilters.status !== 'all' ? appliedFilters.status : undefined,
+      deleted: appliedFilters.deleted === 'deleted' ? true : undefined,
     }
 
     adminApi.getUsers(params)
@@ -257,7 +306,7 @@ function AdminAccountsScreen() {
     setFormEduLevelId('')
     setFormBirthday('')
     setFormGender(true)
-    setFormRoleIds([])
+    setFormRoleId('')
     setFormStatus('ACTIVE')
     setEditingUser(null)
     setIsFormModalOpen(true)
@@ -279,7 +328,7 @@ function AdminAccountsScreen() {
           setFormEduLevelId(u.educationLevelId || '')
           setFormBirthday(u.birthday || '')
           setFormGender(u.gender === undefined ? true : u.gender)
-          setFormRoleIds(u.roles ? u.roles.map(r => r.id) : [])
+          setFormRoleId(u.roles?.find(role => !isRemovedSystemRole(role))?.id || '')
           setFormStatus(u.status || 'ACTIVE')
           setEditingUser(u)
           setIsFormModalOpen(true)
@@ -300,7 +349,8 @@ function AdminAccountsScreen() {
     const empCode = formEmpCode.trim()
     const fullName = formFullName.trim()
     const email = formEmail.trim()
-    const phone = formPhone.trim()
+    const phoneRaw = formPhone.trim()
+    const phone = phoneRaw === '+84' ? '' : phoneRaw
 
     // 1. Check required fields
     if (!empCode || !fullName || !email || !formDeptId) {
@@ -330,9 +380,8 @@ function AdminAccountsScreen() {
 
     // 5. Validate Phone format if entered
     if (phone) {
-      const phoneRegex = /^[0-9]{10,11}$/
-      if (!phoneRegex.test(phone)) {
-        showToast('Số điện thoại không hợp lệ. Vui lòng nhập từ 10 đến 11 chữ số.', 'warning')
+      if (phone.length !== 12) {
+        showToast('Số điện thoại không hợp lệ. Vui lòng nhập đủ 10 số.', 'warning')
         return
       }
     }
@@ -341,16 +390,20 @@ function AdminAccountsScreen() {
     if (formBirthday) {
       const selectedDate = new Date(formBirthday)
       const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      if (selectedDate > today) {
-        showToast('Ngày sinh không thể lớn hơn ngày hiện tại.', 'warning')
+      let age = today.getFullYear() - selectedDate.getFullYear()
+      const m = today.getMonth() - selectedDate.getMonth()
+      if (m < 0 || (m === 0 && today.getDate() < selectedDate.getDate())) {
+        age--
+      }
+      if (age < 18 || age > 100) {
+        showToast('Độ tuổi không hợp lệ. Nhân viên phải từ 18 đến 100 tuổi.', 'warning')
         return
       }
     }
 
-    // 7. Check at least one role
-    if (formRoleIds.length === 0) {
-      showToast('Vui lòng chọn ít nhất một vai trò cho tài khoản.', 'warning')
+    // 7. Exactly one role is required
+    if (!formRoleId) {
+      showToast('Vui lòng chọn một vai trò cho tài khoản.', 'warning')
       return
     }
 
@@ -372,16 +425,15 @@ function AdminAccountsScreen() {
 
         await adminApi.updateUser(editingUser.id, updatePayload)
 
-        // Sync Roles
-        const initialRoleIds = editingUser.roles ? editingUser.roles.map(r => r.id) : []
-        const rolesToAdd = formRoleIds.filter(id => !initialRoleIds.includes(id))
-        const rolesToRemove = initialRoleIds.filter(id => !formRoleIds.includes(id))
-
-        for (const rId of rolesToAdd) {
-          await adminApi.assignRole(editingUser.id, rId)
+        const targetRoleId = Number(formRoleId)
+        const initialRoleIds = (editingUser.roles || []).map(role => Number(role.id))
+        if (!initialRoleIds.includes(targetRoleId)) {
+          await adminApi.assignRole(editingUser.id, targetRoleId)
         }
-        for (const rId of rolesToRemove) {
-          await adminApi.removeRole(editingUser.id, rId)
+        for (const previousRoleId of initialRoleIds) {
+          if (previousRoleId !== targetRoleId) {
+            await adminApi.removeRole(editingUser.id, previousRoleId)
+          }
         }
 
         showToast('Cập nhật tài khoản thành công!', 'success')
@@ -393,7 +445,7 @@ function AdminAccountsScreen() {
           email: email,
           phone: phone || undefined,
           departmentId: parseInt(formDeptId),
-          roleIds: formRoleIds.map(id => parseInt(id))
+          roleIds: [Number(formRoleId)]
         }
 
         await adminApi.createUser(createPayload)
@@ -452,12 +504,12 @@ function AdminAccountsScreen() {
   const handleDeleteUser = (userId) => {
     setConfirmModal({
       isOpen: true,
-      title: 'Xóa tài khoản',
-      message: 'CẢNH BÁO: Bạn có chắc chắn muốn xóa vĩnh viễn tài khoản này? Thao tác này không thể hoàn tác.',
+      title: 'Ngừng sử dụng tài khoản',
+      message: 'Bạn có chắc chắn muốn ngừng sử dụng tài khoản này? Người dùng sẽ không thể đăng nhập, nhưng dữ liệu lịch sử vẫn được giữ lại.',
       onConfirm: () => {
         adminApi.deleteUser(userId)
           .then(() => {
-            showToast('Đã xóa tài khoản thành công.', 'success')
+            showToast('Đã ngừng sử dụng tài khoản thành công.', 'success')
             setSelectedUserId(null)
             loadUsers()
           })
@@ -528,6 +580,7 @@ function AdminAccountsScreen() {
       departmentId: appliedFilters.departmentId !== 'all' ? appliedFilters.departmentId : undefined,
       roleId: appliedFilters.roleId !== 'all' ? appliedFilters.roleId : undefined,
       status: appliedFilters.status !== 'all' ? appliedFilters.status : undefined,
+      deleted: appliedFilters.deleted === 'deleted' ? true : undefined,
     }
 
     adminApi.exportUsers(params)
@@ -543,8 +596,8 @@ function AdminAccountsScreen() {
           u.employeeCode || '',
           u.fullName || '',
           getDeptName(u.departmentId),
-          u.roles?.map(r => r.name || r.code).join(', ') || '',
-          u.status === 'ACTIVE' ? 'Hoạt động' : (u.status === 'LOCKED' ? 'Đã khoá' : 'Ngưng hoạt động')
+          formatRoleLabels(getVisibleRoles(u.roles), 'Chưa cấu hình'),
+          u.deleted ? 'Đã ngừng sử dụng' : (u.status === 'ACTIVE' ? 'Hoạt động' : (u.status === 'LOCKED' ? 'Đã khoá' : 'Ngưng hoạt động'))
         ])
 
         const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(e => e.map(val => `"${val.replace(/"/g, '""')}"`).join(','))].join('\n')
@@ -571,6 +624,29 @@ function AdminAccountsScreen() {
       departmentId: deptFilter,
       roleId: roleFilter,
       status: statusFilter,
+      deleted: deletedFilter,
+    })
+  }
+
+  const handleRestoreUser = (userId) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Khôi phục tài khoản',
+      message: 'Khôi phục tài khoản này? Tài khoản sẽ hoạt động trở lại với mã nhân viên và email cũ.',
+      onConfirm: () => {
+        adminApi.restoreUser(userId)
+          .then(() => {
+            showToast('Đã khôi phục tài khoản thành công.', 'success')
+            setSelectedUserId(null)
+            setDeletedFilter('active')
+            setAppliedFilters((current) => ({ ...current, deleted: 'active' }))
+            setPage(1)
+          })
+          .catch(err => {
+            console.error(err)
+            showToast(err.response?.data?.message || 'Không thể khôi phục tài khoản.', 'error')
+          })
+      }
     })
   }
 
@@ -579,18 +655,20 @@ function AdminAccountsScreen() {
     setDeptFilter('all')
     setRoleFilter('all')
     setStatusFilter('all')
+    setDeletedFilter('active')
     setPage(1)
-    setAppliedFilters({ search: '', departmentId: 'all', roleId: 'all', status: 'all' })
+    setAppliedFilters({ search: '', departmentId: 'all', roleId: 'all', status: 'all', deleted: 'active' })
   }
 
   // Render Pill badges for roles
   const renderRoles = (userRoles) => {
-    if (!userRoles || userRoles.length === 0) return <span className="am-badge">Nhân viên</span>
+    const visibleRoles = getVisibleRoles(userRoles)
+    if (visibleRoles.length === 0) return <span className="am-badge">Chưa cấu hình</span>
     return (
       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-        {userRoles.map(r => {
+        {visibleRoles.map(r => {
           let mod = 'staff'
-          let label = r.name || r.code
+          const label = formatRoleLabel(r)
           if (r.code === 'ADMIN') {
             mod = 'admin'
           } else if (r.code === 'MANAGER') {
@@ -607,7 +685,15 @@ function AdminAccountsScreen() {
   }
 
   // Render status badge with colored dot
-  const renderStatus = (status) => {
+  const renderStatus = (status, deleted = false) => {
+    if (deleted) {
+      return (
+        <span className="am-badge am-badge--status-deleted">
+          <span className="am-badge__dot" />
+          Đã ngừng sử dụng
+        </span>
+      )
+    }
     let mod = 'inactive'
     let label = 'Ngưng hoạt động'
     if (status === 'ACTIVE') {
@@ -634,6 +720,15 @@ function AdminAccountsScreen() {
     })
   }
 
+  const fmtDateOnly = (dateStr) => {
+    if (!dateStr) return 'Chưa cập nhật'
+    return new Date(`${dateStr}T00:00:00`).toLocaleDateString('vi-VN', {
+      day: '2-digit', month: '2-digit', year: 'numeric'
+    })
+  }
+
+  const selectedUserPrimaryRole = getVisibleRoles(selectedUserDetail?.roles)[0] || null
+
   return (
     <AppShell title="Quản lý tài khoản">
             <div className="am-page">
@@ -646,7 +741,7 @@ function AdminAccountsScreen() {
 
               {/* Filters Block */}
               <AppliedFilterToolbar
-                activeCount={[deptFilter !== 'all', roleFilter !== 'all', statusFilter !== 'all'].filter(Boolean).length}
+                activeCount={[deptFilter !== 'all', roleFilter !== 'all', statusFilter !== 'all', deletedFilter !== 'active'].filter(Boolean).length}
                 actions={<div className="am-toolbar-actions">
                     <span className="am-results-count">{totalElements} kết quả</span>
                     <button className="am-btn-primary" onClick={handleOpenCreateModal}>
@@ -706,7 +801,7 @@ function AdminAccountsScreen() {
                       label="Vai trò"
                       value={roleFilter}
                       onChange={setRoleFilter}
-                      options={[{ value: 'all', label: 'Tất cả vai trò' }, ...roles.map((role) => ({ value: role.id, label: role.name || role.code }))]}
+                      options={[{ value: 'all', label: 'Tất cả vai trò' }, ...roles.map((role) => ({ value: role.id, label: formatRoleLabel(role) }))]}
                       placeholder="Tất cả vai trò"
                     />
                     <FilterSelectField
@@ -716,6 +811,17 @@ function AdminAccountsScreen() {
                       onChange={setStatusFilter}
                       options={[{ value: 'all', label: 'Tất cả trạng thái' }, { value: 'ACTIVE', label: 'Hoạt động' }, { value: 'INACTIVE', label: 'Ngưng hoạt động' }, { value: 'LOCKED', label: 'Đã khoá' }]}
                       placeholder="Tất cả trạng thái"
+                    />
+                    <FilterSelectField
+                      className="am-filter-field"
+                      label="Loại tài khoản"
+                      value={deletedFilter}
+                      onChange={setDeletedFilter}
+                      options={[
+                        { value: 'active', label: 'Đang sử dụng' },
+                        { value: 'deleted', label: 'Đã ngừng sử dụng' },
+                      ]}
+                      placeholder="Đang sử dụng"
                     />
               </AppliedFilterToolbar>
 
@@ -752,7 +858,7 @@ function AdminAccountsScreen() {
                           <td><strong>{u.fullName || 'Chưa đặt tên'}</strong></td>
                           <td>{getDeptName(u.departmentId)}</td>
                           <td>{renderRoles(u.roles)}</td>
-                          <td>{renderStatus(u.status)}</td>
+                          <td>{renderStatus(u.status, u.deleted)}</td>
                           <td>
                             <button
                               aria-label={`Xem chi tiết tài khoản ${u.employeeCode || u.username || u.id}`}
@@ -816,7 +922,7 @@ function AdminAccountsScreen() {
       {/* Account Detail Modal overlay */}
       {selectedUserId && (
         <div className="am-modal-overlay" onClick={() => setSelectedUserId(null)}>
-          <div className="am-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="am-modal am-modal--account-detail" onClick={(e) => e.stopPropagation()}>
             <div className="am-modal-header">
               <h3 className="am-modal-title">Thông tin tài khoản</h3>
               <button className="am-modal-close" onClick={() => setSelectedUserId(null)}>
@@ -847,7 +953,24 @@ function AdminAccountsScreen() {
 
                     <div className="am-detail-item">
                       <span className="am-detail-label">Chức danh</span>
-                      <span className="am-detail-value">{selectedUserDetail.positionName || 'Nhân viên'}</span>
+                      <span className="am-detail-value">{selectedUserDetail.positionName || 'Chưa cấu hình'}</span>
+                    </div>
+
+                    <div className="am-detail-item">
+                      <span className="am-detail-label">Trình độ học vấn</span>
+                      <span className="am-detail-value">{selectedUserDetail.educationLevelName || 'Chưa cập nhật'}</span>
+                    </div>
+
+                    <div className="am-detail-item">
+                      <span className="am-detail-label">Ngày sinh</span>
+                      <span className="am-detail-value">{fmtDateOnly(selectedUserDetail.birthday)}</span>
+                    </div>
+
+                    <div className="am-detail-item">
+                      <span className="am-detail-label">Giới tính</span>
+                      <span className="am-detail-value">
+                        {selectedUserDetail.gender === true ? 'Nam' : selectedUserDetail.gender === false ? 'Nữ' : 'Chưa cập nhật'}
+                      </span>
                     </div>
 
                     <div className="am-detail-item">
@@ -863,14 +986,12 @@ function AdminAccountsScreen() {
                     <div className="am-detail-item">
                       <span className="am-detail-label">Vai trò hệ thống</span>
                       <span className="am-detail-value" style={{ display: 'flex', gap: 4 }}>
-                        {selectedUserDetail.roles && selectedUserDetail.roles.length > 0 ? (
-                          selectedUserDetail.roles.map(r => (
-                            <span key={r.id} className={`am-badge am-badge--role-${r.code === 'ADMIN' ? 'admin' : (r.code === 'MANAGER' ? 'manager' : 'staff')}`}>
-                              {r.name || r.code}
-                            </span>
-                          ))
+                        {selectedUserPrimaryRole ? (
+                          <span className={`am-badge am-badge--role-${selectedUserPrimaryRole.code === 'ADMIN' ? 'admin' : (selectedUserPrimaryRole.code === 'MANAGER' ? 'manager' : 'staff')}`}>
+                            {formatRoleLabel(selectedUserPrimaryRole)}
+                          </span>
                         ) : (
-                          <span className="am-badge am-badge--role-staff">Nhân viên</span>
+                          <span className="am-badge">Chưa cấu hình</span>
                         )}
                       </span>
                     </div>
@@ -878,7 +999,7 @@ function AdminAccountsScreen() {
                     <div className="am-detail-item">
                       <span className="am-detail-label">Trạng thái</span>
                       <span className="am-detail-value">
-                        {renderStatus(selectedUserDetail.status)}
+                        {renderStatus(selectedUserDetail.status, selectedUserDetail.deleted)}
                       </span>
                     </div>
 
@@ -895,24 +1016,32 @@ function AdminAccountsScreen() {
 
                   {/* Admin Actions Block */}
                   <div className="am-detail-actions">
-                    <button className="am-btn-secondary am-btn-sm" onClick={() => handleOpenEditModal(selectedUserDetail.id)}>
-                      <EditOutlined /> Sửa thông tin
-                    </button>
-                    {selectedUserDetail.status === 'LOCKED' ? (
-                      <button className="am-btn-secondary am-btn-sm" onClick={() => handleUnlockUser(selectedUserDetail.id)}>
-                        <UnlockOutlined /> Mở khoá
+                    {selectedUserDetail.deleted ? (
+                      <button className="am-btn-secondary am-btn-sm" onClick={() => handleRestoreUser(selectedUserDetail.id)}>
+                        <RollbackOutlined /> Khôi phục tài khoản
                       </button>
                     ) : (
-                      <button className="am-btn-secondary am-btn-sm" onClick={() => handleLockUser(selectedUserDetail.id)}>
-                        <LockOutlined /> Khoá tài khoản
-                      </button>
+                      <>
+                        <button className="am-btn-secondary am-btn-sm" onClick={() => handleOpenEditModal(selectedUserDetail.id)}>
+                          <EditOutlined /> Sửa thông tin
+                        </button>
+                        {selectedUserDetail.status === 'LOCKED' ? (
+                          <button className="am-btn-secondary am-btn-sm" onClick={() => handleUnlockUser(selectedUserDetail.id)}>
+                            <UnlockOutlined /> Mở khoá
+                          </button>
+                        ) : (
+                          <button className="am-btn-secondary am-btn-sm" onClick={() => handleLockUser(selectedUserDetail.id)}>
+                            <LockOutlined /> Khoá tài khoản
+                          </button>
+                        )}
+                        <button className="am-btn-secondary am-btn-sm" onClick={() => handleResetPassword(selectedUserDetail.id)}>
+                          <KeyOutlined /> Đổi mật khẩu tự động
+                        </button>
+                        <button className="am-modal-btn am-btn-sm" style={{ background: '#fef2f2', color: '#b91c1c', borderColor: '#fca5a5' }} onClick={() => handleDeleteUser(selectedUserDetail.id)}>
+                          <DeleteOutlined /> Ngừng sử dụng
+                        </button>
+                      </>
                     )}
-                    <button className="am-btn-secondary am-btn-sm" onClick={() => handleResetPassword(selectedUserDetail.id)}>
-                      <KeyOutlined /> Đổi mật khẩu tự động
-                    </button>
-                    <button className="am-modal-btn am-btn-sm" style={{ background: '#fef2f2', color: '#b91c1c', borderColor: '#fca5a5' }} onClick={() => handleDeleteUser(selectedUserDetail.id)}>
-                      <DeleteOutlined /> Xoá tài khoản
-                    </button>
                   </div>
 
                   {newGeneratedPassword && (
@@ -964,6 +1093,7 @@ function AdminAccountsScreen() {
                       value={formEmpCode}
                       onChange={(e) => setFormEmpCode(e.target.value)}
                       placeholder="VD: NV-00042"
+                      disabled={Boolean(editingUser)}
                       required
                     />
                   </div>
@@ -997,9 +1127,10 @@ function AdminAccountsScreen() {
                     <input
                       type="text"
                       className="am-form-input"
+                      maxLength={12}
                       value={formPhone}
-                      onChange={(e) => setFormPhone(e.target.value)}
-                      placeholder="Nhập số điện thoại..."
+                      onChange={handlePhoneChange}
+                      placeholder="+84"
                     />
                   </div>
 
@@ -1053,6 +1184,8 @@ function AdminAccountsScreen() {
                         <label className="am-form-label">Ngày sinh</label>
                         <KeyboardDatePicker
                           className="am-form-input"
+                          min={minDate}
+                          max={maxDate}
                           value={formBirthday}
                           onChange={(val) => setFormBirthday(val)}
                         />
@@ -1095,30 +1228,16 @@ function AdminAccountsScreen() {
                     </>
                   )}
 
-                  <div className="am-form-group am-form-group--full">
-                    <label className="am-form-label">Vai trò hệ thống *</label>
-                    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 6 }}>
-                      {roles.map(r => {
-                        const roleLabel = r.name || r.code
-                        const isChecked = formRoleIds.includes(r.id)
-                        return (
-                          <label key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '13.5px', cursor: 'pointer' }}>
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setFormRoleIds([...formRoleIds, r.id])
-                                } else {
-                                  setFormRoleIds(formRoleIds.filter(id => id !== r.id))
-                                }
-                              }}
-                            /> {roleLabel}
-                          </label>
-                        )
-                      })}
-                    </div>
-                  </div>
+                  <FormSelectField
+                    className="am-form-group--full"
+                    label="Vai trò hệ thống"
+                    required
+                    value={formRoleId}
+                    onChange={setFormRoleId}
+                    options={roles.map(role => ({ value: role.id, label: formatRoleLabel(role) }))}
+                    placeholder="Chọn một vai trò..."
+                    searchable={false}
+                  />
 
                 </div>
               </div>

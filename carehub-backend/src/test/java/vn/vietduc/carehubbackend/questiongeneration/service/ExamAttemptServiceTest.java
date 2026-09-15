@@ -56,7 +56,6 @@ class ExamAttemptServiceTest {
     private final ExamPaperQuestionRepository paperQuestionRepository = mock(ExamPaperQuestionRepository.class);
     private final ExamPaperQuestionSnapshotRepository snapshotRepository = mock(ExamPaperQuestionSnapshotRepository.class);
     private final UserRepository userRepository = mock(UserRepository.class);
-    private final CompetencyClassificationService classificationService = mock(CompetencyClassificationService.class);
     private final ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
     private final ExamAttemptResultAggregationService resultAggregationService = mock(ExamAttemptResultAggregationService.class);
     private final Clock clock = Clock.fixed(Instant.parse("2026-08-12T08:00:00Z"), ZoneOffset.UTC);
@@ -81,7 +80,6 @@ class ExamAttemptServiceTest {
                 paperQuestionRepository,
                 snapshotRepository,
                 userRepository,
-                classificationService,
                 eventPublisher,
                 resultAggregationService,
                 clock,
@@ -220,7 +218,6 @@ class ExamAttemptServiceTest {
                 paperQuestionRepository,
                 snapshotRepository,
                 userRepository,
-                classificationService,
                 eventPublisher,
                 resultAggregationService,
                 Clock.fixed(Instant.parse("2026-08-12T08:00:00Z"), ZoneId.of("America/Los_Angeles")),

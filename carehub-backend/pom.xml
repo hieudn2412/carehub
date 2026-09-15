@@ -316,7 +316,7 @@
                                         <include>vn.vietduc.carehubbackend.training.validation.TrainingDomainValidator</include>
                                         <include>vn.vietduc.carehubbackend.form.scoring.FormScoringPolicy</include>
                                         <include>vn.vietduc.carehubbackend.form.submission.service.FormScoreCalculator</include>
-                                        <include>vn.vietduc.carehubbackend.questiongeneration.service.CompetencyClassificationService</include>
+                                        <include>vn.vietduc.carehubbackend.questiongeneration.service.CompetencyScoring</include>
                                         <include>vn.vietduc.carehubbackend.questiongeneration.service.DuplicateCheckService</include>
                                         <include>vn.vietduc.carehubbackend.questiongeneration.security.EvaluationSecurity</include>
                                         <include>vn.vietduc.carehubbackend.common.util.CosineUtil</include>

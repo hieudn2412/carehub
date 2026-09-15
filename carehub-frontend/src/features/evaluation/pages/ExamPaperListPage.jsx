@@ -13,6 +13,7 @@ import { apiData, apiErrorMessage, cognitiveLevelText, formatDateTime } from '..
 import '../styles/ExamPaperPages.css'
 
 const EXPORT_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+const DEFAULT_PAPER_STATUS = 'PUBLISHED'
 
 function ExamPaperListPage({
   activeView = 'papers',
@@ -25,8 +26,8 @@ function ExamPaperListPage({
   const [papers, setPapers] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [keyword, setKeyword] = useState('')
-  const [status, setStatus] = useState('')
-  const [appliedFilters, setAppliedFilters] = useState({ keyword: '', status: '' })
+  const [status, setStatus] = useState(DEFAULT_PAPER_STATUS)
+  const [appliedFilters, setAppliedFilters] = useState({ keyword: '', status: DEFAULT_PAPER_STATUS })
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [expandedId, setExpandedId] = useState(null)
   const [showAnswers, setShowAnswers] = useState(false)
@@ -151,8 +152,8 @@ function ExamPaperListPage({
   const applyFilters = () => setAppliedFilters({ keyword: keyword.trim(), status })
   const resetFilters = () => {
     setKeyword('')
-    setStatus('')
-    setAppliedFilters({ keyword: '', status: '' })
+    setStatus(DEFAULT_PAPER_STATUS)
+    setAppliedFilters({ keyword: '', status: DEFAULT_PAPER_STATUS })
   }
 
   return (

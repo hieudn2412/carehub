@@ -64,4 +64,29 @@ describe('TrainingHoursFormScreen hour validation', () => {
     expect(hoursInput).toHaveAttribute('aria-invalid', 'true')
     expect(trainingApi.createRecord).not.toHaveBeenCalled()
   })
+
+  it('uses a date picker capped at today and rejects a future date', async () => {
+    render(
+      <MemoryRouter initialEntries={['/staff/training/new']}>
+        <Routes>
+          <Route path="/staff/training/new" element={<TrainingHoursFormScreen />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    const dateInput = await screen.findByLabelText('Ngày đào tạo liên tục')
+    const today = new Date()
+    const offset = today.getTimezoneOffset() * 60000
+    const todayIso = new Date(today.getTime() - offset).toISOString().slice(0, 10)
+    const tomorrow = new Date(today.getTime() + 86400000 - offset).toISOString().slice(0, 10)
+
+    expect(dateInput).toHaveAttribute('type', 'date')
+    expect(dateInput).toHaveAttribute('max', todayIso)
+
+    fireEvent.change(dateInput, { target: { value: tomorrow } })
+    fireEvent.click(screen.getByRole('button', { name: /Lưu và nộp/ }))
+
+    expect(screen.getByText('Ngày đào tạo không được vượt quá ngày hôm nay')).toBeInTheDocument()
+    expect(trainingApi.createRecord).not.toHaveBeenCalled()
+  })
 })

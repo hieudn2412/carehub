@@ -6,6 +6,10 @@ import lombok.experimental.SuperBuilder;
 import vn.vietduc.carehubbackend.common.entity.BaseEntity;
 import vn.vietduc.carehubbackend.form.entity.Form;
 import vn.vietduc.carehubbackend.form.entity.FormVersion;
+import vn.vietduc.carehubbackend.user.entity.Department;
+
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Entity
 @Getter
@@ -35,4 +39,13 @@ public class FormAssignmentItem extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private FormAssignmentStatus status;
+
+    @Builder.Default
+    @ManyToMany
+    @JoinTable(
+            name = "form_assignment_item_departments",
+            joinColumns = @JoinColumn(name = "assignment_item_id"),
+            inverseJoinColumns = @JoinColumn(name = "department_id")
+    )
+    private Set<Department> allowedDepartments = new LinkedHashSet<>();
 }

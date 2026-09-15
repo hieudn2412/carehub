@@ -7,7 +7,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.mock.web.MockMultipartFile;
-import vn.vietduc.carehubbackend.exception.ConflictException;
 import vn.vietduc.carehubbackend.questiongeneration.dto.request.QuestionBankImportCommitRequest;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.QuestionBankQuestionResponse;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionCategory;
@@ -26,7 +25,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 
@@ -134,10 +132,10 @@ class QuestionBankImportExportServiceTest {
     }
 
     @Test
-    void previewVietnameseHeadersResolvesByStableCodeAndDefaultsSourceToFilename() {
+    void previewVietnameseHeadersResolvesByStableCodeAndDefaultsSourceToImport() {
         MockMultipartFile file = csv("""
-                Danh mục kiến thức,Nội dung câu hỏi,Phương án A,Phương án B,Phương án C,Phương án D,Đáp án đúng,Độ khó,Giải thích,Nguồn câu hỏi
-                [DM_01] Tên cũ,Ai cần báo bác sĩ?,A,B,C,D,A,Trung bình,,
+                Danh mục kiến thức,Nội dung câu hỏi,Phương án A,Phương án B,Phương án C,Phương án D,Đáp án đúng,Mức độ nhận thức,Giải thích
+                [DM_01] Tên cũ,Ai cần báo bác sĩ?,A,B,C,D,A,Áp dụng lâm sàng,
                 """);
 
         var preview = service.preview(file, "admin");
@@ -147,7 +145,7 @@ class QuestionBankImportExportServiceTest {
         assertThat(preview.rows().get(0).categoryName()).isEqualTo("Chủ đề");
         assertThat(preview.rows().get(0).professionalFieldCode()).isNull();
         assertThat(preview.rows().get(0).cognitiveLevel()).isEqualTo("CLINICAL_APPLICATION");
-        assertThat(preview.rows().get(0).sourceDocument()).isEqualTo("questions.csv");
+        assertThat(preview.rows().get(0).sourceDocument()).isEqualTo("Import");
     }
 
     @Test
@@ -255,57 +253,20 @@ class QuestionBankImportExportServiceTest {
     }
 
     @Test
-    void commitCanSkipDuplicateRows() {
-        reset(questionBankService);
-        when(questionBankService.createInNewTransaction(any(), eq("admin"))).thenThrow(new ConflictException("Câu hỏi bị trùng mạnh"));
-        MockMultipartFile file = csv("""
-                stem,optionA,optionB,optionC,optionD,correctAnswer,explanation,topic,difficulty,language,sourceDocument,status
-                Câu hỏi đã có?,A,B,C,D,A,Giải thích,Chủ đề,EASY,vi,Nguồn,APPROVED
-                """);
-        var preview = service.preview(file, "admin");
-
-        var commit = service.commit(new QuestionBankImportCommitRequest(preview.importJobId(), "SKIP_DUPLICATES", preview.rows().stream()
-                .map(row -> new vn.vietduc.carehubbackend.questiongeneration.dto.request.QuestionBankImportRowRequest(
-                        row.rowNumber(),
-                        row.stem(),
-                        row.optionA(),
-                        row.optionB(),
-                        row.optionC(),
-                        row.optionD(),
-                        row.correctAnswer(),
-                        row.explanation(),
-                        row.topic(),
-                        row.language(),
-                        row.sourceDocument(),
-                        row.status(),
-                        row.categoryId(),
-                        row.categoryReference(),
-                        row.professionalFieldId(),
-                        row.professionalFieldReference(),
-                        row.cognitiveLevel()
-                ))
-                .toList()), "admin");
-
-        assertThat(commit.createdCount()).isZero();
-        assertThat(commit.skippedCount()).isEqualTo(1);
-        assertThat(commit.failedCount()).isZero();
-        assertThat(commit.rows().get(0).skipped()).isTrue();
-    }
-
-    @Test
     void importTemplateContainsOnlyVietnameseHeadersReferenceAndGuide() throws Exception {
         byte[] body = service.importTemplateXlsx();
 
         try (XSSFWorkbook workbook = new XSSFWorkbook(new ByteArrayInputStream(body))) {
             assertThat(workbook.getNumberOfSheets()).isEqualTo(3);
-            assertThat(workbook.getSheet("Câu hỏi").getRow(0).getPhysicalNumberOfCells()).isEqualTo(11);
+            assertThat(workbook.getSheet("Câu hỏi").getRow(0).getPhysicalNumberOfCells()).isEqualTo(10);
             assertThat(workbook.getSheet("Câu hỏi").getRow(0).getCell(0).getStringCellValue()).isEqualTo("Danh mục kiến thức");
             assertThat(workbook.getSheet("Câu hỏi").getRow(0).getCell(1).getStringCellValue()).isEqualTo("Lĩnh vực chuyên môn");
             assertThat(workbook.getSheet("Câu hỏi").getRow(0).getCell(7).getStringCellValue()).isEqualTo("Đáp án đúng");
+            assertThat(workbook.getSheet("Câu hỏi").getRow(0).getCell(9).getStringCellValue()).isEqualTo("Giải thích");
             assertThat((Object) workbook.getSheet("Câu hỏi").getRow(1)).isNull();
             assertThat(workbook.getSheet("Danh mục tham chiếu").getRow(1).getCell(0).getStringCellValue()).contains("[DM_01]");
             assertThat(workbook.getSheet("Hướng dẫn").getRow(0).getCell(0).getStringCellValue()).contains("cột bắt buộc");
-            assertThat(workbook.getSheet("Câu hỏi").getDataValidations()).hasSize(5);
+            assertThat(workbook.getSheet("Câu hỏi").getDataValidations()).hasSize(4);
         }
     }
 

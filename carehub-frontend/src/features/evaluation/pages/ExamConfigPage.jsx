@@ -2,14 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   AppstoreOutlined,
-  ArrowLeftOutlined,
   CalendarOutlined,
   CheckCircleOutlined,
-  ControlOutlined,
   DeleteOutlined,
   ExclamationCircleOutlined,
   EyeOutlined,
   FileTextOutlined,
+  LoadingOutlined,
   SendOutlined,
   TeamOutlined,
 } from '@ant-design/icons'
@@ -22,7 +21,6 @@ import { examAssignmentApi } from '../api/examAssignmentApi.js'
 import { evaluationAudienceApi } from '../api/evaluationAudienceApi.js'
 import { adminApi } from '../../admin/api/adminApi.js'
 import { trainingApi } from '../../training/api/trainingApi.js'
-import ExamDeliveryFlow from '../components/ExamDeliveryFlow.jsx'
 import DateTimePicker24h from '../../../shared/components/DateTimePicker24h.jsx'
 import FormSelectField from '../../../shared/components/FormSelectField.jsx'
 import { apiData, apiErrorMessage, formatCognitiveWarningText } from '../utils/documentQuestionUi.js'
@@ -69,8 +67,11 @@ export default function ExamConfigPage() {
 
   // Audience (đối tượng nhận đề)
   const [departments, setDepartments] = useState([])
+  const [positions, setPositions] = useState([])
   const [allUsers, setAllUsers] = useState([])
   const [filterDepartmentIds, setFilterDepartmentIds] = useState([])
+  const [departmentKeyword, setDepartmentKeyword] = useState('')
+  const [positionFilter, setPositionFilter] = useState('')
   const [userKeyword, setUserKeyword] = useState('')
   const [selectedUserIds, setSelectedUserIds] = useState([])
 
@@ -82,31 +83,59 @@ export default function ExamConfigPage() {
 
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
-  const [submitStep, setSubmitStep] = useState('')
+  const [submitAction, setSubmitAction] = useState('')
+  const [showValidationErrors, setShowValidationErrors] = useState(false)
+  const [validationTimestamp, setValidationTimestamp] = useState(null)
 
   useEffect(() => {
-    Promise.all([trainingApi.getRecordOptions(), adminApi.getDepartments(), adminApi.getUsers({ status: 'ACTIVE', size: 500 })])
-      .then(([optionsRes, deptRes, usersRes]) => {
+    Promise.all([
+      trainingApi.getRecordOptions(),
+      adminApi.getDepartments(),
+      adminApi.getPositions(),
+      adminApi.getUsers({ status: 'ACTIVE', size: 500 }),
+    ])
+      .then(([optionsRes, deptRes, positionRes, usersRes]) => {
         setFields(data(optionsRes, {})?.professionalFields || [])
         setDepartments(data(deptRes, []) || [])
+        setPositions(data(positionRes, []) || [])
         const usersData = data(usersRes, {})
-        setAllUsers(usersData?.content || (Array.isArray(usersData) ? usersData : []))
+        const users = usersData?.content || (Array.isArray(usersData) ? usersData : [])
+        // Tai khoan admin khong phai doi tuong lam bai nen khong dua vao danh sach giao de.
+        setAllUsers(users.filter((user) => !(user.roles || []).some((role) => role?.code === 'ADMIN')))
       })
       .catch((error) => showToast(apiErrorMessage(error), 'error'))
       .finally(() => setLoading(false))
   }, [showToast])
 
+  // Lay tu danh muc chuc danh (/positions) chu khong suy ra tu danh sach user,
+  // vi suy ra chi hien duoc nhung chuc danh dang co nguoi.
+  const positionOptions = useMemo(() => {
+    const names = [...new Set(positions.map((position) => position.name).filter(Boolean))]
+    names.sort((a, b) => a.localeCompare(b, 'vi'))
+    return [{ value: '', label: 'Tất cả chức danh' }, ...names.map((name) => ({ value: name, label: name }))]
+  }, [positions])
+
+  const filteredDepartments = useMemo(() => {
+    const keyword = departmentKeyword.trim().toLowerCase()
+    if (!keyword) return departments
+    return departments.filter((dept) => (
+      (dept.departmentCode || '').toLowerCase().includes(keyword)
+      || (dept.name || '').toLowerCase().includes(keyword)
+    ))
+  }, [departments, departmentKeyword])
+
+  // Nhieu tu khoa cach nhau bang dau cach, khop bat ky tu khoa nao:
+  // "tuan1 tuan2 namnv" tra ve ca ba nguoi.
   const filteredUsers = useMemo(() => {
-    const keyword = userKeyword.trim().toLowerCase()
+    const tokens = userKeyword.trim().toLowerCase().split(/\s+/).filter(Boolean)
     return allUsers.filter((user) => {
-      const matchesDepartment = filterDepartmentIds.length === 0 || filterDepartmentIds.includes(Number(user.departmentId))
-      const matchesKeyword = !keyword
-        || (user.employeeCode || '').toLowerCase().includes(keyword)
-        || (user.fullName || '').toLowerCase().includes(keyword)
-        || (user.departmentName || '').toLowerCase().includes(keyword)
-      return matchesDepartment && matchesKeyword
+      if (filterDepartmentIds.length > 0 && !filterDepartmentIds.includes(Number(user.departmentId))) return false
+      if (positionFilter && user.positionName !== positionFilter) return false
+      if (tokens.length === 0) return true
+      const haystack = `${user.employeeCode || ''} ${user.fullName || ''} ${user.departmentName || ''}`.toLowerCase()
+      return tokens.some((token) => haystack.includes(token))
     })
-  }, [allUsers, filterDepartmentIds, userKeyword])
+  }, [allUsers, filterDepartmentIds, positionFilter, userKeyword])
 
   const totalAllocated = useMemo(() => blueprint.reduce((sum, item) => sum + Number(item.questionCount || 0), 0), [blueprint])
   const totalQuestions = Number(form.totalQuestions) || 0
@@ -182,31 +211,82 @@ export default function ExamConfigPage() {
     }
   }
 
-  function validate() {
-    if (!form.name.trim()) return 'Vui lòng nhập tên bài kiểm tra.'
-    if (!blueprint.length) return 'Vui lòng chọn ít nhất một lĩnh vực chuyên môn.'
-    if (totalAllocated !== totalQuestions) return `Tổng số câu các lĩnh vực (${totalAllocated}) phải bằng tổng số câu (${totalQuestions}).`
-    if (blueprint.some((field) => Math.abs(field.cognitive.reduce((sum, cell) => sum + Number(cell.percentage || 0), 0) - 100) > 0.001)) {
-      return 'Tổng tỷ lệ ba mức nhận thức trong mỗi lĩnh vực phải bằng 100%.'
+  function collectValidationErrors(referenceTime = null) {
+    const errors = {}
+    const duration = Number(form.timeLimitMinutes)
+    const passingScore = Number(form.passingScore)
+    const attempts = Number(maxAttempts)
+
+    if (!form.name.trim()) errors.name = 'Vui lòng nhập tên bài kiểm tra.'
+    else if (form.name.trim().length > 255) errors.name = 'Tên bài kiểm tra không được vượt quá 255 ký tự.'
+
+    if (!Number.isInteger(totalQuestions) || totalQuestions < 1 || totalQuestions > 200) {
+      errors.totalQuestions = 'Tổng số câu hỏi phải là số nguyên từ 1 đến 200.'
     }
-    if (!totalQuestions || totalQuestions < 1) return 'Tổng số câu phải lớn hơn 0.'
-    if (selectedUserIds.length === 0) return 'Vui lòng chọn ít nhất một nhân viên nhận đề.'
-    if (availableFrom && dueAt && availableFrom >= dueAt) return 'Thời điểm mở đề phải sớm hơn hạn hoàn thành.'
-    return ''
+    if (!Number.isInteger(duration) || duration < 1 || duration > 300) {
+      errors.timeLimitMinutes = 'Thời gian làm bài phải là số nguyên từ 1 đến 300 phút.'
+    }
+    if (!Number.isInteger(passingScore) || passingScore < 0 || passingScore > 10) {
+      errors.passingScore = 'Điểm đạt chuẩn phải là số nguyên từ 0 đến 10.'
+    }
+
+    if (!blueprint.length) {
+      errors.blueprint = 'Vui lòng chọn ít nhất một lĩnh vực chuyên môn.'
+    } else {
+      blueprint.forEach((field) => {
+        const count = Number(field.questionCount)
+        const cognitiveSum = field.cognitive.reduce((sum, cell) => sum + Number(cell.percentage), 0)
+        if (!Number.isInteger(count) || count < 1 || count > totalQuestions) {
+          errors[`field-${field.professionalFieldId}-count`] = `Số câu của mỗi lĩnh vực phải là số nguyên từ 1 đến ${Math.max(totalQuestions, 1)}.`
+        }
+        if (field.cognitive.some((cell) => !Number.isFinite(Number(cell.percentage)) || Number(cell.percentage) < 0 || Number(cell.percentage) > 100)
+          || Math.abs(cognitiveSum - 100) > 0.001) {
+          errors[`field-${field.professionalFieldId}-cognitive`] = 'Tổng tỷ lệ ba mức nhận thức phải bằng 100% và mỗi tỷ lệ nằm trong khoảng 0–100%.'
+        }
+      })
+      if (!errors.totalQuestions && totalAllocated !== totalQuestions) {
+        errors.allocation = `Tổng số câu các lĩnh vực (${totalAllocated}) phải bằng tổng số câu (${totalQuestions}).`
+      }
+    }
+
+    if (selectedUserIds.length === 0) errors.audience = 'Vui lòng chọn ít nhất một nhân viên nhận đề.'
+    if (!Number.isInteger(attempts) || attempts < 1 || attempts > 10) {
+      errors.maxAttempts = 'Số lượt thi phải là số nguyên từ 1 đến 10.'
+    }
+
+    const availableTime = availableFrom ? Date.parse(availableFrom) : null
+    const dueTime = dueAt ? Date.parse(dueAt) : null
+    if (availableFrom && Number.isNaN(availableTime)) errors.availableFrom = 'Thời điểm mở đề không hợp lệ.'
+    if (dueAt && Number.isNaN(dueTime)) errors.dueAt = 'Hạn nộp bài không hợp lệ.'
+    else if (dueTime !== null && referenceTime !== null && dueTime <= referenceTime) errors.dueAt = 'Hạn nộp bài phải ở thời điểm tương lai.'
+    if (availableTime !== null && dueTime !== null && availableTime >= dueTime) {
+      errors.dueAt = 'Hạn nộp bài phải sau thời điểm mở đề.'
+    }
+
+    return errors
+  }
+
+  function validate() {
+    const referenceTime = Date.now()
+    const errors = collectValidationErrors(referenceTime)
+    setShowValidationErrors(true)
+    setValidationTimestamp(referenceTime)
+    const firstError = Object.values(errors)[0]
+    if (firstError) showToast(firstError, 'warning')
+    return !firstError
   }
 
   async function previewBlueprint() {
-    const error = validate()
-    if (error) return showToast(error, 'warning')
+    if (!validate()) return
     setSubmitting(true)
-    setSubmitStep('Đang kiểm tra khả dụng nguồn câu hỏi...')
+    setSubmitAction('PREVIEW')
     try {
       setPreview(data(await examConfigApi.previewExamConfig(matrixPayload()), null))
     } catch (err) {
       showToast(apiErrorMessage(err), 'error')
     } finally {
       setSubmitting(false)
-      setSubmitStep('')
+      setSubmitAction('')
     }
   }
 
@@ -215,11 +295,10 @@ export default function ExamConfigPage() {
   }
 
   async function createAndAssign() {
-    const error = validate()
-    if (error) return showToast(error, 'warning')
+    if (!validate()) return
     setSubmitting(true)
+    setSubmitAction('CREATE')
     try {
-      setSubmitStep('1/5. Đang kiểm tra khả dụng nguồn câu hỏi...')
       const check = data(await examConfigApi.previewExamConfig(matrixPayload()), null)
       if (check && check.valid === false) {
         showToast((check.warnings || []).map(formatCognitiveWarningText).join('; ') || 'Ngân hàng câu hỏi chưa đủ nguồn theo ma trận đã chọn.', 'warning')
@@ -227,10 +306,8 @@ export default function ExamConfigPage() {
         return
       }
 
-      setSubmitStep('2/5. Đang tạo ma trận đề...')
       const config = data(await examConfigApi.createExamConfig(matrixPayload('ACTIVE')), null)
 
-      setSubmitStep('3/5. Đang sinh mã đề...')
       const papers = data(
         await examPaperApi.generateExamPapers({
           examConfigId: config.id,
@@ -244,12 +321,10 @@ export default function ExamConfigPage() {
       )
       const paper = papers[0]
 
-      setSubmitStep('4/5. Đang phát hành mã đề & tạo nhóm nhận đề...')
       await examPaperApi.publishExamPaper(paper.id)
       const audience = data(await evaluationAudienceApi.create({ name: `${form.name.trim()} - Đối tượng thi`, ruleJson: buildRuleJson() }), null)
       await evaluationAudienceApi.activate(audience.id)
 
-      setSubmitStep('5/5. Đang giao đề kiểm tra...')
       await examAssignmentApi.createAssignment({
         name: form.name.trim(),
         description: form.description.trim() || null,
@@ -260,7 +335,7 @@ export default function ExamConfigPage() {
         maxAttempts: Number(maxAttempts),
         shuffleQuestions: true,
         shuffleOptions: true,
-        resultVisibility: 'SCORE_ONLY',
+        resultVisibility,
         status: 'OPEN',
         variantPolicy: 'FIXED_PAPER',
         retakeVariantPolicy: 'KEEP_VARIANT',
@@ -273,46 +348,27 @@ export default function ExamConfigPage() {
       showToast(apiErrorMessage(err), 'error')
     } finally {
       setSubmitting(false)
-      setSubmitStep('')
+      setSubmitAction('')
     }
   }
 
-  function handleFlowStep(step) {
-    if (step === 'papers') navigate('/admin/evaluation/exam-management?view=papers')
-    if (step === 'assignments') navigate('/admin/evaluation/exam-assignments/new')
-  }
+  const validationErrors = showValidationErrors ? collectValidationErrors(validationTimestamp) : {}
 
   return (
     <AppShell
       className="dashboard-layout"
       back={{ to: '/admin/evaluation/exam-management', label: 'Quay lại' }}
-      breadcrumbs={[{ label: 'Quản lý bài kiểm tra', link: '/admin/evaluation/exam-management' }, { label: 'Tạo ma trận & Giao đề' }]}
+      title="Giao bài kiểm tra"
+      breadcrumbs={[{ label: 'Quản lý bài kiểm tra', link: '/admin/evaluation/exam-management' }, { label: 'Giao bài kiểm tra' }]}
     >
       <div className="exp-page">
-              <ExamDeliveryFlow
-                activeStep="matrix"
-                title="Tạo ma trận & Giao đề kiểm tra"
-                description="Cấu hình ma trận số câu theo lĩnh vực chuyên môn, chọn đối tượng nhận đề và giao đề tự động."
-                onStepChange={handleFlowStep}
-              />
-
               <section className="exp-assignment-shell">
-                <div className="exp-assignment-toolbar">
-                  <div>
-                    <span className="exp-section-kicker">BƯỚC 1 · THIẾT LẬP NHACH MA TRẬN & GIAO ĐỀ</span>
-                    <h2>Tạo mới & Giao đề kiểm tra</h2>
-                    <p>Thiết lập thông tin chung, ma trận chuyên môn, đối tượng thi và lịch phát hành trong một quy trình duy nhất.</p>
-                  </div>
-                  <button type="button" className="exp-btn-secondary" onClick={() => navigate('/admin/evaluation/exam-management')}>
-                    <ArrowLeftOutlined /> Quay lại danh sách
-                  </button>
-                </div>
-
                 {loading ? (
                   <div className="exp-empty">Đang tải danh sách lĩnh vực chuyên môn và khoa phòng...</div>
                 ) : (
                   <form
                     className="exp-assignment-form"
+                    noValidate
                     onSubmit={(event) => {
                       event.preventDefault()
                       createAndAssign()
@@ -324,7 +380,6 @@ export default function ExamConfigPage() {
                         <span className="exp-form-section__number"><FileTextOutlined /></span>
                         <div>
                           <h3>1. Thông tin chung bài kiểm tra</h3>
-                          <p>Nhập tên bài thi, số câu hỏi, thời gian làm bài và mức điểm đạt.</p>
                         </div>
                       </div>
 
@@ -333,11 +388,14 @@ export default function ExamConfigPage() {
                           <span>Tên bài kiểm tra <b>*</b></span>
                           <input
                             required
-                            className="ch-input"
+                            className={`ch-input${validationErrors.name ? ' is-invalid' : ''}`}
                             value={form.name}
                             onChange={(e) => setForm({ ...form, name: e.target.value })}
                             placeholder="Ví dụ: Kiểm tra quy trình điều dưỡng chuyên khoa - 08/2026"
+                            aria-invalid={Boolean(validationErrors.name)}
+                            aria-describedby={validationErrors.name ? 'exam-name-error' : undefined}
                           />
+                          {validationErrors.name && <small id="exam-name-error" className="exp-field-error">{validationErrors.name}</small>}
                         </label>
 
                         <label>
@@ -347,11 +405,14 @@ export default function ExamConfigPage() {
                             type="number"
                             min="1"
                             max="200"
-                            className="ch-input"
+                            className={`ch-input${validationErrors.totalQuestions ? ' is-invalid' : ''}`}
                             value={form.totalQuestions}
                             onFocus={(e) => e.target.select()}
                             onChange={(e) => setForm({ ...form, totalQuestions: e.target.value })}
+                            aria-invalid={Boolean(validationErrors.totalQuestions)}
+                            aria-describedby={validationErrors.totalQuestions ? 'exam-total-error' : undefined}
                           />
+                          {validationErrors.totalQuestions && <small id="exam-total-error" className="exp-field-error">{validationErrors.totalQuestions}</small>}
                         </label>
 
                         <label>
@@ -361,11 +422,14 @@ export default function ExamConfigPage() {
                             type="number"
                             min="1"
                             max="300"
-                            className="ch-input"
+                            className={`ch-input${validationErrors.timeLimitMinutes ? ' is-invalid' : ''}`}
                             value={form.timeLimitMinutes}
                             onFocus={(e) => e.target.select()}
                             onChange={(e) => setForm({ ...form, timeLimitMinutes: e.target.value })}
+                            aria-invalid={Boolean(validationErrors.timeLimitMinutes)}
+                            aria-describedby={validationErrors.timeLimitMinutes ? 'exam-duration-error' : undefined}
                           />
+                          {validationErrors.timeLimitMinutes && <small id="exam-duration-error" className="exp-field-error">{validationErrors.timeLimitMinutes}</small>}
                         </label>
 
                         <label>
@@ -375,12 +439,15 @@ export default function ExamConfigPage() {
                             type="number"
                             min="0"
                             max="10"
-                            step="0.5"
-                            className="ch-input"
+                            step="1"
+                            className={`ch-input${validationErrors.passingScore ? ' is-invalid' : ''}`}
                             value={form.passingScore}
                             onFocus={(e) => e.target.select()}
                             onChange={(e) => setForm({ ...form, passingScore: e.target.value })}
+                            aria-invalid={Boolean(validationErrors.passingScore)}
+                            aria-describedby={validationErrors.passingScore ? 'exam-score-error' : undefined}
                           />
+                          {validationErrors.passingScore && <small id="exam-score-error" className="exp-field-error">{validationErrors.passingScore}</small>}
                         </label>
                       </div>
                     </section>
@@ -390,8 +457,7 @@ export default function ExamConfigPage() {
                       <div className="exp-form-section__heading">
                         <span className="exp-form-section__number"><AppstoreOutlined /></span>
                         <div>
-                          <h3>2. Ma trận Lĩnh vực chuyên môn & Mức nhận thức</h3>
-                          <p>Chọn các lĩnh vực chuyên môn và phân bổ câu hỏi theo tỷ lệ nhận thức.</p>
+                          <h3>2. Ma trận lĩnh vực chuyên môn & mức nhận thức</h3>
                         </div>
                       </div>
 
@@ -405,6 +471,7 @@ export default function ExamConfigPage() {
                             placeholder="Tìm kiếm và chọn lĩnh vực chuyên môn..."
                             emptyValue=""
                           />
+                          {validationErrors.blueprint && <small className="exp-field-error">{validationErrors.blueprint}</small>}
                         </label>
                       </div>
 
@@ -414,9 +481,8 @@ export default function ExamConfigPage() {
                           checked={backfillNearestCognitiveLevel}
                           onChange={(e) => setBackfillNearestCognitiveLevel(e.target.checked)}
                         />
-                        <span>
+                        <span title="Ví dụ thiếu Kiến thức nền tảng sẽ lấy bù từ Áp dụng lâm sàng trước khi báo thiếu">
                           Tự động bù câu từ mức nhận thức gần nhất khi thiếu
-                          <small> (ví dụ thiếu Kiến thức nền tảng sẽ lấy bù từ Áp dụng lâm sàng trước khi báo thiếu)</small>
                         </span>
                       </label>
 
@@ -446,7 +512,7 @@ export default function ExamConfigPage() {
                                     <input
                                       type="number"
                                       min="0"
-                                      className="ch-input"
+                                      className={`ch-input${validationErrors[`field-${item.professionalFieldId}-count`] ? ' is-invalid' : ''}`}
                                       value={item.questionCount}
                                       onFocus={(e) => e.target.select()}
                                       onChange={(e) => {
@@ -458,7 +524,11 @@ export default function ExamConfigPage() {
                                         }
                                         updateField(item.professionalFieldId, 'questionCount', normalized)
                                       }}
+                                      aria-invalid={Boolean(validationErrors[`field-${item.professionalFieldId}-count`])}
                                     />
+                                    {validationErrors[`field-${item.professionalFieldId}-count`] && (
+                                      <small className="exp-field-error">{validationErrors[`field-${item.professionalFieldId}-count`]}</small>
+                                    )}
                                     {previewField && (
                                       <span className={`exp-cognitive-availability ${previewField.shortage > 0 ? 'is-short' : previewField.backfilledQuestionCount > 0 ? 'is-backfilled' : 'is-ok'}`}>
                                         Khả dụng {previewField.availableQuestionCount}/{previewField.requiredQuestionCount} câu
@@ -488,7 +558,7 @@ export default function ExamConfigPage() {
                                                   type="number"
                                                   min="0"
                                                   max="100"
-                                                  className="ch-input"
+                                                  className={`ch-input${validationErrors[`field-${item.professionalFieldId}-cognitive`] ? ' is-invalid' : ''}`}
                                                   style={{ width: '80px', textAlign: 'center' }}
                                                   value={cell.percentage}
                                                   onFocus={(e) => e.target.select()}
@@ -501,6 +571,7 @@ export default function ExamConfigPage() {
                                                     }
                                                     updateCognitive(item.professionalFieldId, cell.cognitiveLevel, normalized)
                                                   }}
+                                                  aria-invalid={Boolean(validationErrors[`field-${item.professionalFieldId}-cognitive`])}
                                                 />
                                               </td>
                                               <td style={{ textAlign: 'right' }}>
@@ -522,8 +593,8 @@ export default function ExamConfigPage() {
                                   </div>
 
                                   <div className={`exp-cognitive-summary ${cognitiveValid ? 'is-valid' : 'is-invalid'}`}>
-                                    <span>Tổng tỷ lệ nhận thức: <strong>{cognitiveSum}%</strong></span>
-                                    {!cognitiveValid && <small> (Tổng tỷ lệ phải bằng 100%)</small>}
+                                    <span>Tổng tỷ lệ: <strong>{cognitiveSum}%</strong></span>
+                                    {!cognitiveValid && <small> {validationErrors[`field-${item.professionalFieldId}-cognitive`] || '(Tổng tỷ lệ phải bằng 100%)'}</small>}
                                   </div>
                                 </div>
                               </div>
@@ -539,6 +610,7 @@ export default function ExamConfigPage() {
                           <><ExclamationCircleOutlined /> Đã phân bổ <strong>{totalAllocated} / {totalQuestions}</strong> câu hỏi. Hãy điều chỉnh để khớp số lượng.</>
                         )}
                       </div>
+                      {validationErrors.allocation && <small className="exp-field-error">{validationErrors.allocation}</small>}
                     </section>
 
                     {/* Section 3 */}
@@ -546,16 +618,41 @@ export default function ExamConfigPage() {
                       <div className="exp-form-section__heading">
                         <span className="exp-form-section__number"><TeamOutlined /></span>
                         <div>
-                          <h3>3. Đối tượng nhận đề (Nhóm thi)</h3>
-                          <p>Lọc theo khoa phòng để thu hẹp danh sách, sau đó tick chọn từng nhân viên nhận đề.</p>
+                          <h3>3. Đối tượng nhận đề</h3>
                         </div>
                       </div>
 
                       <div className="exam-flow__target-columns">
                         <div>
-                          <div className="exam-flow__target-title"><span>Lọc theo khoa phòng (tùy chọn)</span></div>
+                          <div className="exam-flow__target-title">
+                            <span>Bộ lọc</span>
+                            {(filterDepartmentIds.length > 0 || positionFilter) && (
+                              <button
+                                type="button"
+                                className="exp-btn-secondary"
+                                onClick={() => { setFilterDepartmentIds([]); setPositionFilter('') }}
+                              >
+                                Bỏ lọc
+                              </button>
+                            )}
+                          </div>
+                          <FormSelectField
+                            className="exam-flow__position-filter"
+                            ariaLabel="Lọc theo chức danh"
+                            value={positionFilter}
+                            onChange={setPositionFilter}
+                            options={positionOptions}
+                            placeholder="Tất cả chức danh"
+                          />
+                          <input
+                            className="ch-input exam-flow__employee-search"
+                            value={departmentKeyword}
+                            onChange={(e) => setDepartmentKeyword(e.target.value)}
+                            placeholder="Tìm khoa phòng..."
+                            aria-label="Tìm khoa phòng"
+                          />
                           <div className="exp-target-list exp-target-list--select">
-                            {departments.map((dept) => {
+                            {filteredDepartments.map((dept) => {
                               const deptId = Number(dept.id)
                               return (
                                 <label key={dept.id} className="exp-target-item exp-target-item--checkbox">
@@ -565,13 +662,13 @@ export default function ExamConfigPage() {
                                 </label>
                               )
                             })}
-                            {!loading && departments.length === 0 && <div className="exp-empty">Chưa có khoa phòng để lọc.</div>}
+                            {!loading && filteredDepartments.length === 0 && <div className="exp-empty">Không có khoa phòng phù hợp.</div>}
                           </div>
                         </div>
 
                         <div>
                           <div className="exam-flow__target-title">
-                            <span>{selectedUserIds.length} đã chọn / {filteredUsers.length} hiển thị</span>
+                            <span>{selectedUserIds.length} đã chọn / {filteredUsers.length} hiển thị <b>*</b></span>
                             <div style={{ display: 'flex', gap: 8 }}>
                               <button type="button" className="exp-btn-secondary" onClick={selectAllFiltered}>Chọn tất cả</button>
                               <button type="button" className="exp-btn-secondary" onClick={deselectAllFiltered}>Bỏ tất cả</button>
@@ -581,7 +678,8 @@ export default function ExamConfigPage() {
                             className="ch-input exam-flow__employee-search"
                             value={userKeyword}
                             onChange={(e) => setUserKeyword(e.target.value)}
-                            placeholder="Tìm theo mã nhân viên, họ tên hoặc phòng ban..."
+                            placeholder="Tìm nhiều mã nhân viên, cách nhau bằng dấu cách. VD: tuan1 tuan2 namnv"
+                            aria-label="Tìm nhân viên"
                           />
                           <div className="exp-target-list exp-target-list--select">
                             {filteredUsers.map((user) => {
@@ -599,6 +697,7 @@ export default function ExamConfigPage() {
                           </div>
                         </div>
                       </div>
+                      {validationErrors.audience && <small className="exp-field-error">{validationErrors.audience}</small>}
                     </section>
 
                     {/* Section 4 */}
@@ -606,26 +705,27 @@ export default function ExamConfigPage() {
                       <div className="exp-form-section__heading">
                         <span className="exp-form-section__number"><CalendarOutlined /></span>
                         <div>
-                          <h3>4. Lịch mở đề & Lượt thi</h3>
-                          <p>Thiết lập thời gian bắt đầu, hạn hoàn thành và số lần được phép làm bài.</p>
+                          <h3>4. Lịch mở đề & lượt thi</h3>
                         </div>
                       </div>
 
                       <div className="exp-schedule-card">
                         <div className="exp-schedule-row">
-                          <div className="exp-schedule-field">
-                            <label className="exp-schedule-label">Mở đề lúc (tùy chọn)</label>
+                          <div className={`exp-schedule-field${validationErrors.availableFrom ? ' is-invalid' : ''}`}>
+                            <label className="exp-schedule-label">Mở đề lúc</label>
                             <DateTimePicker24h value={availableFrom} onChange={(val) => setAvailableFrom(val)} />
+                            {validationErrors.availableFrom && <small className="exp-field-error">{validationErrors.availableFrom}</small>}
                           </div>
 
-                          <div className="exp-schedule-field">
-                            <label className="exp-schedule-label">Hạn nộp bài (tùy chọn)</label>
+                          <div className={`exp-schedule-field${validationErrors.dueAt ? ' is-invalid' : ''}`}>
+                            <label className="exp-schedule-label">Hạn nộp bài</label>
                             <DateTimePicker24h value={dueAt} onChange={(val) => setDueAt(val)} />
+                            {validationErrors.dueAt && <small className="exp-field-error">{validationErrors.dueAt}</small>}
                           </div>
 
                           <div className="exp-schedule-field exp-schedule-field--compact">
-                            <label className="exp-schedule-label">Số lượt thi tối đa</label>
-                            <div className="exp-number-stepper">
+                            <label className="exp-schedule-label">Số lượt thi <b>*</b></label>
+                            <div className={`exp-number-stepper${validationErrors.maxAttempts ? ' is-invalid' : ''}`}>
                               <input
                                 type="number"
                                 min="1"
@@ -636,10 +736,9 @@ export default function ExamConfigPage() {
                               />
                               <span className="exp-stepper-unit">lần</span>
                             </div>
+                            {validationErrors.maxAttempts && <small className="exp-field-error">{validationErrors.maxAttempts}</small>}
                           </div>
-                        </div>
 
-                        <div className="exp-schedule-row exp-schedule-row--bottom">
                           <div className="exp-schedule-field exp-schedule-field--wide">
                             <label className="exp-schedule-label">Công bố kết quả</label>
                             <FormSelectField
@@ -651,7 +750,6 @@ export default function ExamConfigPage() {
                                 { value: 'HIDDEN_UNTIL_END', label: 'Ẩn kết quả đến khi đợt thi kết thúc' }
                               ]}
                             />
-                            <small className="exp-field-hint">Áp dụng cho toàn bộ nhân viên trong đợt giao đề.</small>
                           </div>
                         </div>
                       </div>
@@ -661,7 +759,8 @@ export default function ExamConfigPage() {
                     {preview && (
                       <div className={`ch-alert ${preview.valid === false ? 'ch-alert--warning' : 'ch-alert--info'}`} style={{ margin: '16px 24px' }}>
                         <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '6px' }}>
-                          <EyeOutlined /> Đánh giá khả dụng: {preview.distributedQuestions} / {totalQuestions} câu khả dụng
+                          <EyeOutlined /> Đánh giá khả dụng:{' '}
+                          {(preview.blueprintFields || []).reduce((sum, field) => sum + field.requiredQuestionCount - field.shortage, 0)} / {totalQuestions} câu có thể chọn
                         </div>
                         {preview.warnings?.length > 0 && (
                           <ul style={{ margin: '4px 0 0 18px', padding: 0 }}>
@@ -676,28 +775,18 @@ export default function ExamConfigPage() {
                       </div>
                     )}
 
-                    {submitting && submitStep && (
-                      <div className="ch-alert ch-alert--info" style={{ margin: '16px 24px' }}>
-                        <ControlOutlined /> {submitStep}
-                      </div>
-                    )}
-
                     {/* Submit Bar */}
                     <div className="exp-assignment-submit">
-                      <div className="exp-assignment-submit__info">
-                        <div className="exp-status-indicator">
-                          <span className="exp-status-dot is-open"></span>
-                          <strong>Tự động sinh mã đề & Mở đợt giao đề ngay</strong>
-                        </div>
-                        <span>Quy trình tự động tạo ma trận, sinh mã đề, chụp snapshot đối tượng thi và mở giao.</span>
-                      </div>
-
                       <div className="exp-actions-group">
                         <button type="button" className="exp-btn-secondary" onClick={previewBlueprint} disabled={loading || submitting}>
-                          <EyeOutlined /> Kiểm tra khả dụng
+                          {submitting && submitAction === 'PREVIEW'
+                            ? <><LoadingOutlined /> Đang kiểm tra...</>
+                            : <><EyeOutlined /> Kiểm tra khả dụng</>}
                         </button>
                         <button type="submit" className="exp-btn-primary" disabled={loading || submitting}>
-                          {submitting ? 'Đang xử lý...' : <><SendOutlined /> Tạo ma trận & Giao đề ngay</>}
+                          {submitting && submitAction === 'CREATE'
+                            ? <><LoadingOutlined /> Đang tạo đề...</>
+                            : <><SendOutlined /> Tạo đề</>}
                         </button>
                       </div>
                     </div>

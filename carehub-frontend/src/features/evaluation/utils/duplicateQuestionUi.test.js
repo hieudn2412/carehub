@@ -7,10 +7,10 @@ import {
 
 describe('duplicateQuestionUi', () => {
   it('phân biệt đúng ngưỡng nghi vấn và trùng mạnh', () => {
-    expect(hasPotentialDuplicate({ duplicateMaxSimilarity: 0.87 })).toBe(false)
-    expect(hasPotentialDuplicate({ duplicateMaxSimilarity: 0.88 })).toBe(true)
-    expect(hasStrongDuplicate({ duplicateMaxSimilarity: 0.94 })).toBe(false)
-    expect(hasStrongDuplicate({ duplicateMaxSimilarity: 0.95 })).toBe(true)
+    expect(hasPotentialDuplicate({ duplicateMaxSimilarity: 0.92 })).toBe(false)
+    expect(hasPotentialDuplicate({ duplicateMaxSimilarity: 0.93 })).toBe(true)
+    expect(hasStrongDuplicate({ duplicateMaxSimilarity: 0.96 })).toBe(false)
+    expect(hasStrongDuplicate({ duplicateMaxSimilarity: 0.97 })).toBe(true)
     expect(hasPotentialDuplicate({ duplicateNeedsReview: false, duplicateMaxSimilarity: 1 })).toBe(false)
     expect(hasStrongDuplicate({ strongDuplicate: false, duplicateMaxSimilarity: 1 })).toBe(false)
   })

@@ -5,6 +5,7 @@ import vn.vietduc.carehubbackend.form.dto.response.FormVersionResponse;
 
 import java.time.Instant;
 import java.math.BigDecimal;
+import java.util.List;
 
 @Builder
 public record AssignedFormResponse(
@@ -16,6 +17,8 @@ public record AssignedFormResponse(
         String complianceTargetSource,
         Instant validFrom,
         Instant validUntil,
-        FormVersionResponse version
+        FormVersionResponse version,
+        Boolean allDepartments,
+        List<FormAssignmentDepartmentScopeResponse> allowedDepartments
 ) {
 }

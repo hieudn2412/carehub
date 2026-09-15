@@ -123,6 +123,12 @@ export const adminApi = {
     })
   },
 
+  restoreUser(id) {
+    return httpClient.patch(`/users/${id}/restore`, {}, {
+      headers: authHeaders(),
+    })
+  },
+
   lockUser(id) {
     return httpClient.patch(`/users/${id}/lock`, {}, {
       headers: authHeaders(),
@@ -279,6 +285,12 @@ export const adminApi = {
 
   deleteForm(id) {
     return httpClient.delete(`/forms/${id}`, {
+      headers: authHeaders(),
+    })
+  },
+
+  restoreForm(id) {
+    return httpClient.post(`/forms/${id}/restore`, {}, {
       headers: authHeaders(),
     })
   },
@@ -455,6 +467,18 @@ export const adminApi = {
     })
   },
 
+  getFormAssignmentItemAllowedDepartments(itemId) {
+    return httpClient.get(`/form-assignment-items/${itemId}/allowed-departments`, {
+      headers: authHeaders(),
+    })
+  },
+
+  updateFormAssignmentItemAllowedDepartments(itemId, data) {
+    return httpClient.put(`/form-assignment-items/${itemId}/allowed-departments`, data, {
+      headers: authHeaders(),
+    })
+  },
+
   getFormAssignmentFormCandidates(params) {
     return httpClient.get('/form-assignments/form-candidates', {
       headers: authHeaders(),
@@ -466,6 +490,12 @@ export const adminApi = {
     return httpClient.get('/form-assignments/assignee-candidates', {
       headers: authHeaders(),
       params,
+    })
+  },
+
+  getFormAssignmentManagerCandidates() {
+    return httpClient.get('/form-assignments/manager-candidate-ids', {
+      headers: authHeaders(),
     })
   },
 
@@ -536,6 +566,20 @@ export const adminApi = {
   getFormSubmission(id) {
     return httpClient.get(`/form-submissions/${id}`, {
       headers: authHeaders(),
+    })
+  },
+
+  getEvaluationHistory(params) {
+    return httpClient.get('/forms/evaluations/history', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getEvaluationHistorySummary(params) {
+    return httpClient.get('/forms/evaluations/history/summary', {
+      headers: authHeaders(),
+      params,
     })
   },
 

@@ -2,7 +2,6 @@ package vn.vietduc.carehubbackend.questiongeneration.service;
 
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CandidateLabel;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CandidateStatus;
-import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CompetencyLevel;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CognitiveLevel;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.DocumentStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAssignmentStatus;
@@ -173,32 +172,6 @@ public final class QuestionGenerationLabels {
             case SCORE_ONLY -> "Xem điểm ngay sau khi nộp";
             case SCORE_AND_ANSWERS -> "Xem điểm và đáp án sau khi đợt thi kết thúc";
             case HIDDEN_UNTIL_END -> "Ẩn kết quả đến khi đợt thi kết thúc";
-        };
-    }
-
-    public static String competencyLevel(CompetencyLevel level) {
-        if (level == null) {
-            return "";
-        }
-        return switch (level) {
-            case NOT_COMPETENT -> "Chưa đạt năng lực";
-            case BEGINNER -> "Sơ cấp";
-            case BASIC -> "Cơ bản";
-            case PROFICIENT -> "Thành thạo";
-            case ADVANCED -> "Chuyên sâu";
-        };
-    }
-
-    public static String competencyLevelColor(CompetencyLevel level) {
-        if (level == null) {
-            return "#6B7280";
-        }
-        return switch (level) {
-            case NOT_COMPETENT -> "#EF4444";
-            case BEGINNER -> "#F59E0B";
-            case BASIC -> "#3B82F6";
-            case PROFICIENT -> "#10B981";
-            case ADVANCED -> "#8B5CF6";
         };
     }
 }

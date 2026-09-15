@@ -14,6 +14,7 @@ import vn.vietduc.carehubbackend.notification.messaging.EmailProducer;
 import vn.vietduc.carehubbackend.notification.service.BrandedEmailRenderer;
 import vn.vietduc.carehubbackend.auth.dto.request.ForgotPasswordRequest;
 import vn.vietduc.carehubbackend.auth.dto.request.ResetPasswordRequest;
+import vn.vietduc.carehubbackend.auth.dto.request.VerifyOtpRequest;
 import vn.vietduc.carehubbackend.auth.entity.PasswordResetOtp;
 import vn.vietduc.carehubbackend.user.entity.User;
 import vn.vietduc.carehubbackend.user.entity.UserStatus;
@@ -74,10 +75,33 @@ public class PasswordResetServiceImpl implements PasswordResetService {
 
     @Override
     @Transactional
+    public void verifyResetOtp(VerifyOtpRequest request) {
+        PasswordResetOtp otp = findValidResetOtp(request.getEmail(), request.getOtp());
+        requireResettableUser(otp.getEmail());
+    }
+
+    @Override
+    @Transactional
     public void resetPassword(ResetPasswordRequest request) {
+        PasswordResetOtp otp = findValidResetOtp(request.getEmail(), request.getOtp());
+        User user = requireResettableUser(otp.getEmail());
+
+        String newPassword = passwordEncoder.encode(request.getNewPassword());
+        user.setPassword(newPassword);
+        user.setLastChangePassword(LocalDateTime.now());
+        user.bumpAuthVersion();
+        refreshTokenService.revokeAllUserTokens(user);
+        otp.setUsed(true);
+        userRepository.save(user);
+        passwordResetRepository.save(otp);
+    }
+
+    private PasswordResetOtp findValidResetOtp(String email, String rawOtp) {
+        String normalizedEmail = normalizeEmail(email);
+        String otpValue = normalizeOtp(rawOtp);
         PasswordResetOtp otp = passwordResetRepository
                 .findTopByEmailAndOtpAndEmailVerificationFalseOrderByCreatedAtDesc(
-                        request.getEmail(), request.getOtp())
+                        normalizedEmail, otpValue)
                 .orElseThrow(() -> new BadRequestException("Mã OTP không chính xác"));
         if (otp.isUsed()) {
             throw new BadRequestException("Mã OTP đã được sử dụng");
@@ -88,20 +112,25 @@ public class PasswordResetServiceImpl implements PasswordResetService {
                     "Mã OTP đã hết hạn");
         }
 
-        User user = userRepository.findByEmailAndIsDeletedFalse(request.getEmail())
+        return otp;
+    }
+
+    private User requireResettableUser(String email) {
+        User user = userRepository.findByEmailAndIsDeletedFalse(email)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy người dùng"));
 
         if (user.requiresFirstLoginSetup()) {
             throw new BadRequestException("Vui lòng hoàn tất thiết lập tài khoản lần đầu trước khi đặt lại mật khẩu");
         }
 
-        String newPassword = passwordEncoder.encode(request.getNewPassword());
-        user.setPassword(newPassword);
-        user.setLastChangePassword(LocalDateTime.now());
-        user.bumpAuthVersion();
-        refreshTokenService.revokeAllUserTokens(user);
-        otp.setUsed(true);
-        userRepository.save(user);
-        passwordResetRepository.save(otp);
+        return user;
+    }
+
+    private String normalizeEmail(String email) {
+        return email == null ? "" : email.trim();
+    }
+
+    private String normalizeOtp(String otp) {
+        return otp == null ? "" : otp.trim();
     }
 }

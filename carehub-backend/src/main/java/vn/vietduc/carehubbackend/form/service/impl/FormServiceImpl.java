@@ -11,6 +11,8 @@ import org.springframework.transaction.annotation.Transactional;
 import vn.vietduc.carehubbackend.exception.ConflictException;
 import vn.vietduc.carehubbackend.exception.ResourceNotFoundException;
 import vn.vietduc.carehubbackend.exception.ValidationException;
+import vn.vietduc.carehubbackend.form.assignment.entity.FormAssignmentStatus;
+import vn.vietduc.carehubbackend.form.assignment.repository.FormAssignmentItemRepository;
 import vn.vietduc.carehubbackend.form.dto.request.CreateFormRequest;
 import vn.vietduc.carehubbackend.form.dto.request.UpdateFormRequest;
 import vn.vietduc.carehubbackend.form.dto.response.FormResponse;
@@ -18,13 +20,20 @@ import vn.vietduc.carehubbackend.form.dto.response.FormComplianceTargetResponse;
 import vn.vietduc.carehubbackend.form.entity.Form;
 import vn.vietduc.carehubbackend.form.entity.enums.FormStatus;
 import vn.vietduc.carehubbackend.form.entity.enums.FormSubjectType;
+import vn.vietduc.carehubbackend.form.entity.enums.FormVersionStatus;
 import vn.vietduc.carehubbackend.form.mapper.FormMapper;
 import vn.vietduc.carehubbackend.form.repository.FormRepository;
 import vn.vietduc.carehubbackend.form.service.FormService;
+import vn.vietduc.carehubbackend.form.submission.entity.FormSubmissionStatus;
+import vn.vietduc.carehubbackend.form.submission.repository.FormSubmissionRepository;
 import vn.vietduc.carehubbackend.user.entity.Department;
 import vn.vietduc.carehubbackend.user.repository.DepartmentRepository;
 
+import java.time.Instant;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +42,8 @@ public class FormServiceImpl implements FormService {
 
     private final FormRepository formRepository;
     private final DepartmentRepository departmentRepository;
+    private final FormAssignmentItemRepository assignmentItemRepository;
+    private final FormSubmissionRepository submissionRepository;
     private final FormMapper mapper;
 
     @Value("${app.competency.compliance.default-target:80.0}")
@@ -47,19 +58,33 @@ public class FormServiceImpl implements FormService {
             Long ownerDepartmentId,
             Pageable pageable
     ) {
-        return formRepository.search(
+        Page<Form> forms = formRepository.search(
                 normalizeKeyword(keyword),
                 status,
                 subjectType,
                 ownerDepartmentId,
                 normalizePageable(pageable)
-        ).map(mapper::toResponse);
+        );
+
+        List<Long> formIds = forms.getContent().stream()
+                .map(Form::getId)
+                .toList();
+        Map<Long, Long> activeAssignmentCounts = activeAssignmentCounts(formIds);
+        Map<Long, Long> responseCounts = responseCounts(formIds);
+
+        return forms.map(form -> mapper.toResponse(
+                form,
+                activeAssignmentCounts.getOrDefault(form.getId(), 0L),
+                responseCounts.getOrDefault(form.getId(), 0L)
+        ));
     }
 
     @Override
     @Transactional(readOnly = true)
     public FormResponse get(Long id) {
-        return mapper.toResponse(findActive(id));
+        Form form = formRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Form not found"));
+        return mapper.toResponse(form);
     }
 
     @Override
@@ -116,6 +141,17 @@ public class FormServiceImpl implements FormService {
         formRepository.save(form);
     }
 
+    @Override
+    @Transactional
+    public FormResponse restore(Long id) {
+        Form form = formRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Form not found"));
+        form.setDeleted(false);
+        form.setStatus(form.getCurrentPublishedVersion() != null ? FormStatus.PUBLISHED : FormStatus.DRAFT);
+        Form saved = formRepository.save(form);
+        return mapper.toResponse(saved);
+    }
+
     private Form findActive(Long id) {
         return formRepository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Form not found"));
@@ -151,6 +187,33 @@ public class FormServiceImpl implements FormService {
                 }).toList())
                 : Sort.by(Sort.Order.desc("updatedAt"), Sort.Order.asc("id"));
         return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+    }
+
+    private Map<Long, Long> activeAssignmentCounts(List<Long> formIds) {
+        if (formIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        Instant now = Instant.now();
+        return assignmentItemRepository.countActiveRecipientsByFormIds(
+                        formIds,
+                        FormAssignmentStatus.ACTIVE,
+                        now
+                ).stream()
+                .collect(Collectors.toMap(
+                        FormAssignmentItemRepository.FormAssignmentCountProjection::getFormId,
+                        FormAssignmentItemRepository.FormAssignmentCountProjection::getActiveAssignmentCount
+                ));
+    }
+
+    private Map<Long, Long> responseCounts(List<Long> formIds) {
+        if (formIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return submissionRepository.countSubmittedByFormIds(formIds, FormSubmissionStatus.SUBMITTED).stream()
+                .collect(Collectors.toMap(
+                        FormSubmissionRepository.FormSubmissionCountProjection::getFormId,
+                        FormSubmissionRepository.FormSubmissionCountProjection::getResponseCount
+                ));
     }
 
     private String normalizeKeyword(String keyword) {

@@ -71,6 +71,12 @@ public class DocumentQuestionChunkResult extends BaseEntity {
     @Column(name = "prompt_tokens", nullable = false)
     private Integer promptTokens;
 
+    @Column(name = "prompt_cache_hit_tokens", nullable = false)
+    private Integer promptCacheHitTokens;
+
+    @Column(name = "prompt_cache_miss_tokens", nullable = false)
+    private Integer promptCacheMissTokens;
+
     @Column(name = "completion_tokens", nullable = false)
     private Integer completionTokens;
 
@@ -79,6 +85,9 @@ public class DocumentQuestionChunkResult extends BaseEntity {
 
     @Column(name = "latency_ms", nullable = false)
     private Long latencyMs;
+
+    @Column(name = "estimated_cost_usd", nullable = false)
+    private Double estimatedCostUsd;
 
     @Column(name = "error_code", length = 64)
     private String errorCode;

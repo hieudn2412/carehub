@@ -59,7 +59,11 @@ function exportRow(employee) {
  * Dùng chung cho dashboard đào tạo của Manager và trang danh sách nhân sự.
  * Nút xem chi tiết điều hướng sang trang "Chi tiết đào tạo nhân viên".
  */
-export default function DepartmentTrainingStaffTable({ pageSize = 100 }) {
+export default function DepartmentTrainingStaffTable({
+  pageSize = 100,
+  hideToolbar = false,
+  externalFilters = null,
+}) {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -77,11 +81,21 @@ export default function DepartmentTrainingStaffTable({ pageSize = 100 }) {
     let cancelled = false
     setLoading(true)
 
-    trainingApi.getEmployeeTrainingStatuses({
+    const params = {
       size: pageSize,
-      keyword: debouncedSearch.trim() || undefined,
-      complianceStatus: statusFilter !== 'all' ? statusFilter : undefined,
-    })
+      keyword: hideToolbar ? externalFilters?.keyword : (debouncedSearch.trim() || undefined),
+      complianceStatus: hideToolbar
+        ? (externalFilters?.complianceStatus || undefined)
+        : (statusFilter !== 'all' ? statusFilter : undefined),
+    }
+
+    // Add extra external filters if provided
+    if (hideToolbar && externalFilters) {
+      if (externalFilters.asOf) params.asOf = externalFilters.asOf
+      if (externalFilters.professionalFieldId) params.professionalFieldId = externalFilters.professionalFieldId
+    }
+
+    trainingApi.getEmployeeTrainingStatuses(params)
       .then((response) => {
         if (cancelled) return
         setEmployees(response.data?.data?.content || [])
@@ -96,56 +110,56 @@ export default function DepartmentTrainingStaffTable({ pageSize = 100 }) {
       })
 
     return () => { cancelled = true }
-  }, [debouncedSearch, pageSize, statusFilter])
+  }, [debouncedSearch, pageSize, statusFilter, hideToolbar, externalFilters])
 
   return (
     <div className="dtst">
-      <div className="dtst__toolbar">
-        <div className="dtst__search">
-          <SearchOutlined />
-          <input
-            type="text"
-            placeholder="Tìm nhân sự theo tên, mã NV..."
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            aria-label="Tìm nhân sự trong khoa"
+      {!hideToolbar && (
+        <div className="dtst__toolbar">
+          <div className="dtst__search">
+            <SearchOutlined />
+            <input
+              type="text"
+              placeholder="Tìm nhân sự theo tên, mã NV..."
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              aria-label="Tìm nhân sự trong khoa"
+            />
+          </div>
+          <FilterSelectField
+            label="Trạng thái đào tạo"
+            value={statusFilter}
+            onChange={(value) => setStatusFilter(value)}
+            options={[
+              { value: 'all', label: 'Tất cả trạng thái' },
+              { value: 'COMPLIANT', label: 'Đạt' },
+              { value: 'NON_COMPLIANT', label: 'Chưa đạt' },
+              { value: 'AT_RISK', label: 'Đang theo dõi' },
+              { value: 'NOT_CONFIGURED', label: 'Chưa thiết lập' },
+            ]}
           />
+          <FilterActionButtons
+            onApply={() => {}}
+            onReset={() => {
+              setSearch('')
+              setStatusFilter('all')
+            }}
+          />
+          <button
+            type="button"
+            className="dtst__export"
+            onClick={() => downloadCsv(
+              exportFileName('nhan-su-dao-tao-lien-tuc'),
+              EXPORT_HEADERS,
+              employees.map(exportRow),
+            )}
+            disabled={loading || employees.length === 0}
+            title="Xuất danh sách đang lọc ra file Excel"
+          >
+            <DownloadOutlined /> Xuất Excel
+          </button>
         </div>
-        <FilterSelectField
-          label="Trạng thái đào tạo"
-          value={statusFilter}
-          onChange={(value) => setStatusFilter(value)}
-          options={[
-            { value: 'all', label: 'Tất cả trạng thái' },
-            { value: 'COMPLIANT', label: 'Đạt' },
-            { value: 'NON_COMPLIANT', label: 'Chưa đạt' },
-            { value: 'AT_RISK', label: 'Đang theo dõi' },
-            { value: 'NOT_CONFIGURED', label: 'Chưa thiết lập' },
-          ]}
-        />
-        <FilterActionButtons
-          onApply={() => {}}
-          onReset={() => {
-            setSearch('')
-            setStatusFilter('all')
-          }}
-        />
-        {/* `employees` chính là kết quả của bộ lọc đang áp dụng (backend lọc theo keyword và
-            trạng thái), nên file xuất ra luôn khớp đúng những gì đang hiển thị. */}
-        <button
-          type="button"
-          className="dtst__export"
-          onClick={() => downloadCsv(
-            exportFileName('nhan-su-dao-tao-lien-tuc'),
-            EXPORT_HEADERS,
-            employees.map(exportRow),
-          )}
-          disabled={loading || employees.length === 0}
-          title="Xuất danh sách đang lọc ra file Excel"
-        >
-          <DownloadOutlined /> Xuất Excel
-        </button>
-      </div>
+      )}
 
       {loading ? (
         <p className="dtst__state"><LoadingOutlined spin /> Đang tải danh sách nhân sự...</p>

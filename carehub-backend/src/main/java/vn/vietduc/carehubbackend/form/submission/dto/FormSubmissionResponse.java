@@ -14,6 +14,7 @@ public record FormSubmissionResponse(
         Long assignmentItemId,
         Long formId,
         String formCode,
+        String formTitle,
         Long formVersionId,
         Integer versionNumber,
         String title,
@@ -39,7 +40,7 @@ public record FormSubmissionResponse(
 
     @Builder
     public record SubjectSnapshot(FormSubjectType type, String employeeCode, String fullName,
-                                  String position, String department) {}
+                                  String position, String department, String departmentName, Long departmentId) {}
 
     @Builder
     public record AnswerResponse(UUID questionKey, UUID optionKey, Map<String, Object> value) {}

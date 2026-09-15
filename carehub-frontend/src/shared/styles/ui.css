@@ -1078,6 +1078,20 @@ textarea.ch-input {
   width: fit-content;
 }
 
+.applied-filter-toolbar__error {
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  border-radius: 8px;
+  color: #b42318;
+  font-size: 13px;
+  font-weight: 600;
+  grid-column: 1 / -1;
+  line-height: 1.45;
+  margin: 0;
+  padding: 9px 12px;
+  width: fit-content;
+}
+
 .filter-action-buttons {
   align-items: center;
   display: flex;

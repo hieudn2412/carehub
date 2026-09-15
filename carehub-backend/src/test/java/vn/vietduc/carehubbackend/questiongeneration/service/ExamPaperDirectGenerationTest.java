@@ -255,6 +255,34 @@ class ExamPaperDirectGenerationTest {
     }
 
     @Test
+    void backfillKeepsFamiliesUniqueAndAllowsPublishing() {
+        ExamBlueprintField field = blueprintField(351L, emergency, 0);
+        field.setQuestionCount(3);
+        fields = List.of(field);
+        cells = Map.of(351L, List.of(
+                cell(451L, field, CognitiveLevel.FOUNDATION, 2),
+                cell(452L, field, CognitiveLevel.CLINICAL_APPLICATION, 1),
+                cell(453L, field, CognitiveLevel.CLINICAL_REASONING_ANALYSIS, 0)
+        ));
+        config.setTotalQuestions(3);
+        config.setBackfillNearestCognitiveLevel(true);
+        QuestionBankQuestion foundation = question(61L, emergency, category(71L, "F", "Nền tảng"), document(81L, "foundation.pdf"));
+        QuestionBankQuestion applicationOne = question(62L, emergency, category(72L, "A1", "Áp dụng 1"), document(82L, "application-1.pdf"));
+        QuestionBankQuestion applicationTwo = question(63L, emergency, category(73L, "A2", "Áp dụng 2"), document(83L, "application-2.pdf"));
+        applicationOne.setCognitiveLevel(CognitiveLevel.CLINICAL_APPLICATION);
+        applicationTwo.setCognitiveLevel(CognitiveLevel.CLINICAL_APPLICATION);
+        pool = List.of(foundation, applicationOne, applicationTwo);
+        config.setPoolChecksum(ExamGenerationDeterminism.poolChecksum(config.getBlueprintVersion(), List.of(), pool));
+
+        var generated = service.generate(request("backfill", 1, 15L, false), "publisher").get(0);
+        var published = service.publish(generated.id(), "publisher");
+
+        assertThat(generated.questions()).extracting(question -> question.questionFamilyId()).doesNotHaveDuplicates();
+        assertThat(generated.coverage()).anyMatch(cell -> !cell.matchesBlueprint());
+        assertThat(published.status()).isEqualTo("PUBLISHED");
+    }
+
+    @Test
     void zeroOverlapUsesDistinctQuestionsAcrossVariants() {
         config.setTotalQuestions(2);
         var papers = service.generate(request("zero-overlap", 2, 77L, true), "publisher");

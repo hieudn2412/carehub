@@ -121,11 +121,23 @@ class FormSubmissionExcelExportServiceTest {
         assertThat(file.content()).isNotEmpty();
         try (Workbook workbook = new XSSFWorkbook(new ByteArrayInputStream(file.content()))) {
             assertThat(workbook.getNumberOfSheets()).isEqualTo(2);
-            assertThat(workbook.getSheet("Tong hop response").getLastRowNum()).isEqualTo(1);
-            assertThat(workbook.getSheet("Chi tiet cau tra loi").getLastRowNum()).isEqualTo(1);
-            assertThat(workbook.getSheet("Chi tiet cau tra loi").getRow(1).getCell(6).getStringCellValue())
-                    .isEqualTo("Q01");
-            assertThat(workbook.getSheet("Chi tiet cau tra loi").getRow(1).getCell(9).getStringCellValue())
+            var summarySheet = workbook.getSheet("Tổng hợp kết quả");
+            var answerSheet = workbook.getSheet("Chi tiết câu trả lời");
+            assertThat(summarySheet.getLastRowNum()).isEqualTo(1);
+            assertThat(summarySheet.getRow(0).getLastCellNum()).isEqualTo((short) 11);
+            assertThat(summarySheet.getRow(0).getCell(0).getStringCellValue())
+                    .isEqualTo("Tên bảng kiểm");
+            assertThat(summarySheet.getRow(1).getCell(0).getStringCellValue())
+                    .isEqualTo("Thụt tháo v2");
+            assertThat(summarySheet.getRow(0).getCell(11)).isNull();
+            assertThat(answerSheet.getLastRowNum()).isEqualTo(1);
+            assertThat(answerSheet.getRow(0).getCell(0).getStringCellValue())
+                    .isEqualTo("Mã NV");
+            assertThat(answerSheet.getRow(0).getCell(5).getStringCellValue())
+                    .isEqualTo("Xác nhận đúng người bệnh");
+            assertThat(answerSheet.getRow(1).getCell(0).getStringCellValue())
+                    .isEqualTo("NV01");
+            assertThat(answerSheet.getRow(1).getCell(5).getStringCellValue())
                     .isEqualTo("Có");
         }
     }

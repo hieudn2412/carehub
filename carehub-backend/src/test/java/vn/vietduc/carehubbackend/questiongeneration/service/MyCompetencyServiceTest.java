@@ -9,7 +9,6 @@ import vn.vietduc.carehubbackend.form.submission.entity.FormSubmissionResult;
 import vn.vietduc.carehubbackend.form.submission.repository.FormSubmissionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttempt;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamPaper;
-import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CompetencyLevel;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.projection.MyComplianceYearProjection;
 import vn.vietduc.carehubbackend.user.entity.Department;
@@ -32,7 +31,6 @@ import static org.mockito.Mockito.when;
 class MyCompetencyServiceTest {
     private ExamAttemptRepository attemptRepository;
     private FormSubmissionRepository submissionRepository;
-    private CompetencyClassificationService classificationService;
     private SystemSettingsService systemSettingsService;
     private MyCompetencyService service;
     private User user;
@@ -41,10 +39,9 @@ class MyCompetencyServiceTest {
     void setUp() {
         attemptRepository = mock(ExamAttemptRepository.class);
         submissionRepository = mock(FormSubmissionRepository.class);
-        classificationService = mock(CompetencyClassificationService.class);
         systemSettingsService = mock(SystemSettingsService.class);
         service = new MyCompetencyService(
-                attemptRepository, submissionRepository, classificationService, systemSettingsService);
+                attemptRepository, submissionRepository, systemSettingsService);
         when(systemSettingsService.competencyTargetScore()).thenReturn(new BigDecimal("8.40"));
 
         Department department = Department.builder()
@@ -87,7 +84,6 @@ class MyCompetencyServiceTest {
         when(submissionRepository.findScoredEvaluationsForSubject(
                 anyLong(), anyString(), any(), any()))
                 .thenReturn(List.of(submission));
-        when(classificationService.classifyOverall(any())).thenReturn(CompetencyLevel.PROFICIENT);
     }
 
     @Test
@@ -121,20 +117,22 @@ class MyCompetencyServiceTest {
     }
 
     @Test
-    void missingComponentIsTreatedAsZeroAndUsesHospitalTarget() {
+    void missingComponentFallsBackToTheAvailableSide() {
         when(attemptRepository.findScoredAttemptsByUserAndDateRange(any(), any(), any()))
                 .thenReturn(List.of());
         when(systemSettingsService.competencyTargetScore()).thenReturn(new BigDecimal("6.00"));
 
         var summary = service.getCompetencySummary(user, LocalDate.now().minusMonths(1), LocalDate.now());
 
-        assertThat(summary.knowledgeAverage()).isEqualByComparingTo("0");
+        // Chưa thi lý thuyết lần nào: điểm tổng lấy nguyên vế thực hành,
+        // không coi vế thiếu là 0 điểm rồi kéo điểm tổng xuống một nửa.
+        assertThat(summary.knowledgeAverage()).isNull();
         assertThat(summary.skillAverage()).isEqualByComparingTo("9.00");
-        assertThat(summary.overallScore()).isEqualByComparingTo("4.50");
+        assertThat(summary.overallScore()).isEqualByComparingTo("9.00");
         assertThat(summary.knowledgeAttemptCount()).isZero();
         assertThat(summary.skillEvaluationCount()).isEqualTo(1);
         assertThat(summary.targetScore()).isEqualByComparingTo("6.00");
-        assertThat(summary.isPassed()).isFalse();
+        assertThat(summary.isPassed()).isTrue();
     }
 
     @Test

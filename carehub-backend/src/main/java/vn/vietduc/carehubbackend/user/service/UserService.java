@@ -18,6 +18,7 @@ public interface UserService {
     UserResponse createUser(CreateUserRequest request);
     UserDetailResponse updateUser(Long id, UpdateUserRequest request);
     void deleteUser(Long id);
+    UserDetailResponse restoreUser(Long id);
     UserDetailResponse lockUser(Long id);
     UserDetailResponse unlockUser(Long id);
     UserDetailResponse assignRole(Long userId, Long roleId);

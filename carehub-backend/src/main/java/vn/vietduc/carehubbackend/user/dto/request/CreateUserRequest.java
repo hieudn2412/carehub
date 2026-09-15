@@ -29,6 +29,6 @@ public class CreateUserRequest {
     @NotBlank(message = "FullName is required")
     private String fullName;
 
-    @Pattern(regexp = "^$|^[0-9+().\\s-]{8,20}$", message = "Số điện thoại không hợp lệ")
+    @Pattern(regexp = "^$|^\\+84[0-9]{9}$", message = "Số điện thoại không hợp lệ")
     private String phone;
 }

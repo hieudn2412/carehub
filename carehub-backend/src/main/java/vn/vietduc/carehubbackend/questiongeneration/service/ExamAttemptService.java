@@ -64,7 +64,6 @@ public class ExamAttemptService {
     private final ExamPaperQuestionRepository paperQuestionRepository;
     private final ExamPaperQuestionSnapshotRepository snapshotRepository;
     private final UserRepository userRepository;
-    private final CompetencyClassificationService classificationService;
     private final ApplicationEventPublisher eventPublisher;
     private final ExamAttemptResultAggregationService resultAggregationService;
     private final Clock clock;
@@ -282,7 +281,6 @@ public class ExamAttemptService {
         }
         boolean passed = score.compareTo(paperPassingScore) >= 0;
         attempt.setPassed(passed);
-        attempt.setClassification(classificationService.classifyOverall(score));
         attempt.setTimeSpentSeconds(Math.toIntExact(Math.max(0, Duration.between(attempt.getStartedAt(), submittedAt).toSeconds())));
         ExamAttempt saved = attemptRepository.save(attempt);
         resultAggregationService.rebuildFromGrade(saved, questions, snapshotsByQuestionId, answersByQuestionId);
@@ -368,8 +366,6 @@ public class ExamAttemptService {
                 revealScore ? attempt.getCorrectCount() : null,
                 attempt.getTotalQuestions(),
                 revealScore ? attempt.getPassed() : null,
-                revealScore && attempt.getClassification() != null ? attempt.getClassification().name() : null,
-                revealScore && attempt.getClassification() != null ? QuestionGenerationLabels.competencyLevel(attempt.getClassification()) : null,
                 attempt.getTimeSpentSeconds(),
                 questions,
                 answers

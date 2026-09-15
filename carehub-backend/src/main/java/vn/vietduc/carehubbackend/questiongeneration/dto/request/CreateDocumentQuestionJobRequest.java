@@ -12,7 +12,16 @@ public record CreateDocumentQuestionJobRequest(
         Long categoryId,
         Long professionalFieldId,
         GenerationPipelineVersion pipelineVersion,
-        TargetCognitiveLevel targetCognitiveLevel
+        TargetCognitiveLevel targetCognitiveLevel,
+
+        @Min(0) @Max(100)
+        Integer cognitiveMixFoundation,
+
+        @Min(0) @Max(100)
+        Integer cognitiveMixApplication,
+
+        @Min(0) @Max(100)
+        Integer cognitiveMixReasoning
 ) {
     public CreateDocumentQuestionJobRequest(
             Integer questionsPerChunk,
@@ -20,6 +29,11 @@ public record CreateDocumentQuestionJobRequest(
             GenerationPipelineVersion pipelineVersion,
             TargetCognitiveLevel targetCognitiveLevel
     ) {
-        this(questionsPerChunk, categoryId, null, pipelineVersion, targetCognitiveLevel);
+        this(questionsPerChunk, categoryId, null, pipelineVersion, targetCognitiveLevel, null, null, null);
+    }
+
+    /** Có đặt tỷ lệ khi cả ba mức đều được điền. */
+    public boolean hasCognitiveMix() {
+        return cognitiveMixFoundation != null && cognitiveMixApplication != null && cognitiveMixReasoning != null;
     }
 }

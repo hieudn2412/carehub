@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 import vn.vietduc.carehubbackend.form.entity.Form;
 import vn.vietduc.carehubbackend.form.entity.FormVersion;
@@ -14,7 +15,7 @@ import vn.vietduc.carehubbackend.form.submission.entity.FormSubmissionResult;
 import vn.vietduc.carehubbackend.form.submission.repository.FormSubmissionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttempt;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAttemptStatus;
-import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CompetencyLevel;
+import vn.vietduc.carehubbackend.questiongeneration.dto.request.EvaluationResultFilter;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionCategoryRepository;
 import vn.vietduc.carehubbackend.user.entity.Department;
@@ -43,7 +44,6 @@ class CompetencyServiceTest {
     private FormSubmissionRepository submissionRepository;
     private UserRepository userRepository;
     private DepartmentRepository departmentRepository;
-    private CompetencyClassificationService classificationService;
     private SystemSettingsService systemSettingsService;
     private CompetencyService service;
     private Department department;
@@ -56,7 +56,6 @@ class CompetencyServiceTest {
         userRepository = mock(UserRepository.class);
         departmentRepository = mock(DepartmentRepository.class);
         QuestionCategoryRepository categoryRepository = mock(QuestionCategoryRepository.class);
-        classificationService = mock(CompetencyClassificationService.class);
         systemSettingsService = mock(SystemSettingsService.class);
         service = new CompetencyService(
                 attemptRepository,
@@ -65,7 +64,6 @@ class CompetencyServiceTest {
                 userRepository,
                 departmentRepository,
                 categoryRepository,
-                classificationService,
                 systemSettingsService
         );
         when(systemSettingsService.competencyTargetScore()).thenReturn(new BigDecimal("6.00"));
@@ -73,7 +71,6 @@ class CompetencyServiceTest {
 
         department = Department.builder().id(10L).name("Khoa Nội").build();
         when(departmentRepository.findById(10L)).thenReturn(Optional.of(department));
-        when(classificationService.classifyOverall(any())).thenReturn(CompetencyLevel.PROFICIENT);
     }
 
     @Test
@@ -102,6 +99,7 @@ class CompetencyServiceTest {
                 null,
                 LocalDate.now().minusDays(30),
                 LocalDate.now(),
+                null,
                 null,
                 PageRequest.of(0, 10)
         );
@@ -147,6 +145,7 @@ class CompetencyServiceTest {
                 null,
                 LocalDate.now().minusDays(30),
                 LocalDate.now(),
+                null,
                 null,
                 PageRequest.of(1, 1)
         );
@@ -199,6 +198,7 @@ class CompetencyServiceTest {
                 LocalDate.of(2026, 1, 1),
                 LocalDate.of(2026, 8, 10),
                 null,
+                null,
                 PageRequest.of(0, 10)
         );
 
@@ -221,6 +221,7 @@ class CompetencyServiceTest {
                 LocalDate.of(2026, 1, 1),
                 LocalDate.of(2026, 8, 10),
                 null,
+                null,
                 PageRequest.of(0, 10)
         );
 
@@ -228,13 +229,31 @@ class CompetencyServiceTest {
     }
 
     @Test
+    void summaryFiltersResultBeforePagination() {
+        User firstPassed = User.builder().id(20L).employeeCode("NV020").name("An").department(department).build();
+        User failed = User.builder().id(21L).employeeCode("NV021").name("Bình").department(department).build();
+        User secondPassed = User.builder().id(22L).employeeCode("NV022").name("Chi").department(department).build();
+        when(userRepository.findCompetencySummaryCandidates(eq(10L), isNull(), argThat(Pageable::isUnpaged)))
+                .thenReturn(new PageImpl<>(List.of(firstPassed, failed, secondPassed)));
+        when(attemptRepository.findScoredAttemptsByUserIdsAndDateRange(any(), any(), any()))
+                .thenReturn(List.of(
+                        ExamAttempt.builder().id(30L).user(firstPassed).score(new BigDecimal("7.00")).build(),
+                        ExamAttempt.builder().id(31L).user(failed).score(new BigDecimal("5.00")).build(),
+                        ExamAttempt.builder().id(32L).user(secondPassed).score(new BigDecimal("8.00")).build()
+                ));
+
+        var response = service.getSummary(
+                10L, LocalDate.now().minusDays(30), LocalDate.now(), null,
+                EvaluationResultFilter.PASSED, PageRequest.of(0, 1)
+        );
+
+        assertThat(response.items()).extracting("employeeId").containsExactly(20L);
+        assertThat(response.totalElements()).isEqualTo(2);
+        assertThat(response.totalPages()).isEqualTo(2);
+    }
+
+    @Test
     void groupsTechniqueResultsBySubjectAndAppliesDepartmentAndFormFilters() {
-        User evaluator = User.builder()
-                .id(90L)
-                .employeeCode("QL090")
-                .name("Trưởng khoa")
-                .department(department)
-                .build();
         User subject = User.builder()
                 .id(20L)
                 .employeeCode("NV020")
@@ -244,13 +263,13 @@ class CompetencyServiceTest {
         Form selectedForm = Form.builder().id(50L).title("Bảng kiểm truyền dịch").build();
         Form otherForm = Form.builder().id(60L).title("Bảng kiểm thay băng").build();
 
-        FormSubmission selectedSubmission = submission(
-                100L, evaluator, subject, selectedForm, "85.00", FormSubmissionResult.PASSED);
-        FormSubmission otherSubmission = submission(
-                101L, evaluator, subject, otherForm, "70.00", FormSubmissionResult.FAILED_SCORE);
-        when(submissionRepository.findCompetencyTechniqueCandidates(
+        when(submissionRepository.summarizeCompetencyTechnique(
                 eq(10L), eq(50L), isNull(), any(), any(), any()
-        )).thenReturn(new PageImpl<>(List.of(subject), PageRequest.of(0, 10), 1));
+        )).thenReturn(new PageImpl<>(
+                List.of(techniqueAggregate(subject, "85.00", 1L, 1L)),
+                PageRequest.of(0, 10),
+                1
+        ));
         when(submissionRepository.findCompetencyTechniqueOptions(eq(10L), any(), any()))
                 .thenReturn(List.of(
                         new vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencyTechniqueOptionResponse(
@@ -260,15 +279,13 @@ class CompetencyServiceTest {
                                 50L, selectedForm.getTitle()
                         )
                 ));
-        when(submissionRepository.findScoredEvaluationsForTechniqueCandidates(
-                any(), eq(50L), any(), any()
-        )).thenReturn(List.of(selectedSubmission));
 
         var response = service.getByTechnique(
                 10L,
                 50L,
                 LocalDate.now().minusDays(30),
                 LocalDate.now(),
+                null,
                 null,
                 PageRequest.of(0, 10)
         );
@@ -285,12 +302,6 @@ class CompetencyServiceTest {
     @Test
     void techniqueWithoutDepartmentUsesAllDepartmentSubmissions() {
         Department surgery = Department.builder().id(11L).name("Khoa Ngoại").build();
-        User evaluator = User.builder()
-                .id(90L)
-                .employeeCode("QL090")
-                .name("Trưởng khoa")
-                .department(department)
-                .build();
         User subject = User.builder()
                 .id(21L)
                 .employeeCode("NV021")
@@ -298,17 +309,16 @@ class CompetencyServiceTest {
                 .department(surgery)
                 .build();
         Form form = Form.builder().id(50L).title("Bảng kiểm truyền dịch").build();
-        when(submissionRepository.findCompetencyTechniqueCandidates(
+        when(submissionRepository.summarizeCompetencyTechnique(
                 isNull(), isNull(), isNull(), any(), any(), any()
-        )).thenReturn(new PageImpl<>(List.of(subject), PageRequest.of(0, 10), 1));
+        )).thenReturn(new PageImpl<>(
+                List.of(techniqueAggregate(subject, "85.00", 1L, 1L)),
+                PageRequest.of(0, 10),
+                1
+        ));
         when(submissionRepository.findCompetencyTechniqueOptions(isNull(), any(), any()))
                 .thenReturn(List.of(new vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencyTechniqueOptionResponse(
                         form.getId(), form.getTitle()
-                )));
-        when(submissionRepository.findScoredEvaluationsForTechniqueCandidates(
-                any(), isNull(), any(), any()
-        )).thenReturn(List.of(submission(
-                        100L, evaluator, subject, form, "85.00", FormSubmissionResult.PASSED
                 )));
 
         var response = service.getByTechnique(
@@ -316,6 +326,7 @@ class CompetencyServiceTest {
                 null,
                 LocalDate.now().minusDays(30),
                 LocalDate.now(),
+                null,
                 null,
                 PageRequest.of(0, 10)
         );
@@ -325,44 +336,30 @@ class CompetencyServiceTest {
         assertThat(response.items()).singleElement()
                 .extracting("employeeName", "departmentName")
                 .containsExactly("Trần Bình", "Khoa Ngoại");
-        verify(submissionRepository).findCompetencyTechniqueCandidates(
+        verify(submissionRepository).summarizeCompetencyTechnique(
                 isNull(), isNull(), isNull(), any(), any(), any()
         );
-        verify(submissionRepository).findScoredEvaluationsForTechniqueCandidates(
-                any(), isNull(), any(), any()
-        );
+        verify(submissionRepository, never()).findScoredEvaluationsForTechniqueCandidates(any(), any(), any(), any());
     }
 
     @Test
     void techniqueUsesConvertedTenPointScoreForAverageAndClassification() {
-        User evaluator = User.builder()
-                .id(90L)
-                .employeeCode("QL090")
-                .name("Trưởng khoa")
-                .department(department)
-                .build();
         User subject = User.builder()
                 .id(20L)
                 .employeeCode("NV020")
                 .name("Chu Văn Long")
                 .department(department)
                 .build();
-        Form form = Form.builder().id(50L).title("THỤT THÁO").build();
-        FormSubmission first = submission(100L, evaluator, subject, form, "1.50", FormSubmissionResult.PASSED);
-        first.setMaxScore(new BigDecimal("1.50"));
-        first.setConvertedScore(new BigDecimal("10.00"));
-        FormSubmission second = submission(101L, evaluator, subject, form, "1.35555556", FormSubmissionResult.PASSED);
-        second.setMaxScore(new BigDecimal("1.50"));
-        second.setConvertedScore(new BigDecimal("9.04"));
 
-        when(submissionRepository.findCompetencyTechniqueCandidates(
+        when(submissionRepository.summarizeCompetencyTechnique(
                 eq(10L), eq(50L), isNull(), any(), any(), any()
-        )).thenReturn(new PageImpl<>(List.of(subject), PageRequest.of(0, 10), 1));
+        )).thenReturn(new PageImpl<>(
+                List.of(techniqueAggregate(subject, "9.52", 2L, 2L)),
+                PageRequest.of(0, 10),
+                1
+        ));
         when(submissionRepository.findCompetencyTechniqueOptions(eq(10L), any(), any()))
                 .thenReturn(List.of());
-        when(submissionRepository.findScoredEvaluationsForTechniqueCandidates(
-                any(), eq(50L), any(), any()
-        )).thenReturn(List.of(first, second));
 
         var response = service.getByTechnique(
                 10L,
@@ -370,14 +367,39 @@ class CompetencyServiceTest {
                 LocalDate.now().minusDays(30),
                 LocalDate.now(),
                 null,
+                null,
                 PageRequest.of(0, 10)
         );
 
         assertThat(response.items()).singleElement().satisfies(item -> {
             assertThat(item.averageScore()).isEqualByComparingTo("9.52");
             assertThat(item.passRate()).isEqualTo(100.0d);
+            // 9.52 vượt điểm sàn 6.00 nên kết luận Đạt.
+            assertThat(item.isPassed()).isTrue();
         });
-        verify(classificationService).classifyOverall(new BigDecimal("9.52"));
+    }
+
+    @Test
+    void techniqueFiltersResultBeforePagination() {
+        User passed = User.builder().id(20L).employeeCode("NV020").name("An").department(department).build();
+        User failed = User.builder().id(21L).employeeCode("NV021").name("Bình").department(department).build();
+        when(submissionRepository.summarizeCompetencyTechnique(
+                eq(10L), isNull(), isNull(), any(), any(), argThat(Pageable::isUnpaged)
+        )).thenReturn(new PageImpl<>(List.of(
+                techniqueAggregate(passed, "7.00", 1L, 1L),
+                techniqueAggregate(failed, "5.00", 1L, 0L)
+        )));
+        when(submissionRepository.findCompetencyTechniqueOptions(eq(10L), any(), any()))
+                .thenReturn(List.of());
+
+        var response = service.getByTechnique(
+                10L, null, LocalDate.now().minusDays(30), LocalDate.now(), null,
+                EvaluationResultFilter.FAILED, PageRequest.of(0, 1)
+        );
+
+        assertThat(response.items()).extracting("employeeId").containsExactly(21L);
+        assertThat(response.totalElements()).isEqualTo(1);
+        assertThat(response.totalPages()).isEqualTo(1);
     }
 
     @Test
@@ -427,9 +449,9 @@ class CompetencyServiceTest {
                             new BigDecimal("10.00"),
                             new BigDecimal("9.04")
                     );
+            // Trung bình 9.68 lấy từ điểm quy đổi, vượt điểm sàn 6.00 nên Đạt.
+            assertThat(item.isPassed()).isTrue();
         });
-        verify(classificationService).classifyOverall(new BigDecimal("9.68"));
-        verify(classificationService, never()).classifyOverall(new BigDecimal("1.45"));
     }
 
     private FormSubmission submission(
@@ -461,5 +483,49 @@ class CompetencyServiceTest {
                 .build();
         submission.setSubjectContext(context);
         return submission;
+    }
+
+    private FormSubmissionRepository.CompetencyTechniqueAggregateProjection techniqueAggregate(
+            User subject,
+            String averageScore,
+            Long evaluationCount,
+            Long passCount
+    ) {
+        return new FormSubmissionRepository.CompetencyTechniqueAggregateProjection() {
+            @Override
+            public Long getEmployeeId() {
+                return subject.getId();
+            }
+
+            @Override
+            public String getEmployeeCode() {
+                return subject.getEmployeeCode();
+            }
+
+            @Override
+            public String getEmployeeName() {
+                return subject.getName();
+            }
+
+            @Override
+            public String getDepartmentName() {
+                return subject.getDepartment() != null ? subject.getDepartment().getName() : null;
+            }
+
+            @Override
+            public Long getEvaluationCount() {
+                return evaluationCount;
+            }
+
+            @Override
+            public Long getPassCount() {
+                return passCount;
+            }
+
+            @Override
+            public BigDecimal getAverageScore() {
+                return new BigDecimal(averageScore);
+            }
+        };
     }
 }

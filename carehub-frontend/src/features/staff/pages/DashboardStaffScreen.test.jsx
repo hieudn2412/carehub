@@ -47,6 +47,7 @@ describe('DashboardStaffScreen', () => {
     }))
     staffApi.getMyDashboardFormSummary.mockReturnValue(response({
       submittedCount: 12,
+      passedCount: 9,
       averageConvertedScore: 6.5,
     }))
     myCompetencyApi.getSummary.mockReturnValue(response({
@@ -73,7 +74,7 @@ describe('DashboardStaffScreen', () => {
     expect(await screen.findByRole('heading', { name: 'Nguyễn Văn A' })).toBeInTheDocument()
     expect(screen.getByText('15/120h')).toBeInTheDocument()
     expect(screen.getByText('12')).toBeInTheDocument()
-    expect(screen.getByText('65,0%')).toBeInTheDocument()
+    expect(screen.getByText('75%')).toBeInTheDocument()
     expect(screen.getByText('7,5/10')).toBeInTheDocument()
     expect(screen.getByText('6,5/10')).toBeInTheDocument()
     expect(screen.getByText((_, element) => (
@@ -96,6 +97,27 @@ describe('DashboardStaffScreen', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Đào tạo liên tục/i }))
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Trang đào tạo' })).toBeInTheDocument())
+  })
+
+  it('calculates compliance from all passed submissions across different forms', async () => {
+    staffApi.getMyDashboardFormSummary.mockReturnValue(response({
+      formCount: 5,
+      submittedCount: 30,
+      passedCount: 6,
+      averageConvertedScore: 7.59,
+    }))
+
+    render(
+      <MemoryRouter initialEntries={['/staff/dashboard']}>
+        <Routes>
+          <Route path="/staff/dashboard" element={<DashboardStaffScreen />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByText('20%')).toBeInTheDocument()
+    expect(screen.getByText('30')).toBeInTheDocument()
+    expect(screen.queryByText('75,9%')).not.toBeInTheDocument()
   })
 
   it('uses the default competency floor of six when the API has no department configuration', async () => {

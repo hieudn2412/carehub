@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Past;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import vn.vietduc.carehubbackend.user.validation.ValidAge;
 
 import java.time.LocalDate;
 
@@ -17,10 +18,10 @@ public record UpdateMyProfileRequest(
         @Size(max = 255, message = "Email không được vượt quá 255 ký tự")
         String email,
 
-        @Pattern(regexp = "^$|^[0-9+().\\s-]{8,20}$", message = "Số điện thoại không hợp lệ")
+        @Pattern(regexp = "^$|^\\+84[0-9]{9}$", message = "Số điện thoại không hợp lệ")
         String phone,
 
-        @Past(message = "Ngày sinh phải nhỏ hơn ngày hiện tại")
+        @ValidAge(min = 18, max = 100, message = "Độ tuổi không hợp lệ. Nhân viên phải từ 18 đến 100 tuổi.")
         LocalDate birthday,
 
         Boolean gender

@@ -84,6 +84,7 @@ public class SecurityConfig {
                                 apiPrefix + "/auth/refresh-token",
                                 apiPrefix + "/auth/logout",
                                 apiPrefix + "/auth/forgot-password",
+                                apiPrefix + "/auth/verify-reset-otp",
                                 apiPrefix + "/auth/reset-password"
                         ).permitAll()
                         .anyRequest().authenticated()

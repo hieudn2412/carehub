@@ -250,6 +250,10 @@ public class ParaphraseService {
         if (candidate.getStatus() == CandidateStatus.REJECTED) {
             throw new BadRequestException("Không thể duyệt candidate đã bị từ chối bởi validation");
         }
+        revalidate(candidate);
+        if (candidate.getStatus() == CandidateStatus.REJECTED) {
+            throw new BadRequestException("Candidate không còn đạt validation hiện tại; hãy sửa và kiểm tra lại");
+        }
         candidate.setStatus(CandidateStatus.APPROVED);
         candidate.setLabel(CandidateLabel.GOOD);
         if (reviewerNotes != null && !reviewerNotes.isBlank()) {
@@ -274,6 +278,10 @@ public class ParaphraseService {
         ParaphraseCandidate candidate = findCandidate(candidateId);
         if (candidate.getStatus() != CandidateStatus.APPROVED) {
             throw new BadRequestException("Chỉ có thể lưu candidate đã được duyệt vào ngân hàng câu hỏi");
+        }
+        revalidate(candidate);
+        if (candidate.getStatus() == CandidateStatus.REJECTED) {
+            throw new BadRequestException("Candidate không còn đạt validation hiện tại; hãy sửa và duyệt lại");
         }
         QuestionBankQuestion source = candidate.getSourceQuestion();
         if (source.getCategory() == null || source.getProfessionalField() == null) {

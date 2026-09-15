@@ -16,7 +16,7 @@ public record TrainingRecordFormRequest(
         String customProfessionalField,
         @NotBlank @Size(max = 500) String title,
         @Size(max = 255) String provider,
-        String description,
+        @Size(max = 500, message = "Ghi chú không được vượt quá 500 ký tự") String description,
         LocalDate startDate,
         LocalDate endDate,
         @DecimalMin("0.0") BigDecimal durationValue,

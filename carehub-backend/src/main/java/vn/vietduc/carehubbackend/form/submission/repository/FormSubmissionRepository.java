@@ -46,6 +46,33 @@ public interface FormSubmissionRepository extends JpaRepository<FormSubmission, 
         Double getAverageConvertedScore();
     }
 
+    interface FormSubmissionCountProjection {
+        Long getFormId();
+        long getResponseCount();
+    }
+
+    interface CompetencyTechniqueAggregateProjection {
+        Long getEmployeeId();
+        String getEmployeeCode();
+        String getEmployeeName();
+        String getDepartmentName();
+        Long getEvaluationCount();
+        Long getPassCount();
+        BigDecimal getAverageScore();
+    }
+
+    @Query("""
+            select s.formVersion.form.id as formId,
+                   count(s.id) as responseCount
+            from FormSubmission s
+            where s.formVersion.form.id in :formIds
+              and s.status = :submittedStatus
+            group by s.formVersion.form.id
+            """)
+    List<FormSubmissionCountProjection> countSubmittedByFormIds(
+            @Param("formIds") Collection<Long> formIds,
+            @Param("submittedStatus") FormSubmissionStatus submittedStatus);
+
     @Query(value = """
             select v.form.id as formId,
                    v.form.code as code,
@@ -195,6 +222,51 @@ public interface FormSubmissionRepository extends JpaRepository<FormSubmission, 
                    or lower(subject.employeeCode) like :keyword)
             """)
     Page<User> findCompetencyTechniqueCandidates(
+            @Param("departmentId") Long departmentId,
+            @Param("formId") Long formId,
+            @Param("keyword") String keyword,
+            @Param("fromDate") Instant fromDate,
+            @Param("toDate") Instant toDate,
+            Pageable pageable
+    );
+
+    @Query(value = """
+            select subject.id as employeeId,
+                   subject.employeeCode as employeeCode,
+                   subject.name as employeeName,
+                   subject.department.name as departmentName,
+                   count(s.id) as evaluationCount,
+                   coalesce(sum(case when s.result = 'PASSED' then 1 else 0 end), 0) as passCount,
+                   avg(coalesce(s.convertedScore, s.totalScore, 0)) as averageScore
+            from FormSubmission s
+            join s.subjectContext context
+            join context.subjectUser subject
+            where s.status = 'SUBMITTED'
+              and s.formVersion.form.deleted = false
+              and s.submittedAt between :fromDate and :toDate
+              and (:departmentId is null or subject.department.id = :departmentId)
+              and (:formId is null or s.formVersion.form.id = :formId)
+              and (:keyword is null
+                   or lower(subject.name) like :keyword
+                   or lower(subject.employeeCode) like :keyword)
+            group by subject.id, subject.employeeCode, subject.name, subject.department.name
+            order by subject.name asc, subject.id asc
+            """,
+            countQuery = """
+            select count(distinct subject.id)
+            from FormSubmission s
+            join s.subjectContext context
+            join context.subjectUser subject
+            where s.status = 'SUBMITTED'
+              and s.formVersion.form.deleted = false
+              and s.submittedAt between :fromDate and :toDate
+              and (:departmentId is null or subject.department.id = :departmentId)
+              and (:formId is null or s.formVersion.form.id = :formId)
+              and (:keyword is null
+                   or lower(subject.name) like :keyword
+                   or lower(subject.employeeCode) like :keyword)
+            """)
+    Page<CompetencyTechniqueAggregateProjection> summarizeCompetencyTechnique(
             @Param("departmentId") Long departmentId,
             @Param("formId") Long formId,
             @Param("keyword") String keyword,
@@ -361,6 +433,7 @@ public interface FormSubmissionRepository extends JpaRepository<FormSubmission, 
                    or lower(context.employeeCode) like :keyword)
               and (:submittedByUserId is null or s.submittedBy.id = :submittedByUserId)
               and (:departmentId is null or subject.department.id = :departmentId)
+              and (:filterDepartmentIds = false or subject.department.id in :departmentIds)
               and (:filterResults = false or s.result in :results)
               and s.submittedAt >= :fromInclusive
               and s.submittedAt < :toExclusive
@@ -372,6 +445,8 @@ public interface FormSubmissionRepository extends JpaRepository<FormSubmission, 
             @Param("keyword") String keyword,
             @Param("submittedByUserId") Long submittedByUserId,
             @Param("departmentId") Long departmentId,
+            @Param("filterDepartmentIds") boolean filterDepartmentIds,
+            @Param("departmentIds") Collection<Long> departmentIds,
             @Param("filterResults") boolean filterResults,
             @Param("results") Collection<FormSubmissionResult> results,
             @Param("fromInclusive") Instant fromInclusive,
@@ -395,6 +470,7 @@ public interface FormSubmissionRepository extends JpaRepository<FormSubmission, 
                    or lower(context.employeeCode) like :keyword)
               and (:submittedByUserId is null or s.submittedBy.id = :submittedByUserId)
               and (:departmentId is null or subject.department.id = :departmentId)
+              and (:filterDepartmentIds = false or subject.department.id in :departmentIds)
               and (:filterResults = false or s.result in :results)
               and s.submittedAt >= :fromInclusive
               and s.submittedAt < :toExclusive
@@ -402,6 +478,86 @@ public interface FormSubmissionRepository extends JpaRepository<FormSubmission, 
     FormSubmissionHistorySummaryProjection summarizeHistoryByFormVersion(
             @Param("formId") Long formId,
             @Param("versionId") Long versionId,
+            @Param("keyword") String keyword,
+            @Param("submittedByUserId") Long submittedByUserId,
+            @Param("departmentId") Long departmentId,
+            @Param("filterDepartmentIds") boolean filterDepartmentIds,
+            @Param("departmentIds") Collection<Long> departmentIds,
+            @Param("filterResults") boolean filterResults,
+            @Param("results") Collection<FormSubmissionResult> results,
+            @Param("fromInclusive") Instant fromInclusive,
+            @Param("toExclusive") Instant toExclusive,
+            @Param("passedResult") FormSubmissionResult passedResult,
+            @Param("failedResults") Collection<FormSubmissionResult> failedResults
+    );
+
+    @EntityGraph(attributePaths = {
+            "formVersion", "formVersion.form", "submittedBy", "subjectContext",
+            "subjectContext.subjectUser", "subjectContext.subjectUser.department"
+    })
+    @Query("""
+            select s from FormSubmission s
+            left join s.subjectContext context
+            left join context.subjectUser subject
+            where (:formId is null or s.formVersion.form.id = :formId)
+              and s.status = 'SUBMITTED'
+              and (:keyword is null
+                   or lower(context.fullName) like :keyword
+                   or lower(context.employeeCode) like :keyword
+                   or lower(s.formVersion.form.title) like :keyword
+                   or lower(s.formVersion.form.code) like :keyword)
+              and (:submittedByUserId is null or s.submittedBy.id = :submittedByUserId)
+              and (:departmentId is null
+                   or subject.department.id = :departmentId
+                   or (context.department is not null and exists (
+                       select 1 from vn.vietduc.carehubbackend.user.entity.Department d
+                       where d.id = :departmentId and d.name = context.department
+                   )))
+              and (:filterResults = false or s.result in :results)
+              and s.submittedAt >= :fromInclusive
+              and s.submittedAt < :toExclusive
+            order by s.submittedAt desc, s.id desc
+            """)
+    Page<FormSubmission> searchEvaluationsHistory(
+            @Param("formId") Long formId,
+            @Param("keyword") String keyword,
+            @Param("submittedByUserId") Long submittedByUserId,
+            @Param("departmentId") Long departmentId,
+            @Param("filterResults") boolean filterResults,
+            @Param("results") Collection<FormSubmissionResult> results,
+            @Param("fromInclusive") Instant fromInclusive,
+            @Param("toExclusive") Instant toExclusive,
+            Pageable pageable
+    );
+
+    @Query("""
+            select count(s.id) as total,
+                   coalesce(sum(case when s.result = :passedResult then 1 else 0 end), 0) as passed,
+                   coalesce(sum(case when s.result in :failedResults then 1 else 0 end), 0) as failed,
+                   avg(s.convertedScore) as averageConvertedScore
+            from FormSubmission s
+            left join s.subjectContext context
+            left join context.subjectUser subject
+            where (:formId is null or s.formVersion.form.id = :formId)
+              and s.status = 'SUBMITTED'
+              and (:keyword is null
+                   or lower(context.fullName) like :keyword
+                   or lower(context.employeeCode) like :keyword
+                   or lower(s.formVersion.form.title) like :keyword
+                   or lower(s.formVersion.form.code) like :keyword)
+              and (:submittedByUserId is null or s.submittedBy.id = :submittedByUserId)
+              and (:departmentId is null
+                   or subject.department.id = :departmentId
+                   or (context.department is not null and exists (
+                       select 1 from vn.vietduc.carehubbackend.user.entity.Department d
+                       where d.id = :departmentId and d.name = context.department
+                   )))
+              and (:filterResults = false or s.result in :results)
+              and s.submittedAt >= :fromInclusive
+              and s.submittedAt < :toExclusive
+            """)
+    FormSubmissionHistorySummaryProjection summarizeEvaluationsHistory(
+            @Param("formId") Long formId,
             @Param("keyword") String keyword,
             @Param("submittedByUserId") Long submittedByUserId,
             @Param("departmentId") Long departmentId,

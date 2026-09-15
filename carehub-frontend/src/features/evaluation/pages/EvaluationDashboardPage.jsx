@@ -2,12 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   BarChartOutlined,
   CheckCircleOutlined,
-  ClockCircleOutlined,
   CloseCircleOutlined,
   FileDoneOutlined,
-  FileTextOutlined,
   InfoCircleOutlined,
   LoadingOutlined,
+  DownloadOutlined,
   TrophyOutlined,
 } from '@ant-design/icons'
 import {
@@ -31,6 +30,8 @@ import { apiData, apiErrorMessage } from '../utils/documentQuestionUi.js'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
+import { currentYearDateRange, validateHistoricalDateRange } from '../../../shared/utils/dateRange.js'
+import { downloadCsv, exportFileName } from '../../../shared/utils/tableExport.js'
 import '../styles/EvaluationDashboardPage.css'
 
 function numberOrNull(value) {
@@ -57,17 +58,22 @@ function unwrapList(response) {
   return Array.isArray(data?.content) ? data.content : []
 }
 
+const DEFAULT_EVALUATION_DASHBOARD_DATES = currentYearDateRange()
 const DEFAULT_EVALUATION_DASHBOARD_FILTERS = {
   departmentId: '',
   employeeId: '',
-  fromDate: '',
+  fromDate: DEFAULT_EVALUATION_DASHBOARD_DATES.fromDate,
   paperId: '',
   professionalFieldId: '',
   resultStatus: '',
-  toDate: '',
+  toDate: DEFAULT_EVALUATION_DASHBOARD_DATES.toDate,
 }
 
-function EvaluationDashboardPage({ role = 'admin' }) {
+/**
+ * Thân trang Dashboard lý thuyết, tách khỏi AppShell để nhúng được vào tab
+ * "Dashboard lý thuyết" của trang Năng lực chuyên môn.
+ */
+export function EvaluationDashboardContent({ role = 'admin' }) {
   const isManager = role === 'manager'
   const { showToast } = useToast()
   const [departments, setDepartments] = useState([])
@@ -78,6 +84,7 @@ function EvaluationDashboardPage({ role = 'admin' }) {
   const [loading, setLoading] = useState(true)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [error, setError] = useState('')
+  const [filterError, setFilterError] = useState('')
   const [filters, setFilters] = useState(DEFAULT_EVALUATION_DASHBOARD_FILTERS)
   const [appliedFilters, setAppliedFilters] = useState(DEFAULT_EVALUATION_DASHBOARD_FILTERS)
 
@@ -131,7 +138,7 @@ function EvaluationDashboardPage({ role = 'admin' }) {
               departmentId: managerDepartmentId,
             }))
           } else {
-            setError('Tài khoản manager chưa được gán khoa/phòng.')
+            setError('Tài khoản Quản lý cấp Khoa chưa được gán khoa/phòng.')
           }
           return
         }
@@ -221,8 +228,8 @@ function EvaluationDashboardPage({ role = 'admin' }) {
   const passed = numberOrNull(summary?.passedAttempts)
   const failed = numberOrNull(summary?.failedAttempts)
   const activeFilterCount = [
-    appliedFilters.fromDate,
-    appliedFilters.toDate,
+    appliedFilters.fromDate !== DEFAULT_EVALUATION_DASHBOARD_FILTERS.fromDate,
+    appliedFilters.toDate !== DEFAULT_EVALUATION_DASHBOARD_FILTERS.toDate,
     !isManager && appliedFilters.departmentId,
     appliedFilters.paperId,
     appliedFilters.professionalFieldId,
@@ -240,41 +247,72 @@ function EvaluationDashboardPage({ role = 'admin' }) {
     }
     setFilters(nextFilters)
     setAppliedFilters(nextFilters)
-    setError('')
+    setFilterError('')
   }
 
   function applyFilters() {
-    if (filters.fromDate && filters.toDate && filters.fromDate > filters.toDate) {
-      setError('Từ ngày không được sau đến ngày.')
+    const dateError = validateHistoricalDateRange(filters.fromDate, filters.toDate)
+    if (dateError) {
+      setFilterError(dateError)
       return
     }
-    setError('')
+    setFilterError('')
     setAppliedFilters({ ...filters })
     setIsFilterOpen(false)
   }
 
-  const pageTitle = 'Dashboard lý thuyết'
+  function handleExport() {
+    const total = overview?.attempts || {}
+    const rows = [
+      ['Tổng quan', '', 'Tổng cộng', overview?.assignmentCount, overview?.targetCount, overview?.notStartedCount,
+        total.gradedAttempts, total.passedAttempts, total.failedAttempts, total.averageScore,
+        numberOrNull(total.passRate) == null ? '' : Number(total.passRate) * 100,
+        appliedFilters.fromDate, appliedFilters.toDate],
+      ...(overview?.byProfessionalField || []).map((item) => [
+        'Lĩnh vực chuyên môn', item.professionalFieldCode, item.professionalFieldName,
+        item.assignmentCount, item.targetCount, item.notStartedCount, item.gradedAttempts,
+        item.passedAttempts, item.failedAttempts, item.averageScore,
+        numberOrNull(item.passRate) == null ? '' : Number(item.passRate) * 100,
+        appliedFilters.fromDate, appliedFilters.toDate,
+      ]),
+      ...(overview?.byPaper || []).map((item) => [
+        'Bài kiểm tra', item.paperCode, item.paperName, item.assignmentCount, item.targetCount,
+        item.notStartedCount, item.gradedAttempts, item.passedAttempts, item.failedAttempts,
+        item.averageScore, numberOrNull(item.passRate) == null ? '' : Number(item.passRate) * 100,
+        appliedFilters.fromDate, appliedFilters.toDate,
+      ]),
+    ]
+    downloadCsv(
+      exportFileName('ky-nang-ly-thuyet'),
+      ['Nhóm dữ liệu', 'Mã', 'Tên', 'Số đợt', 'Lượt phân công', 'Chưa bắt đầu', 'Đã chấm', 'Đạt', 'Không đạt', 'Điểm trung bình', 'Tỷ lệ đạt (%)', 'Từ ngày', 'Đến ngày'],
+      rows,
+    )
+  }
 
   return (
-    <AppShell
-      breadcrumbs={isManager ? undefined : [{ label: 'Dashboard & Báo cáo' }, { label: pageTitle }]}
-      title={isManager ? pageTitle : undefined}
-    >
         <div className="exam-dashboard">
           <AppliedFilterToolbar
             activeCount={activeFilterCount}
+            actions={<button type="button" className="competency-dashboard-export" onClick={handleExport}
+              disabled={loading || !overview}>
+              <DownloadOutlined /> Xuất Excel
+            </button>}
             ariaLabel="Bộ lọc dashboard năng lực chuyên môn"
             className="exam-dashboard__toolbar"
+            errorMessage={filterError}
             isOpen={isFilterOpen}
             onApply={applyFilters}
             onReset={resetFilters}
-            onToggle={() => setIsFilterOpen((current) => !current)}
+            onToggle={() => {
+              setFilterError('')
+              setIsFilterOpen((current) => !current)
+            }}
             panelClassName="exam-dashboard__filter-panel"
             panelId="exam-dashboard-filter-panel"
             showFilter
           >
-                <Filter label="Từ ngày"><KeyboardDatePicker value={filters.fromDate} onChange={(val) => setFilters({ ...filters, fromDate: val })} /></Filter>
-                <Filter label="Đến ngày"><KeyboardDatePicker value={filters.toDate} onChange={(val) => setFilters({ ...filters, toDate: val })} /></Filter>
+                <Filter label="Từ ngày"><KeyboardDatePicker allowInvalidValue value={filters.fromDate} max={filters.toDate || DEFAULT_EVALUATION_DASHBOARD_DATES.toDate} onChange={(val) => { setFilterError(''); setFilters({ ...filters, fromDate: val }) }} /></Filter>
+                <Filter label="Đến ngày"><KeyboardDatePicker allowInvalidValue value={filters.toDate} min={filters.fromDate || undefined} max={DEFAULT_EVALUATION_DASHBOARD_DATES.toDate} onChange={(val) => { setFilterError(''); setFilters({ ...filters, toDate: val }) }} /></Filter>
                 <FilterSelectField
                     label="Khoa/phòng"
                     value={filters.departmentId}
@@ -358,14 +396,10 @@ function EvaluationDashboardPage({ role = 'admin' }) {
           ) : (
             <>
               <section className="exam-dashboard__metrics">
-                <Metric icon={<FileTextOutlined />} label="Đợt kiểm tra" value={overview?.assignmentCount} detail="Số đợt trong phạm vi" />
-                <Metric icon={<FileDoneOutlined />} label="Lượt được phân công" value={overview?.targetCount} detail="Nhân viên × đợt kiểm tra" />
-                <Metric icon={<FileDoneOutlined />} label="Đã hoàn thành" value={completed} detail="Lượt đã nộp/chấm" tone="success" />
-                <Metric icon={<ClockCircleOutlined />} label="Chưa bắt đầu" value={overview?.notStartedCount} detail="Chưa từng mở bài" tone="warning" />
+                <Metric icon={<FileDoneOutlined />} label="Tổng lượt đã chấm" value={completed} detail="Theo bộ lọc hiện tại" />
                 <Metric icon={<CheckCircleOutlined />} label="Đạt" value={passed} detail="Lượt đạt" tone="success" />
                 <Metric icon={<CloseCircleOutlined />} label="Không đạt" value={failed} detail="Lượt không đạt" tone="danger" />
                 <Metric icon={<TrophyOutlined />} label="Tỷ lệ đạt" value={formatPercent(summary?.passRate)} raw detail="Trên số lượt đã chấm" />
-                <Metric icon={<BarChartOutlined />} label="Điểm trung bình" value={`${formatNumber(summary?.averageScore, 2)}/10`} raw detail="Điểm bài kiểm tra (thang 10)" />
               </section>
 
               <section className="exam-dashboard__analytics">
@@ -379,31 +413,22 @@ function EvaluationDashboardPage({ role = 'admin' }) {
                 </article>
               </section>
 
-              <section className="exam-dashboard__panel exam-dashboard__paper-panel">
-                <header><div><h2>Danh sách bài kiểm tra</h2><p>Kết quả tổng hợp theo từng đề và phạm vi đang lọc.</p></div><span>{paperRows.length} bài</span></header>
-                <div className="exam-dashboard__table-wrap">
-                  <table className="exam-dashboard__table">
-                    <thead><tr><th>Mã đề</th><th>Bài kiểm tra</th><th>Lĩnh vực chuyên môn</th><th>Số câu</th><th>Điểm đạt</th><th>Điểm trung bình</th></tr></thead>
-                    <tbody>
-                      {!paperRows.length ? (
-                        <tr><td colSpan="6" className="exam-dashboard__empty-row">Chưa có bài kiểm tra phù hợp.</td></tr>
-                      ) : paperRows.map((paper) => (
-                        <tr key={paper.paperId}>
-                          <td><code>{paper.paperCode || '—'}</code></td>
-                          <td><strong>{paper.paperName || '—'}</strong><span>Phiên bản {paper.version || '—'} · {formatNumber(paper.gradedAttempts)} lượt</span></td>
-                          <td>{(paper.professionalFieldNames || []).join(', ') || '—'}</td>
-                          <td>{formatNumber(paper.totalQuestions)}</td>
-                          <td>{paper.passingScore === null || paper.passingScore === undefined ? '—' : `${formatNumber(paper.passingScore)}/10`}</td>
-                          <td><strong>{formatNumber(paper.averageScore, 2)}</strong>/10</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
             </>
           )}
         </div>
+  )
+}
+
+/** Trang độc lập; route cũ vẫn dùng để không phá link đã lưu. */
+function EvaluationDashboardPage({ role = 'admin' }) {
+  const pageTitle = 'Dashboard lý thuyết'
+  const isManager = role === 'manager'
+  return (
+    <AppShell
+      breadcrumbs={isManager ? undefined : [{ label: 'Dashboard & Báo cáo' }, { label: pageTitle }]}
+      title={isManager ? pageTitle : undefined}
+    >
+      <EvaluationDashboardContent role={role} />
     </AppShell>
   )
 }

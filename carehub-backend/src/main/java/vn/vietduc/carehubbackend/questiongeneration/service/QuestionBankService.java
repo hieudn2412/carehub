@@ -6,7 +6,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import vn.vietduc.carehubbackend.exception.BadRequestException;
-import vn.vietduc.carehubbackend.exception.ConflictException;
 import vn.vietduc.carehubbackend.exception.ResourceNotFoundException;
 import vn.vietduc.carehubbackend.questiongeneration.dto.request.UpsertQuestionBankQuestionRequest;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.QuestionBankQuestionResponse;
@@ -140,33 +139,12 @@ public class QuestionBankService {
 
     @Transactional
     public QuestionBankQuestionResponse create(UpsertQuestionBankQuestionRequest request, String actor) {
-        return createInternal(request, actor, true);
-    }
-
-    @Transactional
-    public QuestionBankQuestionResponse createImportDraftAllowingDuplicate(UpsertQuestionBankQuestionRequest request, String actor) {
-        UpsertQuestionBankQuestionRequest draftRequest = new UpsertQuestionBankQuestionRequest(
-                request.stem(),
-                request.optionA(),
-                request.optionB(),
-                request.optionC(),
-                request.optionD(),
-                request.correctAnswer(),
-                request.explanation(),
-                request.language(),
-                request.sourceDocument(),
-                "DRAFT",
-                request.categoryId(),
-                request.professionalFieldId(),
-                request.cognitiveLevel(),
-                request.sourceDocumentId()
-        );
-        return createInternal(draftRequest, actor, false);
+        return createInternal(request, actor, false);
     }
 
     /**
      * Dùng cho import theo lô: mỗi dòng chạy trong transaction riêng nên một dòng lỗi
-     * (trùng mạnh hoặc lỗi khác) không đánh dấu rollback-only cho cả lô.
+     * không đánh dấu rollback-only cho cả lô.
      * Chỉ có tác dụng khi được gọi từ bean khác (qua proxy Spring).
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -174,23 +152,16 @@ public class QuestionBankService {
         return createInternal(request, actor, true);
     }
 
-    /**
-     * Bản REQUIRES_NEW của {@link #createImportDraftAllowingDuplicate}, dùng cho import theo lô.
-     */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public QuestionBankQuestionResponse createImportDraftAllowingDuplicateInNewTransaction(
+    private QuestionBankQuestionResponse createInternal(
             UpsertQuestionBankQuestionRequest request,
-            String actor
+            String actor,
+            boolean importStrongDuplicateAsDraft
     ) {
-        return createImportDraftAllowingDuplicate(request, actor);
-    }
-
-    private QuestionBankQuestionResponse createInternal(UpsertQuestionBankQuestionRequest request, String actor, boolean rejectStrongDuplicate) {
         validateRequired(request);
         QuestionBankStatus status = parseMutationStatus(request.status(), QuestionBankStatus.APPROVED);
         DuplicateCheckResult duplicate = duplicateCheckService.check(request.stem());
-        if (rejectStrongDuplicate) {
-            rejectStrongDuplicate(duplicate);
+        if (importStrongDuplicateAsDraft && duplicate.strongDuplicate()) {
+            status = QuestionBankStatus.DRAFT;
         }
 
         QuestionCategory category = resolveCategory(request.categoryId(), request.stem(), request.explanation(), request.sourceDocument());
@@ -246,7 +217,6 @@ public class QuestionBankService {
             }
         }
         DuplicateCheckResult duplicate = duplicateCheckService.check(request.stem(), Set.of(question.getId()));
-        rejectStrongDuplicate(duplicate);
 
         String nextStem = clean(request.stem());
         boolean stemChanged = !nextStem.equals(clean(question.getStem()));
@@ -296,7 +266,6 @@ public class QuestionBankService {
             throw new BadRequestException("Không thể duyệt câu hỏi đã lưu trữ");
         }
         DuplicateCheckResult duplicate = duplicateCheckService.check(question.getStem(), Set.of(question.getId()));
-        rejectStrongDuplicate(duplicate);
         if (question.getProfessionalField() == null) {
             throw new BadRequestException("Vui lòng chọn lĩnh vực chuyên môn trước khi duyệt câu hỏi");
         }
@@ -383,15 +352,6 @@ public class QuestionBankService {
         normalizeCorrectAnswer(request.correctAnswer());
         if (isBlank(request.cognitiveLevel())) {
             throw new BadRequestException("Vui lòng chọn mức độ nhận thức cho câu hỏi");
-        }
-    }
-
-    private void rejectStrongDuplicate(DuplicateCheckResult duplicate) {
-        if (duplicate != null && duplicate.strongDuplicate()) {
-            String message = duplicate.matchedQuestionStem() == null
-                    ? "Câu hỏi bị trùng mạnh với ngân hàng câu hỏi"
-                    : "Câu hỏi bị trùng mạnh với câu đã có: " + duplicate.matchedQuestionStem();
-            throw new ConflictException(message);
         }
     }
 

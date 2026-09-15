@@ -655,6 +655,20 @@
   background: #fff;
 }
 
+/* Tab "Dashboard lý thuyết" tự mang bộ lọc riêng nên không dùng thanh công cụ của
+   trang; wrapper này dựng lại đúng hộp mà .competency-dashboard-tabs trông đợi. */
+.competency-dashboard-theory-tabs {
+  padding: 0 20px;
+  border: 1px solid #dbe3ee;
+  border-radius: 8px;
+  background: #fff;
+  margin-bottom: 16px;
+}
+
+.competency-dashboard-theory-tabs .competency-dashboard-tabs {
+  margin-bottom: 0;
+}
+
 .competency-dashboard-tabs {
   display: flex;
   gap: 4px;
@@ -732,6 +746,33 @@
   background: #fff;
   color: #334155;
   cursor: pointer;
+}
+
+.competency-dashboard-export {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 14px;
+  border: 1px solid #087e68;
+  border-radius: 8px;
+  background: #087e68;
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.competency-dashboard-export:hover:not(:disabled) {
+  background: #066b59;
+}
+
+.competency-dashboard-export:disabled {
+  cursor: not-allowed;
+  opacity: .55;
 }
 
 .competency-dashboard-reload:hover:not(:disabled) {

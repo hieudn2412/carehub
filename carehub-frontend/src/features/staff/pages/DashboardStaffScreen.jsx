@@ -23,6 +23,9 @@ const SCORE_FORMATTER = new Intl.NumberFormat('vi-VN', {
   minimumFractionDigits: 1,
   maximumFractionDigits: 1,
 })
+const PERCENT_FORMATTER = new Intl.NumberFormat('vi-VN', {
+  maximumFractionDigits: 1,
+})
 const DEFAULT_COMPETENCY_TARGET_SCORE = 6
 
 function localDate(value = new Date()) {
@@ -45,6 +48,10 @@ function number(value) {
 
 function formatScore(value) {
   return SCORE_FORMATTER.format(number(value))
+}
+
+function formatPercentage(value) {
+  return PERCENT_FORMATTER.format(clampPercentage(value))
 }
 
 function formatHours(value) {
@@ -70,9 +77,12 @@ function DashboardMetricCard({
 }) {
   const content = (
     <>
-      <div className="staff-home-metric__heading">
-        <span className="staff-home-metric__icon" aria-hidden="true">{icon}</span>
-        <h2>{title}</h2>
+      <div>
+        <div className="staff-home-metric__heading">
+          <span className="staff-home-metric__icon" aria-hidden="true">{icon}</span>
+          <h2>{title}</h2>
+        </div>
+        <p>{description}</p>
       </div>
       <div className="staff-home-metric__values">
         {progress != null && (
@@ -93,7 +103,6 @@ function DashboardMetricCard({
           <span style={{ width: `${clampPercentage(progress)}%` }} />
         </div>
       )}
-      <p>{description}</p>
     </>
   )
 
@@ -161,7 +170,10 @@ export default function DashboardStaffScreen() {
       ? submittedHours * 100 / requiredHours
       : number(training?.progressPercentage)
     const complianceCount = number(compliance?.submittedCount)
-    const compliancePercentage = clampPercentage(number(compliance?.averageConvertedScore) * 10)
+    const compliancePassedCount = number(compliance?.passedCount)
+    const compliancePercentage = complianceCount > 0
+      ? clampPercentage(compliancePassedCount * 100 / complianceCount)
+      : 0
     const knowledgeCount = number(competency?.knowledgeAttemptCount)
     const skillCount = number(competency?.skillEvaluationCount)
 
@@ -182,10 +194,6 @@ export default function DashboardStaffScreen() {
     }
   }, [compliance, competency, training])
 
-  const roleName = profile?.roles
-    ?.map(role => role.name || role.displayName)
-    .filter(Boolean)
-    .join(', ') || 'Nhân viên'
   const competencyPassed = competency?.targetScore == null
     ? metrics.overallScore >= metrics.targetScore
     : Boolean(competency?.isPassed)
@@ -204,7 +212,6 @@ export default function DashboardStaffScreen() {
             <span>Bệnh viện Hữu nghị Việt Đức</span>
             <h1>{loading ? 'Đang tải thông tin...' : profile?.fullName || 'Nhân viên'}</h1>
             <div className="staff-home-profile__meta">
-              <span>{roleName}</span>
               <span>{profile?.employeeCode || 'Chưa có mã nhân viên'}</span>
               {profile?.departmentName && <span>{profile.departmentName}</span>}
             </div>
@@ -230,8 +237,8 @@ export default function DashboardStaffScreen() {
             title="Giám sát tuân thủ"
             icon={<SafetyCertificateOutlined />}
             primary={metrics.complianceCount}
-            secondary={`${formatScore(metrics.compliancePercentage)}%`}
-            description="Lượt được chấm · Điểm tuân thủ trung bình"
+            secondary={`${formatPercentage(metrics.compliancePercentage)}%`}
+            description="Lượt được chấm · Tỷ lệ lượt đạt"
             onClick={() => navigate('/staff/competency')}
           />
 

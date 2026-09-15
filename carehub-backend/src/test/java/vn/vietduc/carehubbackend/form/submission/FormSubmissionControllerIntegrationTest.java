@@ -369,14 +369,13 @@ class FormSubmissionControllerIntegrationTest {
                         .param("keyword", "FOREIGN")
                         .param("size", "20"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.content.length()", is(1)));
+                .andExpect(jsonPath("$.data.content.length()", is(0)));
 
         mockMvc.perform(get("/api/v1/form-subjects/users")
                         .with(managerJwt())
                         .param("assignmentItemId", fixture.assignmentItemId().toString())
                         .param("employeeCode", foreignSubject.getEmployeeCode()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.userId", is(foreignSubject.getId().intValue())));
+                .andExpect(status().isNotFound());
 
         mockMvc.perform(post("/api/v1/form-submissions")
                         .with(managerJwt())
@@ -387,7 +386,7 @@ class FormSubmissionControllerIntegrationTest {
                                   "subject": {"type": "USER", "userId": %d}
                                 }
                                 """.formatted(fixture.assignmentItemId(), foreignSubject.getId())))
-                .andExpect(status().isCreated());
+                .andExpect(status().isForbidden());
 
         mockMvc.perform(get("/api/v1/form-subjects/users/search")
                         .with(managerJwt())

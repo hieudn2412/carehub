@@ -26,6 +26,7 @@ import FilterActionButtons from '../../../../shared/components/FilterActionButto
 import SearchableSelect from '../../../../shared/components/SearchableSelect.jsx'
 import { myCompetencyApi } from '../../../evaluation/api/myCompetencyApi.js'
 import { apiData, apiErrorMessage, formatDateTime } from '../../../../shared/utils/apiUi.js'
+import { validateHistoricalDateRange } from '../../../../shared/utils/dateRange.js'
 import './StaffComplianceDashboardPage.css'
 
 const today = () => {
@@ -70,11 +71,11 @@ function SearchForm({ filters, onChange, onApply, onClear, dateError, mobile = f
       </label>
       <label>
         <span>Từ ngày</span>
-        <KeyboardDatePicker value={filters.dateFrom} max={filters.dateTo || undefined} onChange={val => onChange({ dateFrom: val })} aria-label="Từ ngày tuân thủ" />
+        <KeyboardDatePicker allowInvalidValue value={filters.dateFrom} max={filters.dateTo || undefined} onChange={val => onChange({ dateFrom: val })} aria-label="Từ ngày tuân thủ" />
       </label>
       <label>
         <span>Đến ngày</span>
-        <KeyboardDatePicker value={filters.dateTo} min={filters.dateFrom || undefined} max={today()} onChange={val => onChange({ dateTo: val })} aria-label="Đến ngày tuân thủ" />
+        <KeyboardDatePicker allowInvalidValue value={filters.dateTo} min={filters.dateFrom || undefined} max={today()} onChange={val => onChange({ dateTo: val })} aria-label="Đến ngày tuân thủ" />
       </label>
       {dateError && <p className="scd-search-error" role="alert">{dateError}</p>}
       <FilterActionButtons className="scd-search-actions" onReset={onClear} onApply={onApply} />
@@ -156,14 +157,18 @@ function StaffComplianceDashboardPage() {
     label: truncateLabel(item.formName),
   })), [chart])
 
-  const updateFilters = values => setDraftFilters(current => ({ ...current, ...values }))
+  const updateFilters = values => {
+    setDateError('')
+    setDraftFilters(current => ({ ...current, ...values }))
+  }
   const clearFilters = () => {
     setDraftFilters({ q: '', dateFrom: defaultFrom(), dateTo: today() })
     setDateError('')
   }
   const applyFilters = () => {
-    if (draftFilters.dateFrom && draftFilters.dateTo && draftFilters.dateFrom > draftFilters.dateTo) {
-      setDateError('Đến ngày phải lớn hơn hoặc bằng Từ ngày.')
+    const validationError = validateHistoricalDateRange(draftFilters.dateFrom, draftFilters.dateTo, { maxDate: today() })
+    if (validationError) {
+      setDateError(validationError)
       return false
     }
     setDateError('')
@@ -214,11 +219,15 @@ function StaffComplianceDashboardPage() {
               + Number(Boolean(draftFilters.dateTo && draftFilters.dateTo !== today()))}
             ariaLabel="Bộ lọc tuân thủ cá nhân"
             className="scd-applied-toolbar"
+            errorMessage={dateError}
             isOpen={isFilterOpen}
             onApply={() => { if (applyFilters()) setIsFilterOpen(false) }}
             onReset={clearFilters}
             onSearchChange={value => updateFilters({ q: value })}
-            onToggle={() => setIsFilterOpen(current => !current)}
+            onToggle={() => {
+              setDateError('')
+              setIsFilterOpen(current => !current)
+            }}
             panelClassName="scd-filter-panel"
             panelId="staff-compliance-dashboard-filter-panel"
             searchAriaLabel="Tìm tên bảng kiểm"
@@ -227,13 +236,12 @@ function StaffComplianceDashboardPage() {
           >
             <label className="admin-control-toolbar__field">
               <span>Từ ngày</span>
-              <KeyboardDatePicker value={draftFilters.dateFrom} max={draftFilters.dateTo || undefined} onChange={val => updateFilters({ dateFrom: val })} aria-label="Từ ngày tuân thủ" />
+              <KeyboardDatePicker allowInvalidValue value={draftFilters.dateFrom} max={draftFilters.dateTo || today()} onChange={val => updateFilters({ dateFrom: val })} aria-label="Từ ngày tuân thủ" />
             </label>
             <label className="admin-control-toolbar__field">
               <span>Đến ngày</span>
-              <KeyboardDatePicker value={draftFilters.dateTo} min={draftFilters.dateFrom || undefined} max={today()} onChange={val => updateFilters({ dateTo: val })} aria-label="Đến ngày tuân thủ" />
+              <KeyboardDatePicker allowInvalidValue value={draftFilters.dateTo} min={draftFilters.dateFrom || undefined} max={today()} onChange={val => updateFilters({ dateTo: val })} aria-label="Đến ngày tuân thủ" />
             </label>
-            {dateError && <p className="scd-search-error" role="alert">{dateError}</p>}
           </AppliedFilterToolbar>
         </section>
 

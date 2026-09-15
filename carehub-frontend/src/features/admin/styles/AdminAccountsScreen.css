@@ -317,6 +317,11 @@
   color: #ea580c;
 }
 
+.am-badge--status-deleted {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
 .am-badge__dot {
   width: 6px;
   height: 6px;
@@ -905,6 +910,10 @@
 /* Modal form tạo/sửa tài khoản rộng hơn modal mặc định */
 .am-modal--wide {
   max-width: 640px;
+}
+
+.am-modal--account-detail {
+  max-width: 720px;
 }
 
 /* Thông báo lỗi trong modal chi tiết */

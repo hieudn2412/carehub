@@ -11,26 +11,6 @@ export const competencyApi = {
     return httpClient.get(`/competency/employees/${employeeId}`, { headers: authHeaders() })
   },
 
-  getDepartmentClassification(departmentId) {
-    return httpClient.get(`/competency/departments/${departmentId}`, { headers: authHeaders() })
-  },
-
-  getThresholds() {
-    return httpClient.get('/competency/thresholds', { headers: authHeaders() })
-  },
-
-  updateThresholds(payload) {
-    return httpClient.put('/competency/thresholds', payload, { headers: authHeaders() })
-  },
-
-  getByField(params) {
-    return httpClient.get('/competency/by-field', { headers: authHeaders(), params })
-  },
-
-  getEmployeeByField(employeeId, params) {
-    return httpClient.get(`/competency/employees/${employeeId}/by-field`, { headers: authHeaders(), params })
-  },
-
   getByTechnique(params) {
     return httpClient.get('/competency/by-technique', { headers: authHeaders(), params })
   },
@@ -68,13 +48,6 @@ export const examAssignmentApi = {
   getAssignmentResults(assignmentId) {
     return httpClient.get(`/exam-assignments/${assignmentId}/results`, {
       headers: authHeaders(),
-    })
-  },
-
-  getResultReport(assignmentId) {
-    return httpClient.get('/evaluation-results', {
-      headers: authHeaders(),
-      params: { assignmentId },
     })
   },
 

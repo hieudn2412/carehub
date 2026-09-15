@@ -12,9 +12,6 @@ public record CompetencySummaryItemResponse(
         BigDecimal knowledgeAverage,
         BigDecimal skillAverage,
         BigDecimal overallScore,
-        String competencyLevel,
-        String competencyLabel,
-        String colorHex,
         boolean isPassed
 ) {
 }

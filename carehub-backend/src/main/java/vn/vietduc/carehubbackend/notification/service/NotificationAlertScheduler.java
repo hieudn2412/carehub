@@ -47,7 +47,7 @@ public class NotificationAlertScheduler {
     @Value("${app.notification.zone:Asia/Bangkok}")
     private String notificationZone;
 
-    @Scheduled(cron = "${app.notification.scan-cron:0 0 7 * * *}", zone = "${app.notification.zone:Asia/Bangkok}")
+    @Scheduled(cron = "${app.notification.scan-cron:0 52 3 * * *}", zone = "${app.notification.zone:Asia/Bangkok}")
     public void scanAlerts() {
         LocalDate today = LocalDate.now(businessZone());
         try {

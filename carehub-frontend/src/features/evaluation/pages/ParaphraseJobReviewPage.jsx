@@ -23,6 +23,7 @@ import {
   parseJsonList,
   statusTone,
 } from '../utils/documentQuestionUi.js'
+import { formatSimilarity } from '../utils/duplicateQuestionUi.js'
 import '../styles/QuestionDocumentPages.css'
 
 function ParaphraseJobReviewPage() {
@@ -260,6 +261,7 @@ function ParaphraseJobReviewPage() {
                         <div className="qdoc-detail-meta">
                           <span className={`qdoc-badge qdoc-badge--${statusTone(jobDetail.status)}`}>{jobStatusText(jobDetail)}</span>
                           <span>{candidates.length}/{jobDetail.requestedCount} biến thể</span>
+                          <span>Mức thay đổi: {jobDetail.changeStrength}</span>
                           <span>{candidates.filter((item) => item.status === 'APPROVED').length} đã duyệt</span>
                           <span>{candidates.filter((item) => item.status === 'SAVED').length} đã lưu</span>
                           <span>Tạo lúc {formatDateTime(jobDetail.createdAt)}</span>
@@ -276,6 +278,13 @@ function ParaphraseJobReviewPage() {
                     <section className="qdoc-alert qdoc-alert--danger">
                       <WarningOutlined />
                       <span>{jobDetail.errorMessage}</span>
+                    </section>
+                  )}
+
+                  {jobDetail.status === 'COMPLETED' && candidates.length < jobDetail.requestedCount && (
+                    <section className="qdoc-alert qdoc-alert--warning">
+                      <WarningOutlined />
+                      <span>Model chỉ tạo được {candidates.length}/{jobDetail.requestedCount} biến thể đạt bộ lọc.</span>
                     </section>
                   )}
 
@@ -426,6 +435,25 @@ function ParaphraseCandidateCard({
       <h2>{candidate.stem}</h2>
       <Options candidate={candidate} />
 
+      <div className="qdoc-paraphrase-similarity">
+        {candidate.semanticSimilarityToSource != null && (
+          <span>Giữ nghĩa với câu gốc: {formatSimilarity(candidate.semanticSimilarityToSource)}</span>
+        )}
+        {candidate.lexicalDifferenceFromSource != null && (
+          <span>Thay đổi từ vựng: {formatSimilarity(candidate.lexicalDifferenceFromSource)}</span>
+        )}
+        {candidate.duplicateMaxSimilarity != null && (
+          <span>Gần câu khác nhất: {formatSimilarity(candidate.duplicateMaxSimilarity)}</span>
+        )}
+      </div>
+
+      {candidate.duplicateQuestionStemSnapshot && (
+        <div className="qdoc-soft-box">
+          <strong>Câu gần nhất trong ngân hàng</strong>
+          <p>{candidate.duplicateQuestionStemSnapshot}</p>
+        </div>
+      )}
+
       {candidate.explanation && (
         <div className="qdoc-soft-box">
           <strong>Giải thích</strong>
@@ -499,10 +527,8 @@ function Options({ candidate }) {
   )
 }
 
-function Warnings({ warnings }) {
-  const items = parseJsonList(warnings).filter((item) =>
-    typeof item === 'string' && item.startsWith('Mất thuật ngữ hoặc số liệu cần giữ')
-  )
+export function Warnings({ warnings }) {
+  const items = parseJsonList(warnings).filter((item) => typeof item === 'string' && item.trim())
   if (!items.length) return null
   return (
     <div className="qdoc-warning-list">

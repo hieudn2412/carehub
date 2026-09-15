@@ -40,7 +40,7 @@ class QuestionCandidateValidationServiceTest {
     }
 
     @Test
-    void groundedV4RejectsEvidenceThatIsNotAnExactSourceExcerpt() {
+    void groundedV4WarnsButNoLongerRejectsEvidenceThatIsNotAnExactSourceExcerpt() {
         GeneratedQuestion legacy = validQuestion(
                 "Chỉ cần hỏi tên người bệnh.",
                 "Người bệnh cần được xác định bằng tối thiểu hai thông tin."
@@ -69,13 +69,15 @@ class QuestionCandidateValidationServiceTest {
                 "Người bệnh cần được xác định bằng tối thiểu hai thông tin."
         );
 
-        assertThat(result.rejected()).isTrue();
-        assertThat(result.validationGrade()).isEqualTo("REJECT");
+        // Thiếu sót về grounding chỉ còn là cảnh báo; tự động từ chối chỉ dành cho lỗi cấu trúc.
+        assertThat(result.rejected()).isFalse();
         assertThat(result.evidenceStatus()).isEqualTo("MISMATCH");
+        assertThat(result.warnings())
+                .anyMatch(warning -> warning.contains("Bằng chứng đáp án không xuất hiện nguyên văn"));
     }
 
     @Test
-    void groundedV4RejectsMediumQuestionThatCanBeGuessedWithoutDomainReasoning() {
+    void groundedV4FlagsMediumQuestionThatCanBeGuessedWithoutDomainReasoning() {
         String source = "Người bệnh cần được xác định bằng tối thiểu hai thông tin.";
         GeneratedQuestion question = new GeneratedQuestion(
                 "Yêu cầu nào đúng khi xác định người bệnh?",
@@ -110,9 +112,11 @@ class QuestionCandidateValidationServiceTest {
 
         CandidateValidationResult result = service.validate(question, source);
 
-        assertThat(result.rejected()).isTrue();
+        // Critic không còn tự động từ chối: chỉ đánh dấu FAILED để đẩy sang NEED_REVIEW.
+        assertThat(result.rejected()).isFalse();
+        assertThat(result.criticStatus()).isEqualTo("FAILED");
+        assertThat(result.validationGrade()).isEqualTo("REVIEW");
         assertThat(result.warnings())
-                .anyMatch(warning -> warning.contains("surfaceCueFree") || warning.contains("LLM validation"))
                 .anyMatch(warning -> warning.contains("LLM validation"));
     }
 

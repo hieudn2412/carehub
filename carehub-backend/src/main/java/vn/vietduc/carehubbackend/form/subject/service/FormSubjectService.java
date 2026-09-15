@@ -13,15 +13,14 @@ import vn.vietduc.carehubbackend.form.subject.dto.FormSubjectUserResponse;
 import vn.vietduc.carehubbackend.form.assignment.service.FormAssignmentAccessService;
 import vn.vietduc.carehubbackend.form.assignment.entity.FormAssignmentItem;
 import vn.vietduc.carehubbackend.form.entity.enums.FormSubjectType;
-import vn.vietduc.carehubbackend.form.compliance.entity.FormComplianceTarget;
-import vn.vietduc.carehubbackend.form.compliance.repository.FormComplianceTargetRepository;
+import vn.vietduc.carehubbackend.user.entity.Department;
 import vn.vietduc.carehubbackend.user.entity.User;
 import vn.vietduc.carehubbackend.user.repository.UserRepository;
 import vn.vietduc.carehubbackend.utils.SecurityUtils;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -29,7 +28,6 @@ public class FormSubjectService {
     private final UserRepository userRepository;
     private final SecurityUtils securityUtils;
     private final FormAssignmentAccessService assignmentAccessService;
-    private final FormComplianceTargetRepository complianceTargetRepository;
 
     @Transactional(readOnly = true)
     public FormSubjectUserResponse findByEmployeeCode(Long assignmentItemId, String employeeCode) {
@@ -65,17 +63,21 @@ public class FormSubjectService {
         if (isAdmin()) {
             return null;
         }
+        if (item != null) {
+            Set<Long> assignedDepartmentIds = item.getAllowedDepartments().stream()
+                    .map(Department::getId)
+                    .collect(Collectors.toSet());
+            if (assignedDepartmentIds.isEmpty()) {
+                throw new ForbiddenException("Quyền giao bảng kiểm chưa có khoa/phòng được phép chấm");
+            }
+            return assignedDepartmentIds;
+        }
+
         User actor = userRepository.findByIdAndIsDeletedFalse(actorId)
                 .orElseThrow(() -> new ForbiddenException("Không tìm thấy tài khoản người đánh giá hiện tại"));
         if (actor.getDepartment() == null) {
             throw new ForbiddenException("Người đánh giá chưa được gán khoa/phòng");
         }
-        
-        // When assigned, evaluator is allowed to evaluate all departments
-        if (item != null) {
-            return null;
-        }
-        
         Set<Long> allowedDepartmentIds = new HashSet<>();
         allowedDepartmentIds.add(actor.getDepartment().getId());
         return allowedDepartmentIds;

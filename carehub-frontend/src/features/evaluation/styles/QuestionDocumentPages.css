@@ -1,4 +1,5 @@
-.qdoc-page {
+
+.qdoc-page {
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -71,61 +72,10 @@
 
 .qdoc-review-toolbar {
   padding: 14px 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
   background: #ffffff;
   border: 1px solid #cbd5e1;
   border-radius: 10px;
   box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
-}
-
-.qdoc-review-toolbar > .qdoc-search {
-  flex: 1 1 320px;
-  max-width: 460px;
-  min-width: 240px;
-}
-
-.qdoc-toolbar-filters {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex: 0 0 auto;
-  flex-wrap: wrap;
-}
-
-.qdoc-toolbar-filters .qdoc-select {
-  height: 40px;
-  min-height: 40px;
-  min-width: 180px;
-  max-width: 220px;
-  padding: 8px 12px;
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  color: #334155;
-  font-size: 13.5px;
-  font-weight: 500;
-  cursor: pointer;
-  outline: none;
-  transition: all 0.15s ease;
-}
-
-.qdoc-toolbar-filters .qdoc-select:hover {
-  border-color: #94a3b8;
-  background-color: #f8fafc;
-}
-
-.qdoc-toolbar-filters .qdoc-select:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.14);
-}
-
-.qdoc-review-toolbar .qdoc-search input {
-  height: 40px;
-  min-height: 40px;
-  padding: 8px 12px 8px 38px;
 }
 
 .qdoc-filter-bar--compact {
@@ -574,6 +524,82 @@
 .qdoc-metric strong {
   color: #0f172a;
   font-size: 20px;
+}
+
+.qdoc-cognitive-review {
+  display: grid;
+  gap: 14px;
+  padding: 18px 20px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.qdoc-cognitive-review__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.qdoc-cognitive-review__header h2 {
+  margin: 4px 0 0;
+  color: #0f172a;
+  font-size: 17px;
+}
+
+.qdoc-cognitive-review__header > span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.qdoc-cognitive-review__eyebrow {
+  color: #0f766e;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .1em;
+}
+
+.qdoc-cognitive-review__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.qdoc-cognitive-review__item {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.qdoc-cognitive-review__item strong {
+  color: #334155;
+  font-size: 12px;
+}
+
+.qdoc-cognitive-review__item span {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.qdoc-cognitive-review__item b {
+  color: #0f172a;
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+
+.qdoc-cognitive-review__warning {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .qdoc-tabs-card {
@@ -1323,6 +1349,10 @@
 }
 
 .qdoc-paraphrase-similarity {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 10px 0;
   color: #64748b;
   font-size: 12.5px;
   font-weight: 600;
@@ -1723,14 +1753,6 @@
     max-width: none;
   }
 
-  .qdoc-toolbar-filters {
-    width: 100%;
-  }
-
-  .qdoc-toolbar-filters .qdoc-select {
-    flex: 1 1 0;
-  }
-
   .qdoc-filter-bar > .admin-filter-disclosure,
   .qdoc-filter-bar > .admin-filter-disclosure .admin-filter-disclosure__panel {
     width: 100%;
@@ -1738,6 +1760,7 @@
 
   .qdoc-metric-grid,
   .qdoc-metric-grid--wide,
+  .qdoc-cognitive-review__grid,
   .qdoc-overview-grid,
   .qdoc-candidate-meta,
   .qdoc-options,
@@ -1756,3 +1779,32 @@
   }
 }
 
+
+/* Ba ô tỷ lệ mức nhận thức trong modal tạo câu hỏi từ tài liệu. */
+.qdoc-mix-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.qdoc-mix-item {
+  display: grid;
+  gap: 4px;
+}
+
+.qdoc-mix-item > span {
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.qdoc-mix-item input {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.qdoc-field-help--error {
+  color: #dc2626;
+  font-weight: 600;
+}
