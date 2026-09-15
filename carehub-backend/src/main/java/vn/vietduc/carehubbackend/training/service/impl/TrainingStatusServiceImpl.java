@@ -666,6 +666,7 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
                 case "requirementName" -> comparingValue(EmployeeTrainingStatusSummaryResponse::requirementName, order.getDirection());
                 case "requiredHours" -> comparingValue(EmployeeTrainingStatusSummaryResponse::requiredHours, order.getDirection());
                 case "submittedHours" -> comparingValue(EmployeeTrainingStatusSummaryResponse::submittedHours, order.getDirection());
+                case "progressPercentage" -> comparingValue(EmployeeTrainingStatusSummaryResponse::progressPercentage, order.getDirection());
                 case "remainingHours" -> comparingValue(EmployeeTrainingStatusSummaryResponse::remainingHours, order.getDirection());
                 case "status", "complianceStatus" -> comparingValue(EmployeeTrainingStatusSummaryResponse::complianceStatus, order.getDirection());
                 case "lastTrainingDate" -> comparingValue(EmployeeTrainingStatusSummaryResponse::lastTrainingDate, order.getDirection());

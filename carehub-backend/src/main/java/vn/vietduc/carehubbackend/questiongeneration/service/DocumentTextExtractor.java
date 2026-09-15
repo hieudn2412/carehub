@@ -14,12 +14,18 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
+import java.nio.ByteBuffer;
+import java.nio.charset.CodingErrorAction;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 @Service
 public class DocumentTextExtractor {
@@ -29,6 +35,7 @@ public class DocumentTextExtractor {
     public ExtractedDocument extract(byte[] bytes, String filename) {
         String extension = extensionOf(filename);
         try {
+            validateFileSignature(bytes, extension);
             return switch (extension) {
                 case "pdf" -> extractPdf(bytes);
                 case "docx" -> extractDocx(bytes);
@@ -145,6 +152,42 @@ public class DocumentTextExtractor {
     private ExtractedDocument extractText(byte[] bytes) {
         String text = new String(bytes, StandardCharsets.UTF_8);
         return new ExtractedDocument(List.of(text), 1, false, null);
+    }
+
+    private void validateFileSignature(byte[] bytes, String extension) throws IOException {
+        if (bytes == null || bytes.length == 0) {
+            throw new IllegalArgumentException("Tệp rỗng");
+        }
+        switch (extension) {
+            case "pdf" -> {
+                if (bytes.length < 5 || bytes[0] != '%' || bytes[1] != 'P'
+                        || bytes[2] != 'D' || bytes[3] != 'F' || bytes[4] != '-') {
+                    throw new IllegalArgumentException("Nội dung tệp không phải PDF hợp lệ");
+                }
+            }
+            case "docx" -> validateDocxContainer(bytes);
+            case "txt", "md" -> {
+                for (byte value : bytes) {
+                    if (value == 0) throw new IllegalArgumentException("Tệp văn bản chứa byte NUL");
+                }
+                StandardCharsets.UTF_8.newDecoder()
+                        .onMalformedInput(CodingErrorAction.REPORT)
+                        .onUnmappableCharacter(CodingErrorAction.REPORT)
+                        .decode(ByteBuffer.wrap(bytes));
+            }
+            default -> { }
+        }
+    }
+
+    private void validateDocxContainer(byte[] bytes) throws IOException {
+        Set<String> entries = new HashSet<>();
+        try (ZipInputStream zip = new ZipInputStream(new ByteArrayInputStream(bytes))) {
+            ZipEntry entry;
+            while ((entry = zip.getNextEntry()) != null) entries.add(entry.getName());
+        }
+        if (!entries.contains("[Content_Types].xml") || !entries.contains("word/document.xml")) {
+            throw new IllegalArgumentException("Nội dung tệp không phải DOCX hợp lệ");
+        }
     }
 
     private String extensionOf(String filename) {

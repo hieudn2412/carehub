@@ -1,11 +1,7 @@
 import { Fragment, useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
-  WarningFilled,
-  CheckCircleFilled,
   ReloadOutlined,
-  ExclamationCircleFilled,
-  CloseCircleFilled,
 } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
@@ -14,6 +10,7 @@ import { apiData, apiErrorMessage, formatNumber } from '../utils/documentQuestio
 import { tokenStorage } from '../../../shared/auth/tokenStorage.js'
 import { getRolesFromAccessToken } from '../../../shared/auth/jwt.js'
 import '../styles/EvaluationDashboardPage.css'
+import PassFailBadge from '../../../shared/components/PassFailBadge.jsx'
 
 function ComplianceEmployeeTechniqueDetailPage() {
   const { employeeId } = useParams()
@@ -54,10 +51,6 @@ function ComplianceEmployeeTechniqueDetailPage() {
     { label: 'Tuân thủ chung', link: backPath },
     { label: data?.employeeName || 'Chi tiết' },
   ]
-
-  const complianceTarget = data?.complianceTarget || 80.0
-  const belowTargetItems = data?.items ? data.items.filter(i => i.belowTarget).length : 0
-  const totalItems = data?.items ? data.items.length : 0
 
   const toggleExpand = (idx) => {
     setExpandedRow(expandedRow === idx ? null : idx)
@@ -105,13 +98,6 @@ function ComplianceEmployeeTechniqueDetailPage() {
                   </div>
                   <div className="evd-detail-summary__metrics">
                     <span>Điểm TB kỹ năng <strong>{overallAvg != null ? formatNumber(overallAvg) : '—'}</strong></span>
-                    <span>Mục tiêu khoa <strong>{complianceTarget}%</strong></span>
-                    {totalItems > 0 && belowTargetItems > 0 && (
-                      <span className="is-danger">
-                        <ExclamationCircleFilled aria-hidden="true" />
-                        {belowTargetItems}/{totalItems} kỹ thuật dưới mục tiêu
-                      </span>
-                    )}
                   </div>
                   <button className="evd-btn" onClick={loadData} disabled={loading}>
                     <ReloadOutlined /> Tải lại
@@ -129,7 +115,7 @@ function ComplianceEmployeeTechniqueDetailPage() {
                       <th>Điểm TB</th>
                       <th>Đạt/Không đạt</th>
                       <th>Tỷ lệ</th>
-                      <th>Phân loại</th>
+                      <th>Kết quả</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -181,17 +167,7 @@ function ComplianceEmployeeTechniqueDetailPage() {
                               </span>
                             </td>
                             <td>
-                              <span className="evd-badge" style={{
-                                backgroundColor: (item.colorHex || '#6b7280') + '20',
-                                color: item.colorHex || '#6b7280',
-                              }}>
-                                {item.isPassed
-                                  ? <CheckCircleFilled style={{ marginRight: 4 }} />
-                                  : item.belowTarget
-                                    ? <CloseCircleFilled style={{ marginRight: 4 }} />
-                                    : <WarningFilled style={{ marginRight: 4 }} />}
-                                {item.competencyLabel || '—'}
-                              </span>
+                              <PassFailBadge passed={item.isPassed} />
                             </td>
                           </tr>
                           {expandedRow === idx && item.attempts && item.attempts.length > 0 && (

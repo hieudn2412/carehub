@@ -95,18 +95,6 @@ function ScoringFormulaPage() {
     return () => window.clearTimeout(timer)
   }, [loadRows])
 
-  useEffect(() => {
-    const nextKeyword = keyword.trim()
-    if (nextKeyword === appliedFilters.keyword) return undefined
-    const timer = window.setTimeout(() => {
-      setPage(0)
-      setAppliedFilters((current) => (
-        current.keyword === nextKeyword ? current : { ...current, keyword: nextKeyword }
-      ))
-    }, 300)
-    return () => window.clearTimeout(timer)
-  }, [appliedFilters.keyword, keyword])
-
   const hasActiveJobs = useMemo(() => rows.some((row) => (
     ACTIVE_JOB_STATUSES.has(row.latestJob?.status)
   )), [rows])
@@ -202,7 +190,7 @@ function ScoringFormulaPage() {
     >
       <div className="sfp-main">
           <AppliedFilterToolbar
-            activeCount={status ? 1 : 0}
+            activeCount={[appliedFilters.keyword, appliedFilters.status].filter(Boolean).length}
             actions={<div className="sfp-toolbar-actions">
                 <span className="sfp-result-count">{totalElements} phiên bản</span>
                 <button className="sfp-refresh" onClick={() => loadRows()} title="Tải lại dữ liệu" aria-label="Tải lại dữ liệu" type="button">

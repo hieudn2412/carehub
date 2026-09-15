@@ -3,10 +3,12 @@ import { EyeOutlined, FilterOutlined, LoadingOutlined, LockOutlined, PlayCircleO
 import { useLocation, useNavigate } from 'react-router-dom'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
+import FilterActionButtons from '../../../shared/components/FilterActionButtons.jsx'
 import '../styles/ExamHistoryScreen.css'
 import { myExamApi } from '../../evaluation/api/myExamApi.js'
 import { apiData, apiErrorMessage, formatDateTime, formatNumber } from '../../../shared/utils/apiUi.js'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
+import { validateHistoricalDateRange } from '../../../shared/utils/dateRange.js'
 
 export default function ExamTakeListScreen() {
   const navigate = useNavigate()
@@ -18,6 +20,9 @@ export default function ExamTakeListScreen() {
   // toDate = hôm nay thì mọi bài còn hạn (dueAt trong tương lai) đều bị ẩn.
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
+  const [draftFromDate, setDraftFromDate] = useState('')
+  const [draftToDate, setDraftToDate] = useState('')
+  const [filterError, setFilterError] = useState('')
   const [loading, setLoading] = useState(true)
   const [startingId, setStartingId] = useState(null)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
@@ -46,6 +51,29 @@ export default function ExamTakeListScreen() {
     notTaken: filtered.filter(item => item.assessmentStatus === 'NOT_TAKEN').length,
   }), [filtered])
   const activeFilterCount = Number(Boolean(fromDate)) + Number(Boolean(toDate))
+
+  const applyDateFilters = () => {
+    const dateError = validateHistoricalDateRange(draftFromDate, draftToDate, {
+      maxDate: null,
+      required: false,
+    })
+    if (dateError) {
+      setFilterError(dateError)
+      return
+    }
+    setFilterError('')
+    setFromDate(draftFromDate)
+    setToDate(draftToDate)
+    setIsFilterOpen(false)
+  }
+
+  const resetDateFilters = () => {
+    setFilterError('')
+    setDraftFromDate('')
+    setDraftToDate('')
+    setFromDate('')
+    setToDate('')
+  }
 
   const openAttempt = attemptId => navigate(`/staff/exam/take/${attemptId}`, {
     state: { from: `${location.pathname}${location.search}` },
@@ -117,7 +145,12 @@ export default function ExamTakeListScreen() {
             className={`admin-control-toolbar__filter-trigger${isFilterOpen ? ' is-open' : ''}`}
             aria-expanded={isFilterOpen}
             aria-controls="staff-exam-filter-panel"
-            onClick={() => setIsFilterOpen(current => !current)}
+            onClick={() => {
+              setFilterError('')
+              setDraftFromDate(fromDate)
+              setDraftToDate(toDate)
+              setIsFilterOpen(current => !current)
+            }}
           >
             <FilterOutlined />
             Bộ lọc
@@ -128,12 +161,14 @@ export default function ExamTakeListScreen() {
           <div id="staff-exam-filter-panel" className="eh-filter-panel admin-control-toolbar__panel">
             <label className="admin-control-toolbar__field">
               <span>Từ ngày</span>
-              <KeyboardDatePicker value={fromDate} max={toDate || undefined} onChange={val => setFromDate(val)} />
+              <KeyboardDatePicker allowInvalidValue value={draftFromDate} max={draftToDate || undefined} onChange={val => { setFilterError(''); setDraftFromDate(val) }} />
             </label>
             <label className="admin-control-toolbar__field">
               <span>Đến ngày</span>
-              <KeyboardDatePicker value={toDate} min={fromDate || undefined} onChange={val => setToDate(val)} />
+              <KeyboardDatePicker allowInvalidValue value={draftToDate} min={draftFromDate || undefined} onChange={val => { setFilterError(''); setDraftToDate(val) }} />
             </label>
+            <FilterActionButtons onApply={applyDateFilters} onReset={resetDateFilters} />
+            {filterError && <p className="applied-filter-toolbar__error" role="alert">{filterError}</p>}
           </div>
         )}
       </div>
@@ -143,11 +178,12 @@ export default function ExamTakeListScreen() {
           <col className="eh-take-table__due-col" />
           <col className="eh-take-table__attempt-col" />
           <col className="eh-take-table__score-col" />
+          <col className="eh-take-table__score-col" />
           <col className="eh-take-table__status-col" />
           <col className="eh-take-table__action-col" />
         </colgroup>
-        <thead><tr><th>Tên bài kiểm tra</th><th>Thời hạn hoàn thành</th><th>Lượt làm bài</th><th>Điểm cao nhất</th><th>Đánh giá</th><th>Hành động</th></tr></thead><tbody>
-        {loading ? <tr><td colSpan="6">Đang tải bài kiểm tra...</td></tr> : filtered.length === 0 ? <tr><td colSpan="6">{assignments.length === 0 ? 'Bạn chưa được giao bài kiểm tra nào.' : 'Không có bài kiểm tra khớp bộ lọc đã chọn.'}</td></tr> : filtered.map(item => <tr key={item.id} className={item.assessmentStatus === 'FAILED' ? 'eh-row--danger' : ''}>
+        <thead><tr><th>Tên bài kiểm tra</th><th>Thời hạn hoàn thành</th><th>Lượt làm bài</th><th>Điểm đạt <small>/10</small></th><th>Điểm cao nhất <small>/10</small></th><th>Đánh giá</th><th>Hành động</th></tr></thead><tbody>
+        {loading ? <tr><td colSpan="7">Đang tải bài kiểm tra...</td></tr> : filtered.length === 0 ? <tr><td colSpan="7">{assignments.length === 0 ? 'Bạn chưa được giao bài kiểm tra nào.' : 'Không có bài kiểm tra khớp bộ lọc đã chọn.'}</td></tr> : filtered.map(item => <tr key={item.id} className={item.assessmentStatus === 'FAILED' ? 'eh-row--danger' : ''}>
           <td data-label="Tên bài kiểm tra"><strong>{item.name}</strong></td><td data-label="Thời hạn">{formatDateTime(item.dueAt)}</td>
           <td data-label="Lượt làm bài"><span className="eh-attempt-cell">
             <span className="eh-attempt-count">{item.usedAttempts ?? 0}/{item.maxAttempts ?? '—'}</span>
@@ -155,7 +191,8 @@ export default function ExamTakeListScreen() {
               ? <span className="ch-badge ch-badge--amber">{item.availabilityText || 'Đang làm'}</span>
               : !item.actionable && item.availabilityText ? <span className="ch-badge ch-badge--neutral">{item.availabilityText}</span> : null}
           </span></td>
-          <td data-label="Điểm cao nhất">{item.bestScore == null ? '—' : `${formatNumber(item.bestScore)}/10`}</td>
+          <td data-label="Điểm đạt (/10)">{item.passingScore == null ? '—' : formatNumber(item.passingScore)}</td>
+          <td data-label="Điểm cao nhất (/10)">{item.bestScore == null ? '—' : formatNumber(item.bestScore)}</td>
           <td data-label="Đánh giá"><span className={`eh-badge eh-badge--${String(item.assessmentStatus).toLowerCase()}`}>{assessmentLabel(item.assessmentStatus)}</span></td>
           <td data-label="Hành động"><span className="eh-row-actions">
             {detailIdOf(item) ? <button type="button" className="eh-btn eh-btn--view admin-table-action admin-table-action--icon admin-table-action--primary" onClick={() => openAttempt(detailIdOf(item))} title="Xem chi tiết lượt điểm cao nhất" aria-label={`Xem kết quả ${item.name}`}>

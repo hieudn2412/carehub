@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
-  ApartmentOutlined,
   ClockCircleOutlined,
   CloseOutlined,
   EyeOutlined,
@@ -21,6 +20,7 @@ import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import { adminApi } from '../api/adminApi'
 import { getChecklistDisplayCode } from '../utils/formCode.js'
+import { validateHistoricalDateRange } from '../../../shared/utils/dateRange.js'
 import '../styles/AdminQualityHistoryPage.css'
 
 const RESULT_OPTIONS = [
@@ -188,7 +188,7 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
   const keyword = searchParams.get('keyword') || ''
   const dashboardKeyword = searchParams.get('dashboardKeyword') || ''
   const submittedByUserId = isManager ? '' : numericParam(searchParams.get('submittedByUserId'))
-  const departmentId = isManager ? '' : numericParam(searchParams.get('departmentId'))
+  const departmentId = numericParam(searchParams.get('departmentId'))
   const result = searchParams.get('result') || ''
   const dateFrom = searchParams.get('dateFrom') || defaultDateRange.dateFrom
   const dateTo = searchParams.get('dateTo') || defaultDateRange.dateTo
@@ -209,6 +209,7 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
   const [metadataError, setMetadataError] = useState('')
   const [resultsLoading, setResultsLoading] = useState(true)
   const [resultsError, setResultsError] = useState('')
+  const [filterError, setFilterError] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState('')
@@ -253,15 +254,6 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
     setDraftDateFrom(dateFrom)
     setDraftDateTo(dateTo)
   }, [dateFrom, dateTo, departmentId, keyword, result, submittedByUserId, versionId])
-
-  useEffect(() => {
-    const nextKeyword = keywordInput.trim()
-    if (nextKeyword === keyword) return undefined
-    const timer = window.setTimeout(() => {
-      updateQuery({ keyword: nextKeyword, page: 0 }, false)
-    }, 300)
-    return () => window.clearTimeout(timer)
-  }, [keyword, keywordInput, updateQuery])
 
   const loadAssignments = useCallback(async () => {
     setAssignmentsLoading(true)
@@ -347,7 +339,7 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
   }, [dateFrom, dateTo, formId, version, versionId])
 
   useEffect(() => {
-    if (isManager) return undefined
+    if (isManager || !isFilterOpen) return undefined
     let alive = true
     setAssignments([])
     loadAssignments().catch(() => {
@@ -356,10 +348,10 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
     return () => {
       alive = false
     }
-  }, [isManager, loadAssignments, refreshKey])
+  }, [isFilterOpen, isManager, loadAssignments, refreshKey])
 
   useEffect(() => {
-    if (isManager || !isFilterOpen || departments.length > 0) return undefined
+    if ((!isFilterOpen && !(isManager && departmentId)) || departments.length > 0) return undefined
     let alive = true
     adminApi.getDepartments()
       .then((response) => {
@@ -371,13 +363,13 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
     return () => {
       alive = false
     }
-  }, [departments.length, isFilterOpen, isManager])
+  }, [departmentId, departments.length, isFilterOpen, isManager])
 
   const requestParams = useMemo(() => ({
     status: 'SUBMITTED',
     keyword: keyword || undefined,
     submittedByUserId: isManager ? undefined : submittedByUserId || undefined,
-    departmentId: isManager ? undefined : departmentId || undefined,
+    departmentId: departmentId || undefined,
     result: result || undefined,
     // Always send typed date values. PostgreSQL cannot infer a timestamp type
     // from a null optional parameter in the shared history predicates.
@@ -444,7 +436,7 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
         })
     }, 250)
     return () => window.clearTimeout(timer)
-  }, [evaluatorQuery, isManager])
+  }, [evaluatorQuery, isFilterOpen, isManager])
 
   useEffect(() => {
     if (isManager) return
@@ -470,6 +462,14 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
       document.removeEventListener('keydown', closeOnEscape)
     }
   }, [confirmRevoke, isManager, managerModalOpen])
+
+  useEffect(() => {
+    if (!isManager || !departmentId || departments.length === 0) return
+    const allowedDepartmentIds = new Set(departments.map((department) => String(department.departmentId ?? department.id)))
+    if (!allowedDepartmentIds.has(String(departmentId))) {
+      updateQuery({ departmentId: '' }, false)
+    }
+  }, [departmentId, departments, isManager, updateQuery])
 
   const managers = assignments
   const assignedManagerIds = useMemo(() => new Set(managers.map((item) => String(item.manager?.id))), [managers])
@@ -590,10 +590,10 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
     })),
   ]
   const departmentOptions = [
-    { value: '', label: 'Tất cả khoa/phòng' },
+    { value: '', label: isManager ? 'Tất cả khoa/phòng được giao' : 'Tất cả khoa/phòng' },
     ...departments.map((department) => ({
-      value: department.id,
-      label: department.name,
+      value: department.departmentId ?? department.id,
+      label: department.departmentName || department.name,
       description: department.code || '',
     })),
   ]
@@ -620,23 +620,25 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
   const historyFilterCount = [
     versionFilterActive,
     isManager ? '' : submittedByUserId,
-    isManager ? '' : departmentId,
+    departmentId,
     result,
     dateFrom !== defaultDateRange.dateFrom ? dateFrom : '',
     dateTo !== defaultDateRange.dateTo ? dateTo : '',
   ].filter(Boolean).length
   const applyHistoryFilters = () => {
-    if (draftDateFrom && draftDateTo && draftDateFrom > draftDateTo) {
-      setResultsError('Từ ngày không được sau đến ngày.')
+    const validationError = validateHistoricalDateRange(draftDateFrom, draftDateTo, { maxDate: defaultDateRange.dateTo })
+    if (validationError) {
+      setFilterError(validationError)
       return
     }
+    setFilterError('')
     const nextParams = new URLSearchParams()
     nextParams.set('size', String(pageSize))
     nextParams.set('dateFrom', draftDateFrom || defaultDateRange.dateFrom)
     nextParams.set('dateTo', draftDateTo || defaultDateRange.dateTo)
     if (keywordInput.trim()) nextParams.set('keyword', keywordInput.trim())
     if (!isManager && draftSubmittedByUserId) nextParams.set('submittedByUserId', draftSubmittedByUserId)
-    if (!isManager && draftDepartmentId) nextParams.set('departmentId', draftDepartmentId)
+    if (draftDepartmentId) nextParams.set('departmentId', draftDepartmentId)
     if (draftResult) nextParams.set('result', draftResult)
     if (searchParams.get('source')) nextParams.set('source', searchParams.get('source'))
     if (dashboardKeyword) nextParams.set('dashboardKeyword', dashboardKeyword)
@@ -648,6 +650,7 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
     setKeywordInput('')
     setResultsLoading(true)
     setIsFilterOpen(false)
+    setFilterError('')
     const nextParams = new URLSearchParams({
       size: String(pageSize),
       dateFrom: defaultDateRange.dateFrom,
@@ -700,9 +703,15 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
               <section className="aqh-version-detail">
                 <header className="aqh-version-detail__header">
                   <div>
-                    <span className="aqh-form-code">{getChecklistDisplayCode(form?.code)}</span>
-                    <h2>{version?.title || form?.title || 'Quy trình'}<small>v{version?.versionNumber}</small></h2>
-                    <p>{version?.description || form?.description || 'Chưa có mô tả'}</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                      <span className="aqh-form-code" style={{ fontSize: 18, fontWeight: 800, padding: '7px 16px', borderRadius: 999 }}>
+                        {version?.title || form?.title || 'Quy trình'}
+                      </span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: '#64748b', background: '#f1f5f9', padding: '5px 12px', borderRadius: 999 }}>
+                        v{version?.versionNumber}
+                      </span>
+                    </div>
+                    <p style={{ marginTop: 10 }}>{version?.description || form?.description || 'Chưa có mô tả'}</p>
                   </div>
                   <span className={`aqh-version-status aqh-version-status--${getVersionStatusClass(version?.status)}`}>
                     {getVersionStatusLabel(version?.status)}
@@ -741,11 +750,15 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
                   activeCount={historyFilterCount}
                   ariaLabel="Bộ lọc kết quả đánh giá"
                   className="aqh-results-filter"
+                  errorMessage={filterError}
                   isOpen={isFilterOpen}
                   onApply={applyHistoryFilters}
                   onReset={resetHistoryFilters}
                   onSearchChange={setKeywordInput}
-                  onToggle={() => setIsFilterOpen((current) => !current)}
+                  onToggle={() => {
+                    setFilterError('')
+                    setIsFilterOpen((current) => !current)
+                  }}
                   panelClassName="aqh-results-filter-panel"
                   panelId="quality-history-filter-panel"
                   searchAriaLabel="Tìm nhân viên được đánh giá"
@@ -776,18 +789,19 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
                         value={draftSubmittedByUserId}
                       />
                     </label>}
-                    {!isManager && <label className="admin-control-toolbar__field">
+                    <label className="admin-control-toolbar__field">
                       <span>Khoa/phòng</span>
                       <SearchableSelect
                         ariaLabel="Lọc theo khoa phòng"
-                        onChange={setDraftDepartmentId}
+                        disabled={isManager}
+                        onChange={isManager ? undefined : setDraftDepartmentId}
                         options={departmentOptions}
                         placeholder="Tất cả khoa/phòng"
                         searchPlaceholder="Tìm khoa/phòng..."
                         showDescriptions={false}
                         value={draftDepartmentId}
                       />
-                    </label>}
+                    </label>
                     <label className="admin-control-toolbar__field">
                       <span>Kết quả</span>
                       <SearchableSelect
@@ -799,8 +813,8 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
                         value={draftResult}
                       />
                     </label>
-                    <label className="admin-control-toolbar__field aqh-results-filter__date"><span>Từ ngày</span><KeyboardDatePicker value={draftDateFrom} onChange={setDraftDateFrom} /></label>
-                    <label className="admin-control-toolbar__field aqh-results-filter__date"><span>Đến ngày</span><KeyboardDatePicker value={draftDateTo} onChange={setDraftDateTo} /></label>
+                    <label className="admin-control-toolbar__field aqh-results-filter__date"><span>Từ ngày</span><KeyboardDatePicker allowInvalidValue value={draftDateFrom} max={draftDateTo || defaultDateRange.dateTo} onChange={(value) => { setFilterError(''); setDraftDateFrom(value) }} /></label>
+                    <label className="admin-control-toolbar__field aqh-results-filter__date"><span>Đến ngày</span><KeyboardDatePicker allowInvalidValue value={draftDateTo} min={draftDateFrom || undefined} max={defaultDateRange.dateTo} onChange={(value) => { setFilterError(''); setDraftDateTo(value) }} /></label>
                 </AppliedFilterToolbar>
 
                 {exportError && <div className="aqh-export-error" role="alert">{exportError}</div>}
@@ -809,7 +823,7 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
                 ) : resultsLoading ? (
                   <div className="aqh-results-loading"><LoadingOutlined spin /><span>Đang tải kết quả...</span></div>
                 ) : submissionData.content.length === 0 ? (
-                  <div className="aqh-results-empty"><CheckCircleIcon /><strong>Chưa có kết quả phù hợp</strong><span>Hãy thay đổi bộ lọc hoặc khoảng thời gian.</span></div>
+                  <div className="aqh-results-empty"><strong>Chưa có kết quả phù hợp</strong><span>Hãy thay đổi bộ lọc hoặc khoảng thời gian.</span></div>
                 ) : (
                   <>
                     <div className="aqh-results-table-wrap">
@@ -831,19 +845,14 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
                               <td className="aqh-result-col-employee">
                                 <div className="aqh-results-table__person">
                                   <strong>{item.subject?.fullName || 'Chưa có tên'}</strong>
-                                  <small>{item.subject?.employeeCode || 'Chưa có mã'}</small>
                                 </div>
                               </td>
                               <td className="aqh-result-col-department">
-                                <div className="aqh-results-table__inline">
-                                  <ApartmentOutlined />
-                                  <span>{item.subject?.department || 'Chưa xác định'}</span>
-                                </div>
+                                <span>{item.subject?.department || 'Chưa xác định'}</span>
                               </td>
                               <td className="aqh-result-col-grader">
                                 <div className="aqh-results-table__person">
                                   <span>{item.submittedBy?.fullName || 'Chưa xác định'}</span>
-                                  <small>{item.submittedBy?.employeeCode || ''}</small>
                                 </div>
                               </td>
                               <td className="aqh-result-col-submitted">
@@ -865,7 +874,9 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
                                     }}
                                     title="Xem chi tiết"
                                     type="button"
-                                  ><EyeOutlined /></button>
+                                  >
+                                    <EyeOutlined />
+                                  </button>
                                 </div>
                               </td>
                             </tr>
@@ -970,10 +981,6 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
       />}
     </AppShell>
   )
-}
-
-function CheckCircleIcon() {
-  return <span className="aqh-results-empty__icon">✓</span>
 }
 
 export default AdminQualityHistoryVersionPage

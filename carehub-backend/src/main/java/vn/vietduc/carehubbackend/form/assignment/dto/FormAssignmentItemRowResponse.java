@@ -20,6 +20,8 @@ public record FormAssignmentItemRowResponse(
         Long departmentId,
         String departmentName,
         List<String> roleCodes,
+        Integer allowedDepartmentCount,
+        List<FormAssignmentDepartmentScopeResponse> allowedDepartments,
         Instant assignedAt,
         Instant validFrom,
         Instant validUntil

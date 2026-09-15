@@ -121,7 +121,7 @@ function TrainingLegacyImportPage() {
     <div className="training-page">
       <section className="training-header">
         <div>
-          <p className="training-eyebrow">Manager / Admin</p>
+          <p className="training-eyebrow">Quản lý cấp Khoa / Quản lý cấp Bệnh Viện</p>
           <h1>Legacy Excel Import</h1>
         </div>
         <div className="training-header-actions">

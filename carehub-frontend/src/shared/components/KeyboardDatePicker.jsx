@@ -1,6 +1,15 @@
 import { useState, useEffect } from 'react';
 
-export default function KeyboardDatePicker({ value, onChange, min, max, className, id, ...props }) {
+export default function KeyboardDatePicker({
+  value,
+  onChange,
+  min,
+  max,
+  className,
+  id,
+  allowInvalidValue = false,
+  ...props
+}) {
   const toDisplay = (val) => {
     if (!val) return '';
     // val is expected in yyyy-MM-dd
@@ -39,7 +48,11 @@ export default function KeyboardDatePicker({ value, onChange, min, max, classNam
       const parts = raw.split('-');
       const formatted = `${parts[2]}/${parts[1]}/${parts[0]}`;
       setInputValue(formatted);
-      onChange(raw);
+      if ((!min || raw >= min) && (!max || raw <= max)) {
+        onChange(raw);
+      } else if (allowInvalidValue) {
+        onChange(raw);
+      }
       return;
     }
 
@@ -75,10 +88,21 @@ export default function KeyboardDatePicker({ value, onChange, min, max, classNam
           onChange(iso);
           return;
         }
+        if (allowInvalidValue) {
+          onChange(iso);
+          return;
+        }
       }
     }
     if (raw === '') {
       onChange('');
+      return;
+    }
+
+    // Date-range filters need the raw value so their Apply action can return
+    // a clear validation error instead of silently reusing the previous date.
+    if (allowInvalidValue) {
+      onChange(raw);
     }
   };
 
@@ -97,7 +121,7 @@ export default function KeyboardDatePicker({ value, onChange, min, max, classNam
         }
       }
     }
-    if (!isValid && inputValue !== '') {
+    if (!allowInvalidValue && !isValid && inputValue !== '') {
       setInputValue(toDisplay(value));
     }
   };

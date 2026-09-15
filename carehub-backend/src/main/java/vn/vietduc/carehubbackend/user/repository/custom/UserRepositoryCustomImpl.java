@@ -131,6 +131,16 @@ public class UserRepositoryCustomImpl implements UserRepositoryCustom {
             StringBuilder countSql,
             Map<String, Object> params
     ) {
+        boolean deleted = request != null && Boolean.TRUE.equals(request.getDeleted());
+        String deletedCondition = """
+                    AND u.is_deleted = :deleted
+                    """;
+        sql.append(deletedCondition);
+        if (countSql != null) {
+            countSql.append(deletedCondition);
+        }
+        params.put("deleted", deleted);
+
         if (request == null) {
             return;
         }

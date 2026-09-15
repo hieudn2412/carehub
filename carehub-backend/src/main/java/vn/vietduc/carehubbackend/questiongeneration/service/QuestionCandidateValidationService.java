@@ -30,6 +30,18 @@ public class QuestionCandidateValidationService {
     private final ObjectMapper objectMapper;
     private final ValidationRulesProperties properties;
 
+    /**
+     * Tự động từ chối CHỈ khi câu hỏi hỏng về cấu trúc: thiếu stem, thiếu phương án,
+     * đáp án đúng không thuộc A/B/C/D, mức nhận thức không hợp lệ, hai phương án trùng
+     * nội dung, phương án chứa mẫu cấm. Đây là những câu không ai cứu được, đưa vào danh
+     * sách chờ duyệt chỉ làm loãng.
+     *
+     * <p>Mọi thứ khác chỉ còn là cảnh báo: thiếu sót về grounding (trích dẫn nguồn,
+     * knowledge point, bằng chứng đáp án, stem tham chiếu tài liệu), kết luận của AI critic,
+     * và điểm chất lượng dưới ngưỡng. Riêng critic thì đặt {@code criticStatus = "FAILED"}
+     * để phía trên đẩy ứng viên sang NEED_REVIEW thay vì loại thẳng — đo trên 101 ứng viên
+     * đã được critic chấm thì chỉ 1 câu trượt, không đủ căn cứ để tự động vứt bỏ.</p>
+     */
     public CandidateValidationResult validate(GeneratedQuestion question, String chunkText) {
         List<String> warnings = new ArrayList<>();
         boolean rejected = false;
@@ -60,7 +72,6 @@ public class QuestionCandidateValidationService {
         }
         if (groundedV4 && isGenericDocumentReferenceStem(question.stem())) {
             warnings.add("Stem không tự đứng độc lập hoặc đang tham chiếu tài liệu");
-            rejected = true;
         }
         Set<String> normalizedOptions = new HashSet<>();
         for (String option : options) {
@@ -76,39 +87,30 @@ public class QuestionCandidateValidationService {
         }
         if (isBlank(question.sourceExcerpt())) {
             warnings.add("Thiếu trích dẫn nguồn");
-            rejected = true;
             evidenceStatus = "MISSING";
         } else if (groundedV4
                 ? !containsExact(chunkText, question.sourceExcerpt())
                 : !containsNormalized(chunkText, question.sourceExcerpt())) {
             warnings.add("Trích dẫn nguồn chưa khớp rõ với chunk gốc");
             evidenceStatus = "MISMATCH";
-            if (groundedV4) {
-                rejected = true;
-            }
         }
 
         if (groundedV4) {
             if (isBlank(question.questionType())) {
                 warnings.add("Thiếu loại câu hỏi Grounded v4");
-                rejected = true;
             }
             if (isBlank(question.knowledgePointId())) {
                 warnings.add("Thiếu liên kết knowledge point");
-                rejected = true;
             }
             if (isBlank(question.answerEvidence())) {
                 warnings.add("Thiếu bằng chứng hỗ trợ đáp án đúng");
-                rejected = true;
                 evidenceStatus = "MISSING";
             } else if (!containsExact(chunkText, question.answerEvidence())) {
                 warnings.add("Bằng chứng đáp án không xuất hiện nguyên văn trong chunk");
-                rejected = true;
                 evidenceStatus = "MISMATCH";
             }
             if (isBlank(question.distractorRationales())) {
                 warnings.add("Thiếu giải thích cho các distractor");
-                rejected = true;
             }
         }
 
@@ -120,32 +122,26 @@ public class QuestionCandidateValidationService {
             warnings.addAll(llmValidation.issues());
             if (Boolean.FALSE.equals(llmValidation.answerable())) {
                 warnings.add("LLM validation: câu hỏi không trả lời được từ nguồn");
-                rejected = true;
                 criticStatus = "FAILED";
             }
             if (Boolean.FALSE.equals(llmValidation.singleBestAnswer())) {
                 warnings.add("LLM validation: chưa đảm bảo một đáp án tốt nhất");
-                rejected = true;
                 criticStatus = "FAILED";
             }
             if (Boolean.FALSE.equals(llmValidation.correctAnswerSupported())) {
                 warnings.add("LLM validation: đáp án đúng chưa được nguồn hỗ trợ");
-                rejected = true;
                 criticStatus = "FAILED";
             }
             if (Boolean.FALSE.equals(llmValidation.distractorsInvalid())) {
                 warnings.add("LLM validation: có distractor chưa được chứng minh là sai");
-                rejected = true;
                 criticStatus = "FAILED";
             }
             if (Boolean.FALSE.equals(llmValidation.surfaceCueFree())) {
                 warnings.add("LLM validation: đáp án có thể bị đoán nhờ dấu hiệu hình thức");
-                rejected = true;
                 criticStatus = "FAILED";
             }
             if (Boolean.FALSE.equals(llmValidation.distractorsPlausible())) {
                 warnings.add("LLM validation: distractor chưa đủ hợp lý với người có chuyên môn");
-                rejected = true;
                 criticStatus = "FAILED";
             }
             boolean expectsDomainReasoning = Set.of("CLINICAL_APPLICATION", "CLINICAL_REASONING_ANALYSIS").contains(
@@ -155,10 +151,11 @@ public class QuestionCandidateValidationService {
             );
             if (expectsDomainReasoning && Boolean.FALSE.equals(llmValidation.requiresDomainReasoning())) {
                 warnings.add("LLM validation: câu chỉ đến từ đọc hiểu hoặc loại trừ, chưa cần suy luận lâm sàng");
-                rejected = true;
                 criticStatus = "FAILED";
             }
-            if (!rejected && (!Boolean.TRUE.equals(llmValidation.answerable())
+            // UNCERTAIN chỉ dành cho trường hợp critic KHÔNG trả đủ kết luận; không được
+            // ghi đè lên FAILED khi critic đã kết luận rõ là hỏng.
+            if (!"FAILED".equals(criticStatus) && (!Boolean.TRUE.equals(llmValidation.answerable())
                     || !Boolean.TRUE.equals(llmValidation.singleBestAnswer())
                     || !Boolean.TRUE.equals(llmValidation.correctAnswerSupported())
                     || (groundedV4 && (!Boolean.TRUE.equals(llmValidation.distractorsInvalid())
@@ -173,7 +170,6 @@ public class QuestionCandidateValidationService {
 
         if (qualityScore != null && qualityScore < properties.getQuality().getRejectMin()) {
             warnings.add("Điểm chất lượng dưới ngưỡng tối thiểu");
-            rejected = true;
             criticStatus = "FAILED";
         }
         boolean needsReview = !rejected && !warnings.isEmpty();

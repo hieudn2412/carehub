@@ -26,7 +26,7 @@ import java.util.List;
 @RestController
 @RequestMapping("${app.api-prefix}")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF', 'USER')")
 public class ReferenceDataController {
     private final ReferenceDataService referenceDataService;
 
@@ -41,11 +41,13 @@ public class ReferenceDataController {
     }
 
     @PostMapping("/departments")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<DepartmentResponse>> createDepartment(@Valid @RequestBody DepartmentRequest request) {
         return ResponseEntity.ok(ApiResponse.success("Create department successfully", referenceDataService.createDepartment(request)));
     }
 
     @PutMapping("/departments/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<DepartmentResponse>> updateDepartment(
             @PathVariable Long id,
             @Valid @RequestBody DepartmentRequest request
@@ -54,6 +56,7 @@ public class ReferenceDataController {
     }
 
     @DeleteMapping("/departments/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> deleteDepartment(@PathVariable Long id) {
         referenceDataService.deleteDepartment(id);
         return ResponseEntity.ok(ApiResponse.success("Department deleted successfully", null));
@@ -70,11 +73,13 @@ public class ReferenceDataController {
     }
 
     @PostMapping("/positions")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<PositionResponse>> createPosition(@Valid @RequestBody PositionRequest request) {
         return ResponseEntity.ok(ApiResponse.success("Create position successfully", referenceDataService.createPosition(request)));
     }
 
     @PutMapping("/positions/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<PositionResponse>> updatePosition(
             @PathVariable Long id,
             @Valid @RequestBody PositionRequest request
@@ -83,6 +88,7 @@ public class ReferenceDataController {
     }
 
     @DeleteMapping("/positions/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> deletePosition(@PathVariable Long id) {
         referenceDataService.deletePosition(id);
         return ResponseEntity.ok(ApiResponse.success("Position deleted successfully", null));
@@ -99,11 +105,13 @@ public class ReferenceDataController {
     }
 
     @PostMapping("/education-levels")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<EducationLevelResponse>> createEducationLevel(@Valid @RequestBody EducationLevelRequest request) {
         return ResponseEntity.ok(ApiResponse.success("Create education level successfully", referenceDataService.createEducationLevel(request)));
     }
 
     @PutMapping("/education-levels/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<EducationLevelResponse>> updateEducationLevel(
             @PathVariable Long id,
             @Valid @RequestBody EducationLevelRequest request
@@ -112,6 +120,7 @@ public class ReferenceDataController {
     }
 
     @DeleteMapping("/education-levels/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> deleteEducationLevel(@PathVariable Long id) {
         referenceDataService.deleteEducationLevel(id);
         return ResponseEntity.ok(ApiResponse.success("Education level deleted successfully", null));

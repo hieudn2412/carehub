@@ -5,7 +5,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,7 +18,6 @@ import vn.vietduc.carehubbackend.questiongeneration.dto.response.DocumentQuestio
 import vn.vietduc.carehubbackend.questiongeneration.service.DocumentQuestionJobService;
 import vn.vietduc.carehubbackend.questiongeneration.service.EvaluationAuditLogService;
 import vn.vietduc.carehubbackend.questiongeneration.security.EvaluationSecurity;
-import vn.vietduc.carehubbackend.questiongeneration.entity.enums.GenerationPipelineVersion;
 
 import java.util.List;
 import java.util.Map;
@@ -40,11 +38,6 @@ public class DocumentQuestionJobController {
             @Valid @RequestBody(required = false) CreateDocumentQuestionJobRequest request,
             Authentication authentication
     ) {
-        if (request != null
-                && request.pipelineVersion() == GenerationPipelineVersion.GROUNDED_V4
-                && !evaluationSecurity.canPilotGroundedV4(authentication)) {
-            throw new AccessDeniedException("Grounded v4 đang giới hạn cho admin pilot");
-        }
         DocumentQuestionJobResponse response = jobService.createJob(documentId, request, actor(authentication));
         auditLogService.record(
                 "DOCUMENT_JOB_CREATE",

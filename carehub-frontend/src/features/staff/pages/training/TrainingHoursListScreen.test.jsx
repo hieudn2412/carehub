@@ -176,7 +176,7 @@ describe('TrainingHoursListScreen query navigation', () => {
     fireEvent.click(await screen.findByRole('combobox', { name: 'Lọc theo trạng thái hồ sơ' }))
     fireEvent.click(screen.getByRole('option', { name: 'Đã nộp' }))
     fireEvent.change(screen.getByLabelText('Lọc từ ngày'), { target: { value: '2026-01-01' } })
-    fireEvent.change(screen.getByLabelText('Lọc đến ngày'), { target: { value: '2026-12-31' } })
+    fireEvent.change(screen.getByLabelText('Lọc đến ngày'), { target: { value: '2026-08-20' } })
     fireEvent.click(screen.getByRole('combobox', { name: 'Lọc theo lĩnh vực chuyên môn' }))
     fireEvent.click(screen.getByRole('option', { name: 'Hồi sức' }))
     fireEvent.click(screen.getByRole('combobox', { name: 'Lọc theo hình thức đào tạo' }))
@@ -185,7 +185,7 @@ describe('TrainingHoursListScreen query navigation', () => {
 
     await waitFor(() => expect(screen.getByTestId('current-path')).toHaveTextContent('/staff/training/all?status=SUBMITTED'))
     expect(screen.getByTestId('current-path')).toHaveTextContent('dateFrom=2026-01-01')
-    expect(screen.getByTestId('current-path')).toHaveTextContent('dateTo=2026-12-31')
+    expect(screen.getByTestId('current-path')).toHaveTextContent('dateTo=2026-08-20')
     expect(screen.getByTestId('current-path')).toHaveTextContent('professionalFieldId=7')
     expect(screen.getByTestId('current-path')).toHaveTextContent('activityTypeId=4')
     expect(screen.getByTestId('current-path')).not.toHaveTextContent('page=3')
@@ -193,7 +193,7 @@ describe('TrainingHoursListScreen query navigation', () => {
       page: 0,
       workflowStatus: 'SUBMITTED',
       dateFrom: '2026-01-01',
-      dateTo: '2026-12-31',
+      dateTo: '2026-08-20',
       professionalFieldId: 7,
       activityTypeId: 4,
     })))

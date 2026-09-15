@@ -94,12 +94,11 @@ public class FormSubmissionExcelExportService {
             List<FormSubmission> submissions,
             Styles styles
     ) {
-        Sheet sheet = workbook.createSheet("Tong hop response");
+        Sheet sheet = workbook.createSheet("Tổng hợp kết quả");
         String[] headers = {
-                "Response ID", "Ma bang kiem", "Phien ban", "Ma nhan vien", "Ho va ten",
-                "Khoa/Phong", "Chuc danh", "Ma manager", "Manager thuc hien", "Ngay nop",
-                "Ket qua", "Diem quy doi", "Diem tho", "Diem toi da", "Diem san",
-                "Khong dat cau trong yeu"
+                "Tên bảng kiểm", "Phiên bản", "Mã nhân viên", "Họ và tên",
+                "Khoa/Phòng", "Chức danh", "Mã manager", "Manager thực hiện", "Ngày nộp",
+                "Kết quả", "Điểm quy đổi"
         };
         writeHeader(sheet, headers, styles.header());
 
@@ -108,8 +107,7 @@ public class FormSubmissionExcelExportService {
             Row row = sheet.createRow(rowIndex++);
             FormSubmissionContext subject = submission.getSubjectContext();
             int column = 0;
-            writeNumber(row, column++, submission.getId(), styles.integer());
-            writeText(row, column++, version.getForm().getCode());
+            writeText(row, column++, checklistTitle(version));
             writeNumber(row, column++, version.getVersionNumber(), styles.integer());
             writeText(row, column++, subject == null ? null : subject.getEmployeeCode());
             writeText(row, column++, subject == null ? null : subject.getFullName());
@@ -119,16 +117,22 @@ public class FormSubmissionExcelExportService {
             writeText(row, column++, submission.getSubmittedBy().getName());
             writeDate(row, column++, submission, styles.dateTime());
             writeText(row, column++, resultLabel(submission.getResult()));
-            writeDecimal(row, column++, submission.getConvertedScore(), styles.decimal());
-            writeDecimal(row, column++, submission.getTotalScore(), styles.decimal());
-            writeDecimal(row, column++, submission.getMaxScore(), styles.decimal());
-            writeDecimal(row, column++, submission.getPassingScore(), styles.decimal());
-            writeText(row, column, submission.isCriticalFailure() ? "Co" : "Khong");
+            writeDecimal(row, column, submission.getConvertedScore(), styles.decimal());
         }
 
         finishSheet(sheet, new int[] {
-                14, 18, 12, 16, 26, 24, 22, 16, 26, 20, 26, 15, 15, 15, 15, 22
+                30, 12, 16, 26, 24, 22, 16, 26, 20, 26, 15
         });
+    }
+
+    private String checklistTitle(FormVersion version) {
+        if (version.getTitle() != null && !version.getTitle().isBlank()) {
+            return version.getTitle();
+        }
+        if (version.getForm() != null && version.getForm().getTitle() != null) {
+            return version.getForm().getTitle();
+        }
+        return "";
     }
 
     private void writeAnswerSheet(
@@ -137,67 +141,65 @@ public class FormSubmissionExcelExportService {
             List<FormSubmission> submissions,
             Styles styles
     ) {
-        Sheet sheet = workbook.createSheet("Chi tiet cau tra loi");
-        String[] headers = {
-                "Response ID", "Ma nhan vien", "Ho va ten", "Ngay nop", "Ket qua",
-                "Nhom", "Ma cau hoi", "Noi dung cau hoi", "Cau trong yeu", "Cau tra loi",
-                "Diem goc", "Trong so", "Diem sau trong so", "Diem toi da"
-        };
+        Sheet sheet = workbook.createSheet("Chi tiết câu trả lời");
+        List<FormQuestion> questions = orderedQuestions(version);
+        String[] headers = answerSheetHeaders(questions);
         writeHeader(sheet, headers, styles.header());
 
-        List<FormQuestion> questions = version.getSections().stream()
-                .sorted(Comparator.comparing(section -> section.getDisplayOrder()))
-                .flatMap(section -> section.getQuestions().stream()
-                        .sorted(Comparator.comparing(FormQuestion::getDisplayOrder)))
-                .toList();
         int rowIndex = 1;
         for (FormSubmission submission : submissions) {
             Map<UUID, FormAnswer> answersByQuestion = new HashMap<>();
             submission.getAnswers().forEach(answer ->
                     answersByQuestion.put(answer.getQuestion().getQuestionKey(), answer));
 
+            Row row = sheet.createRow(rowIndex++);
+            FormSubmissionContext subject = submission.getSubjectContext();
+            int column = 0;
+            writeText(row, column++, subject == null ? null : subject.getEmployeeCode());
+            writeText(row, column++, subject == null ? null : subject.getFullName());
+            writeDate(row, column++, submission, styles.dateTime());
+            writeDecimal(row, column++, submission.getConvertedScore(), styles.decimal());
+            writeText(row, column++, resultLabel(submission.getResult()));
             for (FormQuestion question : questions) {
                 FormAnswer answer = answersByQuestion.get(question.getQuestionKey());
-                Row row = sheet.createRow(rowIndex++);
-                FormSubmissionContext subject = submission.getSubjectContext();
-                int column = 0;
-                writeNumber(row, column++, submission.getId(), styles.integer());
-                writeText(row, column++, subject == null ? null : subject.getEmployeeCode());
-                writeText(row, column++, subject == null ? null : subject.getFullName());
-                writeDate(row, column++, submission, styles.dateTime());
-                writeText(row, column++, resultLabel(submission.getResult()));
-                writeText(row, column++, question.getSection().getTitle());
-                writeText(row, column++, question.getCode());
-                writeText(row, column++, question.getTitle());
-                writeText(row, column++, question.isCritical() ? "Co" : "Khong");
                 writeText(row, column++, answerValue(answer));
-                writeDecimal(row, column++, answer == null ? null : answer.getScoreValue(), styles.decimal());
-                writeDecimal(row, column++, answer == null ? null : answer.getWeight(), styles.decimal());
-                writeDecimal(row, column++, answer == null ? null : answer.getWeightedScore(), styles.decimal());
-                writeDecimal(row, column, maxScore(submission, question), styles.decimal());
             }
         }
 
-        finishSheet(sheet, new int[] {
-                14, 16, 26, 20, 26, 24, 18, 48, 18, 42, 14, 14, 20, 15
-        });
+        finishSheet(sheet, answerSheetWidths(questions.size()));
     }
 
-    private BigDecimal maxScore(FormSubmission submission, FormQuestion question) {
-        Object questions = submission.getScoreBreakdown() == null
-                ? null
-                : submission.getScoreBreakdown().get("questions");
-        if (!(questions instanceof List<?> items)) return null;
+    private List<FormQuestion> orderedQuestions(FormVersion version) {
+        return version.getSections().stream()
+                .sorted(Comparator.comparing(section -> section.getDisplayOrder()))
+                .flatMap(section -> section.getQuestions().stream()
+                        .sorted(Comparator.comparing(FormQuestion::getDisplayOrder)))
+                .toList();
+    }
 
-        String questionKey = question.getQuestionKey().toString();
-        return items.stream()
-                .filter(Map.class::isInstance)
-                .map(Map.class::cast)
-                .filter(item -> questionKey.equals(String.valueOf(item.get("questionKey"))))
-                .map(item -> decimal(item.get("maxScore")))
-                .filter(Objects::nonNull)
-                .findFirst()
-                .orElse(null);
+    private String[] answerSheetHeaders(List<FormQuestion> questions) {
+        List<String> headers = new ArrayList<>(List.of(
+                "Mã NV", "Họ tên", "Ngày nộp", "Tổng điểm", "Kết quả"
+        ));
+        questions.stream()
+                .map(this::questionHeader)
+                .forEach(headers::add);
+        return headers.toArray(String[]::new);
+    }
+
+    private String questionHeader(FormQuestion question) {
+        return question.getTitle();
+    }
+
+    private int[] answerSheetWidths(int questionCount) {
+        int[] widths = new int[5 + questionCount];
+        widths[0] = 16;
+        widths[1] = 28;
+        widths[2] = 20;
+        widths[3] = 14;
+        widths[4] = 26;
+        Arrays.fill(widths, 5, widths.length, 36);
+        return widths;
     }
 
     private String answerValue(FormAnswer answer) {
@@ -207,6 +209,20 @@ public class FormSubmissionExcelExportService {
         }
         Map<String, Object> value = answer.getAnswerJson();
         if (value == null || value.isEmpty()) return "";
+        Object labels = value.get("labels");
+        if (labels != null) return displayValue(labels);
+        Object label = value.get("label");
+        if (label != null) return displayValue(label);
+        Object textValue = value.get("textValue");
+        if (textValue != null) return displayValue(textValue);
+        Object numberValue = value.get("numberValue");
+        if (numberValue != null) return displayValue(numberValue);
+        Object dateValue = value.get("dateValue");
+        if (dateValue != null) return displayValue(dateValue);
+        Object timeValue = value.get("timeValue");
+        if (timeValue != null) return displayValue(timeValue);
+        Object values = value.get("values");
+        if (values != null) return displayValue(values);
         Object simpleValue = value.get("value");
         if (simpleValue != null) return displayValue(simpleValue);
         try {
@@ -287,21 +303,12 @@ public class FormSubmissionExcelExportService {
         cell.setCellStyle(style);
     }
 
-    private BigDecimal decimal(Object value) {
-        if (value == null) return null;
-        try {
-            return new BigDecimal(String.valueOf(value));
-        } catch (NumberFormatException exception) {
-            return null;
-        }
-    }
-
     private String resultLabel(FormSubmissionResult result) {
-        if (result == null) return "Chua tinh diem";
+        if (result == null) return "Chưa tính điểm";
         return switch (result) {
-            case PASSED -> "Dat";
-            case FAILED_SCORE -> "Khong dat diem";
-            case FAILED_CRITICAL -> "Khong dat cau trong yeu";
+            case PASSED -> "Đạt";
+            case FAILED_SCORE -> "Không đạt điểm";
+            case FAILED_CRITICAL -> "Không đạt câu trọng yếu";
         };
     }
 

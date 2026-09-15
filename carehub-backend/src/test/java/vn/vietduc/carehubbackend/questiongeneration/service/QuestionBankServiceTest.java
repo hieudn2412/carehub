@@ -3,7 +3,6 @@ package vn.vietduc.carehubbackend.questiongeneration.service;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import vn.vietduc.carehubbackend.exception.BadRequestException;
-import vn.vietduc.carehubbackend.exception.ConflictException;
 import vn.vietduc.carehubbackend.questiongeneration.dto.request.UpsertQuestionBankQuestionRequest;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.QuestionClassificationTestResponse;
 import vn.vietduc.carehubbackend.questiongeneration.embedding.QuestionEmbeddingService;
@@ -204,7 +203,7 @@ class QuestionBankServiceTest {
     }
 
     @Test
-    void createRejectsStrongDuplicate() {
+    void createAllowsStrongDuplicateAndReturnsWarning() {
         when(duplicateCheckService.check(anyString())).thenReturn(new DuplicateCheckResult(
                 0.97,
                 99L,
@@ -213,9 +212,28 @@ class QuestionBankServiceTest {
                 true
         ));
 
-        assertThatThrownBy(() -> service.create(validRequest("APPROVED"), "admin"))
-                .isInstanceOf(ConflictException.class)
-                .hasMessageContaining("trùng mạnh");
+        var response = service.create(validRequest("APPROVED"), "admin");
+
+        assertThat(response.status()).isEqualTo(QuestionBankStatus.APPROVED.name());
+        assertThat(response.duplicateWarning()).isNotNull();
+        assertThat(response.duplicateWarning().maxSimilarity()).isEqualTo(0.97);
+        assertThat(response.duplicateWarning().needsReview()).isTrue();
+    }
+
+    @Test
+    void importStrongDuplicateBecomesDraftForReviewer() {
+        when(duplicateCheckService.check(anyString())).thenReturn(new DuplicateCheckResult(
+                0.97,
+                99L,
+                "Câu hỏi đã có",
+                true,
+                true
+        ));
+
+        var response = service.createInNewTransaction(validRequest("APPROVED"), "admin");
+
+        assertThat(response.status()).isEqualTo(QuestionBankStatus.DRAFT.name());
+        assertThat(response.duplicateWarning()).isNotNull();
     }
 
     private UpsertQuestionBankQuestionRequest validRequest(String status) {

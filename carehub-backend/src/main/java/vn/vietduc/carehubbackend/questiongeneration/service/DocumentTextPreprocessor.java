@@ -9,6 +9,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 @Service
@@ -30,7 +32,7 @@ public class DocumentTextPreprocessor {
                 currentPage = null;
                 continue;
             }
-            if (shouldSkip(line.text(), repeated)) {
+            if (shouldSkip(line, repeated)) {
                 continue;
             }
             if (startsStandaloneParagraph(line.text())) {
@@ -59,31 +61,43 @@ public class DocumentTextPreprocessor {
                     .replace('\u00A0', ' ')
                     .replace("\r\n", "\n")
                     .replace('\r', '\n');
-            for (String rawLine : normalized.split("\\n", -1)) {
-                String line = WHITESPACE.matcher(rawLine.trim()).replaceAll(" ");
-                lines.add(new LineItem(line, i + 1));
+            String[] rawLines = normalized.split("\\n", -1);
+            List<Integer> nonBlank = new ArrayList<>();
+            for (int index = 0; index < rawLines.length; index++) {
+                if (!WHITESPACE.matcher(rawLines[index].trim()).replaceAll(" ").isBlank()) nonBlank.add(index);
+            }
+            Set<Integer> edgeLines = new HashSet<>();
+            nonBlank.stream().limit(3).forEach(edgeLines::add);
+            nonBlank.stream().skip(Math.max(0, nonBlank.size() - 3L)).forEach(edgeLines::add);
+            for (int index = 0; index < rawLines.length; index++) {
+                String line = WHITESPACE.matcher(rawLines[index].trim()).replaceAll(" ");
+                lines.add(new LineItem(line, i + 1, edgeLines.contains(index)));
             }
         }
         return lines;
     }
 
     private Map<String, Integer> countRepeatedShortLines(List<LineItem> lines) {
-        Map<String, Integer> counts = new HashMap<>();
+        Map<String, Set<Integer>> pagesByLine = new HashMap<>();
         for (LineItem line : lines) {
             String text = line.text();
-            if (text.length() >= 3 && text.length() <= 80) {
-                counts.merge(text.toLowerCase(Locale.ROOT), 1, Integer::sum);
+            if (line.pageEdge() && text.length() >= 3 && text.length() <= 80) {
+                pagesByLine.computeIfAbsent(text.toLowerCase(Locale.ROOT), ignored -> new HashSet<>())
+                        .add(line.pageNumber());
             }
         }
+        Map<String, Integer> counts = new HashMap<>();
+        pagesByLine.forEach((line, pageNumbers) -> counts.put(line, pageNumbers.size()));
         return counts;
     }
 
-    private boolean shouldSkip(String line, Map<String, Integer> repeated) {
+    private boolean shouldSkip(LineItem item, Map<String, Integer> repeated) {
+        String line = item.text();
         if (PAGE_NUMBER.matcher(line).matches()) {
             return true;
         }
         String key = line.toLowerCase(Locale.ROOT);
-        return repeated.getOrDefault(key, 0) >= 3 && line.length() <= 80;
+        return item.pageEdge() && repeated.getOrDefault(key, 0) >= 3 && line.length() <= 80;
     }
 
     private boolean startsStandaloneParagraph(String line) {
@@ -102,6 +116,6 @@ public class DocumentTextPreprocessor {
         return value == null ? "" : value;
     }
 
-    private record LineItem(String text, Integer pageNumber) {
+    private record LineItem(String text, Integer pageNumber, boolean pageEdge) {
     }
 }

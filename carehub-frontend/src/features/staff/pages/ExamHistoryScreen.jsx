@@ -6,18 +6,7 @@ import { myExamApi } from '../../evaluation/api/myExamApi.js'
 import { apiData, apiErrorMessage, formatDateTime, formatNumber } from '../../../shared/utils/apiUi.js'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
-
-const COMPETENCY_COLORS = {
-  NOT_COMPETENT: ['#ef4444', '#fef2f2'],
-  BEGINNER: ['#f59e0b', '#fffbeb'],
-  BASIC: ['#3b82f6', '#eff6ff'],
-  PROFICIENT: ['#10b981', '#ecfdf5'],
-  ADVANCED: ['#8b5cf6', '#f5f3ff'],
-}
-
-function clsColor(level) {
-  return COMPETENCY_COLORS[level] || ['#6b7280', '#f3f4f6']
-}
+import PassFailBadge from '../../../shared/components/PassFailBadge.jsx'
 
 function examDisplayName(attempt) {
   return attempt?.assignmentName || attempt?.examPaperName || 'Bài kiểm tra'
@@ -167,7 +156,7 @@ function ExamHistoryScreen() {
                 <th>Ngày nộp</th>
                 <th>Lĩnh vực chuyên môn</th>
                 <th>Điểm số</th>
-                <th>Phân loại</th>
+                <th>Kết quả</th>
                 <th>Thời gian</th>
                 <th>Lượt</th>
                 <th>Hành động</th>
@@ -188,20 +177,8 @@ function ExamHistoryScreen() {
                       attempt.passed === true ? 'eh-score--pass' : attempt.passed === false ? 'eh-score--fail' : 'eh-score--pending'
                     }`}>{attempt.score == null && attempt.status === 'GRADED' ? 'Chờ công bố' : attempt.score == null ? '---' : `${formatNumber(attempt.score)}/10`}</span>
                   </td>
-                  <td data-label="Phân loại">
-                    {attempt.classification ? (
-                      <span style={{
-                        display: 'inline-block',
-                        padding: '2px 10px',
-                        borderRadius: 20,
-                        fontSize: 12,
-                        fontWeight: 600,
-                        background: clsColor(attempt.classification)[1],
-                        color: clsColor(attempt.classification)[0],
-                      }}>
-                        {attempt.classificationText || attempt.classification}
-                      </span>
-                    ) : <span style={{ color: '#9ca3af' }}>--</span>}
+                  <td data-label="Kết quả">
+                    <PassFailBadge passed={attempt.passed == null ? null : attempt.passed} className="eh-result-badge" unknownLabel="--" />
                   </td>
                   <td data-label="Thời gian">{Math.round((attempt.timeSpentSeconds || 0) / 60)} phút</td>
                   <td data-label="Lượt"><span className="eh-attempt">{attempt.attemptNumber}</span></td>

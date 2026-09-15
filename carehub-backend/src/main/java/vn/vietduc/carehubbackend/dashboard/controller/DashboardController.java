@@ -19,6 +19,7 @@ import vn.vietduc.carehubbackend.dashboard.dto.DashboardFormFilterOptionsRespons
 import vn.vietduc.carehubbackend.dashboard.dto.DashboardFormPerformanceResponse;
 import vn.vietduc.carehubbackend.dashboard.dto.DashboardFormResultFilter;
 import vn.vietduc.carehubbackend.dashboard.dto.DashboardFormSummaryResponse;
+import vn.vietduc.carehubbackend.dashboard.dto.DashboardFormTargetFilter;
 import vn.vietduc.carehubbackend.dashboard.dto.DashboardFormTrendResponse;
 import vn.vietduc.carehubbackend.dashboard.dto.DashboardMyFormSummaryResponse;
 import vn.vietduc.carehubbackend.dashboard.dto.DashboardOverviewResponse;
@@ -56,10 +57,11 @@ public class DashboardController {
             @RequestParam(required = false) Long subjectUserId,
             @RequestParam(required = false) Long submittedByUserId,
             @RequestParam(required = false) DashboardFormResultFilter resultStatus,
+            @RequestParam(required = false) DashboardFormTargetFilter targetStatus,
             @PageableDefault(size = 10) Pageable pageable
     ) {
         DashboardFormFilter filter = new DashboardFormFilter(fromDate, toDate, departmentId, formId,
-                subjectUserId, submittedByUserId, resultStatus);
+                subjectUserId, submittedByUserId, resultStatus, targetStatus);
         return ResponseEntity.ok(ApiResponse.success("Lấy dashboard chất lượng chăm sóc thành công",
                 PageResponse.from(qualityChecklistDashboardService.performance(view, keyword, filter, pageable))));
     }
@@ -85,10 +87,11 @@ public class DashboardController {
             @RequestParam Long formId,
             @RequestParam(required = false) Long subjectUserId,
             @RequestParam(required = false) Long submittedByUserId,
-            @RequestParam(required = false) DashboardFormResultFilter resultStatus
+            @RequestParam(required = false) DashboardFormResultFilter resultStatus,
+            @RequestParam(required = false) DashboardFormTargetFilter targetStatus
     ) {
         DashboardFormFilter filter = new DashboardFormFilter(fromDate, toDate, departmentId, formId,
-                subjectUserId, submittedByUserId, resultStatus);
+                subjectUserId, submittedByUserId, resultStatus, targetStatus);
         return ResponseEntity.ok(ApiResponse.success("Lấy xu hướng chất lượng chăm sóc thành công",
                 qualityChecklistDashboardService.trend(filter, bucket)));
     }
@@ -175,7 +178,8 @@ public class DashboardController {
                 formId,
                 subjectUserId,
                 submittedByUserId,
-                resultStatus
+                resultStatus,
+                null
         );
         return ResponseEntity.ok(ApiResponse.success(
                 "Get dashboard form performance successfully",
@@ -207,7 +211,8 @@ public class DashboardController {
                 formId,
                 subjectUserId,
                 submittedByUserId,
-                resultStatus
+                resultStatus,
+                null
         );
         return ResponseEntity.ok(ApiResponse.success(
                 "Get dashboard form trend successfully",
@@ -231,6 +236,7 @@ public class DashboardController {
                 fromDate,
                 toDate,
                 scopedDepartmentId,
+                null,
                 null,
                 null,
                 null,

@@ -34,6 +34,9 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
     @EntityGraph(attributePaths = {"department", "position", "educationLevel"})
     Optional<User> findByEmployeeCodeIgnoreCaseAndIsDeletedFalseAndStatus(String employeeCode, vn.vietduc.carehubbackend.user.entity.UserStatus status);
     boolean existsByEmail(String email);
+    boolean existsByEmployeeCode(String employeeCode);
+    boolean existsByEmailAndIdNot(String email, Long id);
+    boolean existsByEmployeeCodeAndIdNot(String employeeCode, Long id);
     boolean existsByEmployeeCodeAndIsDeletedFalse(String employeeCode);
     boolean existsByEmailAndIsDeletedFalse(String email);
     boolean existsByEmployeeCodeAndIsDeletedFalseAndIdNot(String employeeCode, Long id);
@@ -129,6 +132,24 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
             @Param("departmentId") Long departmentId,
             @Param("roleCode") String roleCode,
             Pageable pageable);
+
+    @EntityGraph(attributePaths = {"department", "position"})
+    @Query("""
+            SELECT DISTINCT u
+            FROM UserRole ur
+            JOIN ur.user u
+            WHERE u.isDeleted = false
+              AND u.status = vn.vietduc.carehubbackend.user.entity.UserStatus.ACTIVE
+              AND (UPPER(ur.role.code) = 'MANAGER' OR UPPER(ur.role.code) = 'ROLE_MANAGER')
+              AND NOT EXISTS (
+                  SELECT adminRole.id
+                  FROM UserRole adminRole
+                  WHERE adminRole.user = u
+                    AND (UPPER(adminRole.role.code) = 'ADMIN' OR UPPER(adminRole.role.code) = 'ROLE_ADMIN')
+              )
+            ORDER BY u.name ASC, u.employeeCode ASC
+            """)
+    List<User> findActiveManagerFormAssignmentCandidates();
 
     @EntityGraph(attributePaths = {"department", "position"})
     @Query(value = """
@@ -229,65 +250,6 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
     );
 
     @EntityGraph(attributePaths = {"department", "position"})
-    @Query(value = """
-            SELECT u
-            FROM User u
-            WHERE u.isDeleted = false
-              AND (:departmentId IS NULL OR u.department.id = :departmentId)
-              AND (:keyword IS NULL
-                   OR LOWER(u.name) LIKE :keyword
-                   OR LOWER(u.employeeCode) LIKE :keyword)
-              AND EXISTS (
-                  SELECT a.id
-                  FROM ExamAttempt a
-                  WHERE a.user = u
-                    AND a.status IN ('SUBMITTED', 'GRADED')
-                    AND a.score IS NOT NULL
-                    AND a.submittedAt >= :fromDate
-                    AND a.submittedAt <= :toDate
-                    AND (:category IS NULL OR EXISTS (
-                        SELECT pq.id
-                        FROM ExamPaperQuestion pq
-                        WHERE pq.examPaper = a.examPaper
-                          AND pq.question.category.name = :category
-                    ))
-              )
-            ORDER BY u.name ASC, u.id ASC
-            """,
-            countQuery = """
-            SELECT COUNT(u)
-            FROM User u
-            WHERE u.isDeleted = false
-              AND (:departmentId IS NULL OR u.department.id = :departmentId)
-              AND (:keyword IS NULL
-                   OR LOWER(u.name) LIKE :keyword
-                   OR LOWER(u.employeeCode) LIKE :keyword)
-              AND EXISTS (
-                  SELECT a.id
-                  FROM ExamAttempt a
-                  WHERE a.user = u
-                    AND a.status IN ('SUBMITTED', 'GRADED')
-                    AND a.score IS NOT NULL
-                    AND a.submittedAt >= :fromDate
-                    AND a.submittedAt <= :toDate
-                    AND (:category IS NULL OR EXISTS (
-                        SELECT pq.id
-                        FROM ExamPaperQuestion pq
-                        WHERE pq.examPaper = a.examPaper
-                          AND pq.question.category.name = :category
-                    ))
-              )
-            """)
-    Page<User> findCompetencyFieldCandidates(
-            @Param("departmentId") Long departmentId,
-            @Param("keyword") String keyword,
-            @Param("category") String category,
-            @Param("fromDate") java.time.LocalDateTime fromDate,
-            @Param("toDate") java.time.LocalDateTime toDate,
-            Pageable pageable
-    );
-
-    @EntityGraph(attributePaths = {"department", "position"})
     @Query("""
             SELECT u
             FROM User u
@@ -308,6 +270,12 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
                    OR LOWER(u.name) LIKE :keyword)
               AND (:departmentId IS NULL OR u.department.id = :departmentId)
               AND (:positionId IS NULL OR u.position.id = :positionId)
+              AND NOT EXISTS (
+                  SELECT adminRole.id
+                  FROM UserRole adminRole
+                  WHERE adminRole.user = u
+                    AND (UPPER(adminRole.role.code) = 'ADMIN' OR UPPER(adminRole.role.code) = 'ROLE_ADMIN')
+              )
             ORDER BY u.employeeCode ASC, u.id ASC
             """)
     List<User> searchTrainingEmployeeCandidates(

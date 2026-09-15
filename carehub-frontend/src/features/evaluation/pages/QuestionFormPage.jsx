@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
-import FormSelectField from '../../../shared/components/FormSelectField.jsx'
 import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
 import { CheckOutlined, ExclamationCircleOutlined } from '@ant-design/icons'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
@@ -68,6 +67,8 @@ function QuestionFormPage() {
   }))
   const [pendingDestination, setPendingDestination] = useState(null)
   const [pendingSavePayload, setPendingSavePayload] = useState(null)
+  const [duplicatePrompt, setDuplicatePrompt] = useState(null)
+  const [isCheckingDuplicates, setIsCheckingDuplicates] = useState(false)
 
   const currentSnapshot = useMemo(() => formSnapshot({
     content,
@@ -271,18 +272,44 @@ function QuestionFormPage() {
       return
     }
 
+    // Cảnh báo trùng TRƯỚC khi lưu; người soạn tự quyết định lưu tiếp hay sửa lại.
+    const check = await findDuplicates(payload.stem)
+    if (!check.ok) {
+      // Không chặn việc lưu, nhưng phải nói rõ là bước kiểm tra đã không chạy được.
+      showToast('Không kiểm tra được trùng lặp lúc này. Câu hỏi vẫn sẽ được lưu.', 'warning')
+      await persistQuestion(payload, { warnDuplicateAfterSave: true })
+      return
+    }
+    if (check.matches.length > 0) {
+      setDuplicatePrompt({ payload, matches: check.matches })
+      return
+    }
+
     await persistQuestion(payload)
   }
 
-  async function persistQuestion(payload) {
+  async function findDuplicates(stem) {
+    setIsCheckingDuplicates(true)
+    try {
+      const response = await questionBankApi.checkDuplicates(stem, isEditMode ? Number(id) : null)
+      return { ok: true, matches: apiData(response, []) || [] }
+    } catch {
+      return { ok: false, matches: [] }
+    } finally {
+      setIsCheckingDuplicates(false)
+    }
+  }
+
+  async function persistQuestion(payload, { warnDuplicateAfterSave = false } = {}) {
     setIsSaving(true)
     try {
       const response = isEditMode
         ? await questionBankApi.updateQuestion(id, payload)
         : await questionBankApi.createQuestion(payload)
       const saved = apiData(response)
-      if (saved?.duplicateWarning) {
-        showToast('Đã lưu câu hỏi, nhưng có cảnh báo gần trùng. Nên kiểm tra lại trong ngân hàng.', 'warning')
+      if (warnDuplicateAfterSave && saved?.duplicateWarning) {
+        const similarity = Math.round(Number(saved.duplicateWarning.maxSimilarity || 0) * 100)
+        showToast(`Đã lưu câu hỏi nhưng phát hiện trùng: mức tương đồng cao nhất ${similarity}%.`, 'warning')
       } else if (saved?.impactWarning?.warning) {
         showToast('Đã lưu câu hỏi. Câu hỏi này đang được dùng trong bộ câu hỏi hoặc bộ đề.', 'warning')
       } else {
@@ -397,16 +424,17 @@ function QuestionFormPage() {
                   <label>
                     Mức độ nhận thức <span className="qf-required-star">*</span>
                   </label>
-                  <FormSelectField
-                    className="qf-input-red"
-                    required
+                  <SearchableSelect
                     value={cognitiveLevel}
-                    onChange={setCognitiveLevel}
-                    disabled={isLoadingQuestion || isSaving || Boolean(loadError)}
                     options={[
-                      { value: '', label: 'Chọn mức độ nhận thức' },
+                      { value: '', label: '-- Chọn mức độ nhận thức --' },
                       ...COGNITIVE_LEVELS.map((level) => ({ value: level.value, label: level.label }))
                     ]}
+                    onChange={(val) => setCognitiveLevel(val)}
+                    placeholder="-- Chọn mức độ nhận thức --"
+                    searchPlaceholder="Tìm mức độ nhận thức..."
+                    disabled={isLoadingQuestion || isSaving || Boolean(loadError)}
+                    ariaLabel="Mức độ nhận thức"
                   />
                 </div>
               </div>
@@ -476,8 +504,8 @@ function QuestionFormPage() {
                 >
                   Hủy
                 </button>
-                <button type="submit" className="qf-btn-save" disabled={isLoadingQuestion || isSaving || Boolean(loadError)}>
-                  {isSaving ? 'Đang lưu...' : (isEditMode ? 'Lưu thay đổi' : 'Tạo câu hỏi')}
+                <button type="submit" className="qf-btn-save" disabled={isLoadingQuestion || isSaving || isCheckingDuplicates || Boolean(loadError)}>
+                  {isCheckingDuplicates ? 'Đang kiểm tra trùng...' : isSaving ? 'Đang lưu...' : (isEditMode ? 'Lưu thay đổi' : 'Tạo câu hỏi')}
                 </button>
               </div>
             </form>
@@ -508,6 +536,26 @@ function QuestionFormPage() {
             </section>
           </div>
         )}
+        <ConfirmModal
+          isOpen={Boolean(duplicatePrompt)}
+          title="Câu hỏi có thể bị trùng"
+          message={duplicatePrompt
+            ? `Tìm thấy ${duplicatePrompt.matches.length} câu tương tự trong ngân hàng:\n\n`
+              + duplicatePrompt.matches
+                .map((match, index) => `${index + 1}. (${Math.round(Number(match.similarity || 0) * 100)}%) ${match.stem}`)
+                .join('\n\n')
+              + '\n\nVẫn lưu câu hỏi này?'
+            : ''}
+          confirmText="Vẫn lưu"
+          cancelText="Để tôi sửa lại"
+          danger
+          onCancel={() => setDuplicatePrompt(null)}
+          onConfirm={async () => {
+            const payload = duplicatePrompt?.payload
+            setDuplicatePrompt(null)
+            if (payload) await persistQuestion(payload)
+          }}
+        />
         <ConfirmModal
           isOpen={Boolean(pendingSavePayload)}
           title="Câu hỏi đang được sử dụng"

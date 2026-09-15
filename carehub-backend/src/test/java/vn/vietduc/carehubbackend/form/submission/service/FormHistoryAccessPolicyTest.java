@@ -22,6 +22,9 @@ import vn.vietduc.carehubbackend.utils.SecurityUtils;
 
 import java.util.List;
 import java.util.Optional;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -65,12 +68,15 @@ class FormHistoryAccessPolicyTest {
         assertFalse(scope.admin());
         assertEquals(7L, scope.departmentId());
         assertEquals(7L, service.resolveDepartmentScope(99L));
+        assertEquals(List.of(7L), service.resolveDepartmentScope(18L, 99L).departmentIds());
         assertDoesNotThrow(() -> service.requireFormAccess(18L));
         assertThrows(ResourceNotFoundException.class, () -> service.requireFormAccess(19L));
+        verify(assignmentItemRepository, never()).findActiveAllowedDepartmentIds(
+                anyLong(), anyLong(), any(), any(), any(), any());
     }
 
     @Test
-    void managerReadsOnlySubmittedResultsFromOwnDepartment() {
+    void managerStillReadsSubmittedResultsFromOwnDepartmentAfterScoringPermissionIsRevoked() {
         authenticate("ROLE_MANAGER");
         Department ownDepartment = Department.builder().id(7L).name("Khoa Nội").build();
         User manager = User.builder().id(2L).name("Manager").department(ownDepartment).build();
@@ -85,17 +91,19 @@ class FormHistoryAccessPolicyTest {
         submission.setSubjectContext(FormSubmissionContext.builder().submission(submission).subjectUser(subject).build());
         when(securityUtils.getCurrentUserId()).thenReturn(2L);
         when(userRepository.findByIdAndIsDeletedFalse(2L)).thenReturn(Optional.of(manager));
-        when(assignmentItemRepository.existsEverAssignedToManager(2L, 18L)).thenReturn(true);
 
         var service = policy();
         assertTrue(service.managerCanRead(submission));
+        verify(assignmentItemRepository, never()).findActiveAllowedDepartmentIds(
+                anyLong(), anyLong(), any(), any(), any(), any());
 
         submission.setStatus(FormSubmissionStatus.DRAFT);
         assertFalse(service.managerCanRead(submission));
     }
 
     private FormHistoryAccessPolicy policy() {
-        return new FormHistoryAccessPolicy(securityUtils, userRepository, assignmentItemRepository);
+        return new FormHistoryAccessPolicy(securityUtils, userRepository, assignmentItemRepository,
+                Clock.fixed(Instant.parse("2026-06-21T00:00:00Z"), ZoneOffset.UTC));
     }
 
     private void authenticate(String... roles) {

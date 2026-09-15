@@ -21,14 +21,13 @@ import {
   apiData,
   apiErrorMessage,
   chunkGenerationEligible,
-  COGNITIVE_LEVELS,
   documentStatusText,
   formatDateTime,
   formatNumber,
   jobStatusText,
   statusTone,
 } from '../utils/documentQuestionUi.js'
-import { buildCreateQuestionJobPayload } from '../utils/groundedQuestionUi.js'
+import { buildCreateQuestionJobPayload, COGNITIVE_MIX_FIELDS, DEFAULT_COGNITIVE_MIX, cognitiveMixTotal } from '../utils/groundedQuestionUi.js'
 import '../styles/QuestionDocumentPages.css'
 
 function QuestionDocumentDetailPage() {
@@ -42,7 +41,8 @@ function QuestionDocumentDetailPage() {
   const [showJobModal, setShowJobModal] = useState(false)
   const [questionsPerChunk, setQuestionsPerChunk] = useState(1)
   const [categoryId, setCategoryId] = useState('')
-  const [targetCognitiveLevel, setTargetCognitiveLevel] = useState('AUTO')
+  const targetCognitiveLevel = 'AUTO'
+  const [cognitiveMix, setCognitiveMix] = useState(DEFAULT_COGNITIVE_MIX)
   const [categories, setCategories] = useState([])
   const [isLoadingCategories, setIsLoadingCategories] = useState(false)
   const [showCategoryModal, setShowCategoryModal] = useState(false)
@@ -95,15 +95,20 @@ function QuestionDocumentDetailPage() {
       showToast('Số câu mỗi đoạn nội dung chỉ được từ 1 đến 3.', 'warning')
       return
     }
+    if (mixTotal !== 100) {
+      showToast('Tổng tỷ lệ ba mức nhận thức phải bằng 100%.', 'warning')
+      return
+    }
     setIsCreatingJob(true)
     try {
       const response = await documentQuestionApi.createQuestionJob(documentDetail.id, buildCreateQuestionJobPayload({
         questionsPerChunk,
         categoryId,
         targetCognitiveLevel,
+        cognitiveMix,
       }))
       const job = apiData(response)
-      showToast('Tạo phiên sinh câu hỏi thành công.', 'success')
+      showToast('Tạo câu hỏi từ tài liệu thành công.', 'success')
       navigate(`/admin/evaluation/document-question-jobs/${job.id}`)
     } catch (error) {
       showToast(apiErrorMessage(error), 'error')
@@ -111,6 +116,8 @@ function QuestionDocumentDetailPage() {
       setIsCreatingJob(false)
     }
   }
+
+  const mixTotal = cognitiveMixTotal(cognitiveMix)
 
   async function openJobModal() {
     setShowJobModal(true)
@@ -336,7 +343,7 @@ function QuestionDocumentDetailPage() {
       {showJobModal && documentDetail && (
         <div className="qdoc-modal-backdrop">
           <div className="qdoc-modal" role="dialog" aria-modal="true" aria-labelledby="detail-create-job-title">
-            <h2 id="detail-create-job-title">Tạo phiên sinh câu hỏi</h2>
+            <h2 id="detail-create-job-title">Tạo câu hỏi từ tài liệu</h2>
             <p className="qdoc-modal-subtitle">{documentDetail.filename}</p>
             <div className="qdoc-modal-stats">
               <InfoRow label="Tổng đoạn nội dung" value={formatNumber(chunks.length)} />
@@ -354,18 +361,37 @@ function QuestionDocumentDetailPage() {
               />
               <small className="qdoc-field-help">Tối đa 3 câu/đoạn — vượt quá dễ khiến AI trả lời bị cắt dở và sinh câu thất bại.</small>
             </label>
-            <label className="qdoc-field">
-              <span>Mức độ nhận thức mục tiêu</span>
-              <FormSelectField
-                value={targetCognitiveLevel}
-                onChange={setTargetCognitiveLevel}
-                disabled={isCreatingJob}
-                options={[
-                  { value: 'AUTO', label: 'Tự động theo nguồn' },
-                  ...COGNITIVE_LEVELS
-                ]}
-              />
-            </label>
+            <div className="qdoc-field">
+              <span>Tỷ lệ mức độ nhận thức (%)</span>
+              <div className="qdoc-mix-grid">
+                {COGNITIVE_MIX_FIELDS.map((field) => (
+                  <label key={field.key} className="qdoc-mix-item">
+                    <span>{field.label}</span>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      className="ch-input"
+                      value={cognitiveMix[field.key]}
+                      disabled={isCreatingJob}
+                      onFocus={(event) => event.target.select()}
+                      onClick={(event) => event.currentTarget.select()}
+                      onChange={(event) => {
+                        const raw = event.target.value
+                        const parsed = Number.parseInt(raw, 10)
+                        const normalized = Number.isNaN(parsed) ? 0 : Math.max(0, Math.min(100, parsed))
+                        if (raw !== '' && raw !== String(normalized)) event.target.value = String(normalized)
+                        setCognitiveMix((current) => ({ ...current, [field.key]: raw === '' ? 0 : normalized }))
+                      }}
+                      aria-label={`Tỷ lệ mức ${field.label}`}
+                    />
+                  </label>
+                ))}
+              </div>
+              <small className={`qdoc-field-help ${mixTotal === 100 ? '' : 'qdoc-field-help--error'}`}>
+                Tổng: {mixTotal}% {mixTotal === 100 ? '' : '— phải bằng 100%'}
+              </small>
+            </div>
             <div className="qdoc-field">
               <span>Danh mục câu hỏi (không bắt buộc)</span>
               <div className="qdoc-inline-field">
@@ -402,7 +428,7 @@ function QuestionDocumentDetailPage() {
               </button>
               <button type="button" className="qdoc-primary-btn" onClick={createJob} disabled={isCreatingJob}>
                 {isCreatingJob ? <LoadingOutlined /> : <PlayCircleOutlined />}
-                <span>{isCreatingJob ? 'Đang tạo câu hỏi từ tài liệu...' : 'Tạo phiên'}</span>
+                <span>{isCreatingJob ? 'Đang tạo câu hỏi từ tài liệu...' : 'Tạo câu hỏi'}</span>
               </button>
             </div>
           </div>

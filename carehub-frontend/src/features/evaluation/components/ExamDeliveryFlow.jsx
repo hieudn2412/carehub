@@ -25,7 +25,7 @@ function ExamDeliveryFlow({ activeStep, title, description, onStepChange }) {
       <div className="exp-flow-header__copy">
         <span className="exp-flow-header__eyebrow">QUẢN LÝ BÀI KIỂM TRA</span>
         <h1 id="exam-delivery-flow-title">{title}</h1>
-        <p>{description}</p>
+        {description && <p>{description}</p>}
       </div>
       <div className="exp-flow-steps" aria-label="Quy trình giao đề kiểm tra">
         {STEPS.map((step) => (

@@ -55,11 +55,13 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserResponse createUser(CreateUserRequest request) {
-        if (userRepository.existsByEmployeeCodeAndIsDeletedFalse(request.getEmployeeCode())) {
-            throw new ConflictException("Mã nhân viên đã tồn tại");
+        String employeeCode = request.getEmployeeCode().trim();
+        String email = request.getEmail().trim();
+        if (userRepository.existsByEmployeeCode(employeeCode)) {
+            throw new ConflictException("Mã nhân viên đã tồn tại hoặc thuộc tài khoản đã ngừng sử dụng. Vui lòng khôi phục tài khoản cũ nếu cần");
         }
-        if (userRepository.existsByEmailAndIsDeletedFalse(request.getEmail())) {
-            throw new ConflictException("Email này đã được sử dụng");
+        if (userRepository.existsByEmail(email)) {
+            throw new ConflictException("Email này đã được sử dụng hoặc thuộc tài khoản đã ngừng sử dụng");
         }
         Department department = departmentRepository.findById(request.getDepartmentId())
                 .orElseThrow(()-> new EntityNotFoundException("Không tìm thấy phòng ban"));
@@ -68,8 +70,8 @@ public class UserServiceImpl implements UserService {
         String encodedPassword = passwordEncoder.encode(randomPassword);
 
         User user = User.builder()
-                .employeeCode(request.getEmployeeCode().trim())
-                .email(request.getEmail().trim())
+                .employeeCode(employeeCode)
+                .email(email)
                 .password(encodedPassword)
                 .name(request.getFullName().trim())
                 .phone(request.getPhone() == null || request.getPhone().isBlank()
@@ -107,8 +109,8 @@ public class UserServiceImpl implements UserService {
         );
 
         return UserResponse.builder()
-                .employeeCode(request.getEmployeeCode())
-                .email(request.getEmail())
+                .employeeCode(employeeCode)
+                .email(email)
                 .fullName(request.getFullName())
                 .status(UserStatus.ACTIVE)
                 .build();
@@ -121,18 +123,23 @@ public class UserServiceImpl implements UserService {
 
         if (request.getEmployeeCode() != null) {
             validateText(request.getEmployeeCode(), "Employee code");
-            if (userRepository.existsByEmployeeCodeAndIsDeletedFalseAndIdNot(request.getEmployeeCode(), id)) {
-                throw new ConflictException("Mã nhân viên đã tồn tại");
+            String employeeCode = request.getEmployeeCode().trim();
+            if (!employeeCode.equals(user.getEmployeeCode())) {
+                throw new BadRequestException("Mã nhân viên là định danh cố định và không thể thay đổi");
             }
-            user.setEmployeeCode(request.getEmployeeCode().trim());
+            if (userRepository.existsByEmployeeCodeAndIdNot(employeeCode, id)) {
+                throw new ConflictException("Mã nhân viên đã tồn tại hoặc thuộc tài khoản đã ngừng sử dụng. Vui lòng khôi phục tài khoản cũ nếu cần");
+            }
+            user.setEmployeeCode(employeeCode);
         }
 
         if (request.getEmail() != null) {
             validateText(request.getEmail(), "Email");
-            if (userRepository.existsByEmailAndIsDeletedFalseAndIdNot(request.getEmail(), id)) {
-                throw new ConflictException("Email này đã được sử dụng");
+            String email = request.getEmail().trim();
+            if (userRepository.existsByEmailAndIdNot(email, id)) {
+                throw new ConflictException("Email này đã được sử dụng hoặc thuộc tài khoản đã ngừng sử dụng");
             }
-            user.setEmail(request.getEmail().trim());
+            user.setEmail(email);
         }
 
         if (request.getFullName() != null) {
@@ -235,6 +242,7 @@ public class UserServiceImpl implements UserService {
                     .birthday(user.getBirthday())
                     .fullName(user.getName())
                     .status(user.getStatus())
+                    .deleted(user.isDeleted())
                     .roles(roles)
                     .build();
         });
@@ -247,6 +255,19 @@ public class UserServiceImpl implements UserService {
         user.setDeleted(true);
         invalidateUserSessions(user);
         userRepository.save(user);
+    }
+
+    @Override
+    @Transactional
+    public UserDetailResponse restoreUser(Long id) {
+        User user = findUserIncludingDeleted(id);
+        if (!user.isDeleted()) {
+            return toDetailResponse(user);
+        }
+        user.setDeleted(false);
+        user.setStatus(UserStatus.ACTIVE);
+        invalidateUserSessions(user);
+        return toDetailResponse(userRepository.save(user));
     }
 
     @Override
@@ -328,8 +349,8 @@ public class UserServiceImpl implements UserService {
     public UserDetailResponse updateCurrentUserProfile(UpdateMyProfileRequest request) {
         User user = findUser(securityUtils.getCurrentUserId());
         String email = normalizeOptionalText(request.email());
-        if (email != null && userRepository.existsByEmailAndIsDeletedFalseAndIdNot(email, user.getId())) {
-            throw new ConflictException("Email này đã được sử dụng");
+        if (email != null && userRepository.existsByEmailAndIdNot(email, user.getId())) {
+            throw new ConflictException("Email này đã được sử dụng hoặc thuộc tài khoản đã ngừng sử dụng");
         }
 
         user.setName(request.fullName().trim());
@@ -344,7 +365,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserDetailResponse getUserDetails(Long id) {
-        return toDetailResponse(findUser(id));
+        return toDetailResponse(findUserIncludingDeleted(id));
     }
 
     public List<UserSummaryResponse> getAllUsersToExport(UserFilterRequest filter){
@@ -363,6 +384,7 @@ public class UserServiceImpl implements UserService {
                                     .birthday(user.getBirthday())
                                     .fullName(user.getName())
                                     .status(user.getStatus())
+                                    .deleted(user.isDeleted())
                                     .roles(roles)
                                     .build();
                         }
@@ -371,11 +393,16 @@ public class UserServiceImpl implements UserService {
     }
 
     private User findUser(Long id) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+        User user = findUserIncludingDeleted(id);
         if (user.isDeleted()) {
             throw new EntityNotFoundException("User not found");
         }
+        return user;
+    }
+
+    private User findUserIncludingDeleted(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
         return user;
     }
 
@@ -385,6 +412,7 @@ public class UserServiceImpl implements UserService {
                 .employeeCode(user.getEmployeeCode())
                 .id(user.getId())
                 .status(user.getStatus())
+                .deleted(user.isDeleted())
                 .fullName(user.getName())
                 .phone(user.getPhone())
                 .createdAt(user.getCreatedAt())

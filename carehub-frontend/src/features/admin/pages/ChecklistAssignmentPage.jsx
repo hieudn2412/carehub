@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
+  ApartmentOutlined,
   CalendarOutlined,
   CheckCircleOutlined,
   CloseOutlined,
@@ -9,22 +10,26 @@ import {
   LoadingOutlined,
   PlusOutlined,
   ReloadOutlined,
+  SaveOutlined,
   SearchOutlined,
   StopOutlined,
   TeamOutlined,
   UserSwitchOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
+import Modal from '../../../shared/components/Modal.jsx'
 import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import DateTimePicker24h from '../../../shared/components/DateTimePicker24h.jsx'
+import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { adminApi } from '../api/adminApi'
 import { getChecklistDisplayCode } from '../utils/formCode.js'
+import { formatRoleLabels } from '../../../shared/utils/roleLabels.js'
 import '../styles/ChecklistAssignmentPage.css'
 
 const PAGE_SIZE = 10
 const MAX_FORMS = 25
-const MAX_ASSIGNEES = 100
+const WIZARD_TOTAL_STEPS = 4
 
 const TAB_FORMS = 'forms'
 const TAB_ASSIGNEES = 'assignees'
@@ -37,7 +42,7 @@ const EXPIRING_OPTIONS = [
 const ROLE_FILTER_OPTIONS = [
   { value: '', label: 'Tất cả vai trò' },
   { value: 'USER', label: 'Nhân viên' },
-  { value: 'MANAGER', label: 'Quản lý' },
+  { value: 'MANAGER', label: 'Quản lý cấp Khoa' },
 ]
 
 function getPageData(response) {
@@ -98,22 +103,7 @@ function useDebouncedValue(value, delay = 350) {
 }
 
 function getRoleText(value) {
-  const roleLabels = {
-    USER: 'Nhân viên',
-    ROLE_USER: 'Nhân viên',
-    STAFF: 'Nhân viên',
-    ROLE_STAFF: 'Nhân viên',
-    MANAGER: 'Quản lý',
-    ROLE_MANAGER: 'Quản lý',
-    ADMIN: 'Quản trị viên',
-    ROLE_ADMIN: 'Quản trị viên',
-  }
-  const formatRole = (role) => roleLabels[String(role || '').trim().toUpperCase()] || role
-  if (Array.isArray(value)) {
-    const labels = value.map(formatRole).filter(Boolean)
-    return labels.length > 0 ? Array.from(new Set(labels)).join(', ') : 'Chưa có vai trò'
-  }
-  return formatRole(value) || 'Chưa có vai trò'
+  return formatRoleLabels(Array.isArray(value) ? value : [value]) || 'Chưa có vai trò'
 }
 
 function buildFormOption(form) {
@@ -141,11 +131,29 @@ function buildAssigneeOption(user) {
   }
 }
 
+function buildDepartmentOption(department) {
+  return {
+    value: String(department.departmentId ?? department.id),
+    label: department.departmentName || department.name || 'Chưa có tên khoa/phòng',
+    searchText: [department.departmentName || department.name, department.code].filter(Boolean).join(' '),
+  }
+}
+
+function departmentIdOf(department) {
+  return String(department?.departmentId ?? department?.id ?? department?.value ?? '')
+}
+
+function departmentNameOf(department) {
+  return department?.departmentName || department?.name || department?.label || `Khoa #${departmentIdOf(department)}`
+}
+
 function SelectionLimitNotice({ formsCount, assigneesCount }) {
+  const largeAssigneeWarning = assigneesCount > 100
   return (
     <p className="cap-assignment-wizard__limit">
-      Có thể chọn tối đa {MAX_FORMS} bảng kiểm và {MAX_ASSIGNEES} người nhận trong một lần giao.
+      Có thể chọn tối đa {MAX_FORMS} bảng kiểm trong một lần giao.
       Hiện đã chọn {formsCount} bảng kiểm, {assigneesCount} người nhận.
+      {largeAssigneeWarning ? ' Số người nhận lớn có thể khiến thao tác xử lý lâu hơn.' : ''}
     </p>
   )
 }
@@ -178,6 +186,7 @@ function WizardSelectedList({ title, count, options, emptyText, onRemove }) {
 }
 
 function ChecklistAssignmentPage() {
+  const { showToast } = useToast()
   const [searchParams, setSearchParams] = useSearchParams()
   const initialFormId = searchParams.get('formId')
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') === TAB_ASSIGNEES ? TAB_ASSIGNEES : TAB_FORMS)
@@ -209,6 +218,10 @@ function ChecklistAssignmentPage() {
   const [selectedItemIds, setSelectedItemIds] = useState([])
   const [drawerValidUntil, setDrawerValidUntil] = useState('')
   const [drawerSubmitting, setDrawerSubmitting] = useState(false)
+  const [deptModalItem, setDeptModalItem] = useState(null)
+  const [deptScopeSearch, setDeptScopeSearch] = useState('')
+  const [deptScopeSaving, setDeptScopeSaving] = useState(false)
+  const initialFormIdHandledRef = useRef(false)
 
   const [wizardOpen, setWizardOpen] = useState(false)
   const [wizardStep, setWizardStep] = useState(1)
@@ -216,10 +229,13 @@ function ChecklistAssignmentPage() {
   const [selectedAssigneeIds, setSelectedAssigneeIds] = useState([])
   const [selectedFormOptions, setSelectedFormOptions] = useState([])
   const [selectedAssigneeOptions, setSelectedAssigneeOptions] = useState([])
+  const [selectedDepartmentIds, setSelectedDepartmentIds] = useState([])
+  const [selectedDepartmentOptions, setSelectedDepartmentOptions] = useState([])
   const [formCandidateOptions, setFormCandidateOptions] = useState([])
   const [assigneeCandidateOptions, setAssigneeCandidateOptions] = useState([])
   const [formCandidateLoading, setFormCandidateLoading] = useState(false)
   const [assigneeCandidateLoading, setAssigneeCandidateLoading] = useState(false)
+  const [managerCandidateLoading, setManagerCandidateLoading] = useState(false)
   const [validUntil, setValidUntil] = useState('')
   const [preview, setPreview] = useState(null)
   const [previewLoading, setPreviewLoading] = useState(false)
@@ -233,6 +249,48 @@ function ChecklistAssignmentPage() {
       label: department.name,
     })),
   ], [departments])
+  const wizardDepartmentOptions = useMemo(() => departments.map(buildDepartmentOption), [departments])
+
+  const deptModalSelectedIds = useMemo(
+    () => new Set((deptModalItem?.selectedDepartmentIds || []).map(String)),
+    [deptModalItem?.selectedDepartmentIds],
+  )
+  const deptModalSelectedDepartments = useMemo(() => (
+    (departments || [])
+      .filter((department) => deptModalSelectedIds.has(String(department.id)))
+      .map((department) => ({
+        departmentId: department.id,
+        departmentName: department.name,
+        code: department.code,
+      }))
+  ), [departments, deptModalSelectedIds])
+  const deptModalAvailableDepartments = useMemo(() => (
+    (departments || [])
+      .filter((department) => !deptModalSelectedIds.has(String(department.id)))
+      .map((department) => ({
+        departmentId: department.id,
+        departmentName: department.name,
+        code: department.code,
+      }))
+  ), [departments, deptModalSelectedIds])
+
+  const normalizedDeptScopeSearch = deptScopeSearch.trim().toLowerCase()
+  const filterModalDepartments = useCallback((items) => {
+    if (!normalizedDeptScopeSearch) return items
+    return items.filter((department) => [
+      department.departmentName || department.name,
+      department.code,
+    ].filter(Boolean).some((text) => String(text).toLowerCase().includes(normalizedDeptScopeSearch)))
+  }, [normalizedDeptScopeSearch])
+
+  const visibleSelectedDepartments = useMemo(
+    () => filterModalDepartments(deptModalSelectedDepartments),
+    [deptModalSelectedDepartments, filterModalDepartments],
+  )
+  const visibleAvailableDepartments = useMemo(
+    () => filterModalDepartments(deptModalAvailableDepartments),
+    [deptModalAvailableDepartments, filterModalDepartments],
+  )
 
   const activeFilters = activeTab === TAB_FORMS ? formFilters : assigneeFilters
 
@@ -244,9 +302,13 @@ function ChecklistAssignmentPage() {
     Object.entries(activeFilters).forEach(([key, value]) => {
       if (value) params.set(key, value)
     })
-    if (initialFormId) params.set('formId', initialFormId)
-    setSearchParams(params, { replace: true })
-  }, [activeFilters, activeTab, initialFormId, keyword, page, setSearchParams])
+    if (drawer?.type === TAB_FORMS && drawer?.id) {
+      params.set('formId', String(drawer.id))
+    }
+    if (params.toString() !== searchParams.toString()) {
+      setSearchParams(params, { replace: true })
+    }
+  }, [activeFilters, activeTab, drawer?.id, drawer?.type, keyword, page, searchParams, setSearchParams])
 
   useEffect(() => {
     let cancelled = false
@@ -327,7 +389,15 @@ function ChecklistAssignmentPage() {
         page: 0,
         size: 100,
       })
-      setDrawerItems(getPageData(response).content)
+      const items = getPageData(response).content
+      setDrawerItems(items)
+      if (items.length > 0) {
+        if (nextDrawer.type === TAB_FORMS && items[0]?.formTitle) {
+          setDrawer((cur) => (cur && cur.id === nextDrawer.id ? { ...cur, title: items[0].formTitle } : cur))
+        } else if (nextDrawer.type === TAB_ASSIGNEES && (items[0]?.assigneeName || items[0]?.fullName)) {
+          setDrawer((cur) => (cur && cur.id === nextDrawer.id ? { ...cur, title: items[0].assigneeName || items[0].fullName } : cur))
+        }
+      }
     } catch (requestError) {
       setError(requestError?.response?.data?.message || 'Không thể tải chi tiết quyền.')
       setDrawerItems([])
@@ -337,21 +407,22 @@ function ChecklistAssignmentPage() {
   }, [drawer])
 
   useEffect(() => {
-    if (!initialFormId || drawer) return
-    const nextDrawer = { type: TAB_FORMS, id: initialFormId, title: `Bảng kiểm #${initialFormId}` }
+    if (initialFormIdHandledRef.current) return
+    if (!initialFormId) return
+    initialFormIdHandledRef.current = true
+
+    const nextDrawer = { type: TAB_FORMS, id: Number(initialFormId), title: 'Bảng kiểm' }
     setDrawer(nextDrawer)
     loadDrawerItems(nextDrawer)
-  }, [drawer, initialFormId, loadDrawerItems])
+  }, [initialFormId, loadDrawerItems])
 
   const closeDrawer = useCallback(() => {
     setDrawer(null)
     setDrawerItems([])
     setSelectedItemIds([])
     setDrawerValidUntil('')
-    const nextParams = new URLSearchParams(searchParams)
-    nextParams.delete('formId')
-    setSearchParams(nextParams, { replace: true })
-  }, [searchParams, setSearchParams])
+    setDeptModalItem(null)
+  }, [])
 
   useEffect(() => {
     if (!drawer) return undefined
@@ -362,24 +433,115 @@ function ChecklistAssignmentPage() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [closeDrawer, drawer])
 
+  const handleOpenDeptModal = async (item) => {
+    const count = item.allowedDepartmentCount ?? (item.allowedDepartments?.length || 0)
+    const isAll = count === 0
+    setDeptScopeSearch('')
+    setDeptModalItem({
+      ...item,
+      isAll,
+      loading: !isAll,
+      departments: isAll ? departments : (item.allowedDepartments || []),
+      selectedDepartmentIds: isAll ? departments.map((d) => String(d.id)) : (item.allowedDepartments || []).map(departmentIdOf).filter(Boolean),
+      error: '',
+    })
+    if (isAll) return
+    try {
+      const response = await adminApi.getFormAssignmentItemAllowedDepartments(item.assignmentItemId)
+      const depts = response.data?.data || []
+      setDeptModalItem((curr) => (curr && curr.assignmentItemId === item.assignmentItemId ? {
+        ...curr,
+        loading: false,
+        departments: depts,
+        selectedDepartmentIds: depts.map(departmentIdOf).filter(Boolean),
+      } : curr))
+    } catch (requestError) {
+      const errorMsg = requestError?.response?.data?.message || 'Không thể tải danh sách khoa/phòng.'
+      setDeptModalItem((curr) => (curr && curr.assignmentItemId === item.assignmentItemId ? {
+        ...curr,
+        loading: false,
+        error: errorMsg,
+      } : curr))
+      showToast(errorMsg, 'error')
+    }
+  }
+
+  const addDeptToModalScope = (departmentId) => {
+    const id = String(departmentId)
+    setDeptModalItem((current) => {
+      if (!current || current.selectedDepartmentIds?.includes(id)) return current
+      return { ...current, selectedDepartmentIds: [...(current.selectedDepartmentIds || []), id], isAll: false }
+    })
+  }
+
+  const removeDeptFromModalScope = (departmentId) => {
+    const id = String(departmentId)
+    setDeptModalItem((current) => {
+      if (!current) return current
+      return {
+        ...current,
+        selectedDepartmentIds: (current.selectedDepartmentIds || []).filter((value) => String(value) !== id),
+        isAll: false,
+      }
+    })
+  }
+
+  const saveDeptModalScope = async () => {
+    if (!deptModalItem?.assignmentItemId) return
+    const departmentIds = (deptModalItem.selectedDepartmentIds || []).map(Number).filter(Number.isFinite)
+    if (departmentIds.length === 0) {
+      const warnMsg = 'Vui lòng chọn ít nhất một khoa/phòng.'
+      setDeptModalItem((current) => current ? { ...current, error: warnMsg } : current)
+      showToast(warnMsg, 'warning')
+      return
+    }
+    setDeptScopeSaving(true)
+    setDeptModalItem((current) => current ? { ...current, error: '' } : current)
+    try {
+      const response = await adminApi.updateFormAssignmentItemAllowedDepartments(deptModalItem.assignmentItemId, { departmentIds })
+      const updatedDepartments = response.data?.data || []
+      const updatedCount = updatedDepartments.length
+      setDrawerItems((current) => current.map((item) => (
+        item.assignmentItemId === deptModalItem.assignmentItemId
+          ? { ...item, allowedDepartmentCount: updatedCount, allowedDepartments: updatedDepartments }
+          : item
+      )))
+      setDeptModalItem((current) => current ? {
+        ...current,
+        isAll: false,
+        departments: updatedDepartments,
+        selectedDepartmentIds: updatedDepartments.map(departmentIdOf).filter(Boolean),
+        error: '',
+      } : current)
+      const successMsg = 'Lưu phạm vi khoa/phòng thành công!'
+      setMessage(successMsg)
+      showToast(successMsg, 'success')
+      setRefreshKey((current) => current + 1)
+    } catch (requestError) {
+      const errorMsg = requestError?.response?.data?.message || 'Lưu phạm vi khoa/phòng thất bại.'
+      setDeptModalItem((current) => current ? {
+        ...current,
+        error: errorMsg,
+      } : current)
+      showToast(errorMsg, 'error')
+    } finally {
+      setDeptScopeSaving(false)
+    }
+  }
+
   const openDrawer = (type, row) => {
+    const id = type === TAB_FORMS ? row.formId : row.assigneeId
     const nextDrawer = {
       type,
-      id: type === TAB_FORMS ? row.formId : row.assigneeId,
+      id,
       title: type === TAB_FORMS
         ? (row.formTitle || row.title || 'Bảng kiểm')
         : (row.fullName || row.assigneeName || 'Người nhận'),
       subtitle: type === TAB_FORMS
-        ? getChecklistDisplayCode(row.formCode || row.code)
+        ? ''
         : row.employeeCode,
     }
     setDrawer(nextDrawer)
-    if (type === TAB_FORMS) {
-      const nextParams = new URLSearchParams(searchParams)
-      nextParams.set('tab', TAB_FORMS)
-      nextParams.set('formId', String(nextDrawer.id))
-      setSearchParams(nextParams, { replace: true })
-    }
     loadDrawerItems(nextDrawer)
   }
 
@@ -415,7 +577,9 @@ function ChecklistAssignmentPage() {
 
   const mutateDrawerItems = async (mode) => {
     if (selectedItemIds.length === 0) {
-      setError('Vui lòng chọn ít nhất một quyền để thao tác.')
+      const warnMsg = 'Vui lòng chọn ít nhất một quyền để thao tác.'
+      setError(warnMsg)
+      showToast(warnMsg, 'warning')
       return
     }
     setDrawerSubmitting(true)
@@ -427,17 +591,23 @@ function ChecklistAssignmentPage() {
           assignmentItemIds: selectedItemIds.map(Number),
           validUntil: toIsoOrNull(drawerValidUntil),
         })
-        setMessage(`Đã cập nhật hạn cho ${selectedItemIds.length} quyền.`)
+        const successMsg = `Đã cập nhật hạn cho ${selectedItemIds.length} quyền thành công.`
+        setMessage(successMsg)
+        showToast(successMsg, 'success')
       } else {
         await adminApi.bulkRevokeFormAssignmentItems({
           assignmentItemIds: selectedItemIds.map(Number),
         })
-        setMessage(`Đã thu hồi ${selectedItemIds.length} quyền.`)
+        const successMsg = `Đã thu hồi ${selectedItemIds.length} quyền thành công.`
+        setMessage(successMsg)
+        showToast(successMsg, 'success')
       }
       setRefreshKey((current) => current + 1)
       await loadDrawerItems()
     } catch (requestError) {
-      setError(requestError?.response?.data?.message || 'Không thể cập nhật quyền đã chọn.')
+      const errorMsg = requestError?.response?.data?.message || (mode === 'revoke' ? 'Thu hồi quyền thất bại.' : 'Không thể cập nhật hạn quyền đã chọn.')
+      setError(errorMsg)
+      showToast(errorMsg, 'error')
     } finally {
       setDrawerSubmitting(false)
     }
@@ -477,7 +647,13 @@ function ChecklistAssignmentPage() {
   }, [wizardOpen])
 
   useEffect(() => {
-    if (!wizardOpen || wizardStep !== 3 || selectedFormIds.length === 0 || selectedAssigneeIds.length === 0) {
+    if (
+      !wizardOpen
+      || wizardStep !== 4
+      || selectedFormIds.length === 0
+      || selectedAssigneeIds.length === 0
+      || selectedDepartmentIds.length === 0
+    ) {
       setPreview(null)
       return
     }
@@ -495,6 +671,7 @@ function ChecklistAssignmentPage() {
         const response = await adminApi.previewBulkFormAssignment({
           formIds: selectedFormIds.map(Number),
           assigneeIds: selectedAssigneeIds.map(Number),
+          departmentIds: selectedDepartmentIds.map(Number),
           validUntil: toIsoOrNull(validUntil),
         })
         if (!cancelled) {
@@ -511,7 +688,7 @@ function ChecklistAssignmentPage() {
     return () => {
       cancelled = true
     }
-  }, [selectedAssigneeIds, selectedFormIds, validUntil, wizardOpen, wizardStep])
+  }, [selectedAssigneeIds, selectedDepartmentIds, selectedFormIds, validUntil, wizardOpen, wizardStep])
 
   const changeWizardForms = (nextValues) => {
     if (nextValues.length > MAX_FORMS) {
@@ -525,14 +702,47 @@ function ChecklistAssignmentPage() {
   }
 
   const changeWizardAssignees = (nextValues) => {
-    if (nextValues.length > MAX_ASSIGNEES) {
-      setWizardError(`Chỉ được chọn tối đa ${MAX_ASSIGNEES} người nhận.`)
-      return
-    }
     setWizardError('')
     setSelectedAssigneeIds(nextValues)
     const optionMap = new Map([...selectedAssigneeOptions, ...assigneeCandidateOptions].map((option) => [String(option.value), option]))
     setSelectedAssigneeOptions(nextValues.map((value) => optionMap.get(String(value)) || { value, label: value }))
+  }
+
+  const changeWizardDepartments = (nextValues) => {
+    setWizardError('')
+    setSelectedDepartmentIds(nextValues)
+    const optionMap = new Map([...selectedDepartmentOptions, ...wizardDepartmentOptions].map((option) => [String(option.value), option]))
+    setSelectedDepartmentOptions(nextValues.map((value) => optionMap.get(String(value)) || { value, label: value }))
+  }
+
+  const selectAllManagers = async () => {
+    setManagerCandidateLoading(true)
+    setWizardError('')
+    try {
+      const response = await adminApi.getFormAssignmentManagerCandidates()
+      const managers = Array.isArray(response?.data?.data) ? response.data.data : []
+      const options = managers.map(buildAssigneeOption)
+      const selectedMap = new Map(selectedAssigneeOptions.map((option) => [String(option.value), option]))
+      options.forEach((option) => selectedMap.set(String(option.value), option))
+      const mergedOptions = Array.from(selectedMap.values())
+      setSelectedAssigneeOptions(mergedOptions)
+      setSelectedAssigneeIds(mergedOptions.map((option) => String(option.value)))
+      const candidateMap = new Map([...assigneeCandidateOptions, ...options].map((option) => [String(option.value), option]))
+      setAssigneeCandidateOptions(Array.from(candidateMap.values()))
+    } catch (requestError) {
+      const errorMsg = extractApiErrorMessage(requestError, 'Không thể chọn tất cả quản lý.')
+      setWizardError(errorMsg)
+      showToast(errorMsg, 'error')
+    } finally {
+      setManagerCandidateLoading(false)
+    }
+  }
+
+  const selectAllDepartments = () => {
+    const options = wizardDepartmentOptions
+    setSelectedDepartmentOptions(options)
+    setSelectedDepartmentIds(options.map((option) => String(option.value)))
+    setWizardError('')
   }
 
   const changeWizardValidUntil = (nextValue) => {
@@ -545,8 +755,10 @@ function ChecklistAssignmentPage() {
     setWizardStep(1)
     setSelectedFormIds([])
     setSelectedAssigneeIds([])
+    setSelectedDepartmentIds([])
     setSelectedFormOptions([])
     setSelectedAssigneeOptions([])
+    setSelectedDepartmentOptions([])
     setValidUntil('')
     setPreview(null)
     setWizardError('')
@@ -558,6 +770,10 @@ function ChecklistAssignmentPage() {
       setWizardError(validityDateError)
       return
     }
+    if (selectedDepartmentIds.length === 0) {
+      setWizardError('Vui lòng chọn ít nhất một khoa/phòng được phép chấm.')
+      return
+    }
     setWizardSubmitting(true)
     setWizardError('')
     setMessage('')
@@ -565,14 +781,19 @@ function ChecklistAssignmentPage() {
       const response = await adminApi.bulkAssignForms({
         formIds: selectedFormIds.map(Number),
         assigneeIds: selectedAssigneeIds.map(Number),
+        departmentIds: selectedDepartmentIds.map(Number),
         validUntil: toIsoOrNull(validUntil),
       })
       const result = response.data?.data || {}
-      setMessage(`Đã xử lý ${result.totalPairs || 0} cặp quyền. Tạo mới ${result.newCount || 0}, cập nhật ${result.updatedCount || 0}, khôi phục ${result.restoredCount || 0}.`)
+      const successMsg = `Đã giao bảng kiểm thành công! (Tạo mới ${result.createdCount || result.newCount || 0}, cập nhật ${result.updatedCount || 0}, khôi phục ${result.restoredCount || 0})`
+      setMessage(successMsg)
+      showToast('Giao bảng kiểm thành công!', 'success')
       closeWizard()
       setRefreshKey((current) => current + 1)
     } catch (requestError) {
-      setWizardError(extractApiErrorMessage(requestError, 'Không thể giao bảng kiểm. Vui lòng kiểm tra lại lựa chọn.'))
+      const errorMsg = extractApiErrorMessage(requestError, 'Không thể giao bảng kiểm. Vui lòng kiểm tra lại lựa chọn.')
+      setWizardError(errorMsg)
+      showToast(errorMsg, 'error')
     } finally {
       setWizardSubmitting(false)
     }
@@ -793,7 +1014,7 @@ function ChecklistAssignmentPage() {
               <div>
                 <span>{drawer.type === TAB_FORMS ? 'Chi tiết theo bảng kiểm' : 'Chi tiết theo người nhận'}</span>
                 <h2>{drawer.title}</h2>
-                {drawer.subtitle && <p>{drawer.subtitle}</p>}
+                {drawer.type === TAB_ASSIGNEES && drawer.subtitle && <p>{drawer.subtitle}</p>}
               </div>
               <button type="button" onClick={closeDrawer} aria-label="Đóng chi tiết"><CloseOutlined /></button>
             </header>
@@ -829,8 +1050,42 @@ function ChecklistAssignmentPage() {
                         <small>
                           {drawer.type === TAB_FORMS
                             ? `${item.employeeCode || 'Chưa có mã'} · ${item.departmentName || 'Chưa có khoa/phòng'}`
-                            : `${getChecklistDisplayCode(item.formCode)} · v${item.versionNumber || '-'}`}
+                            : `Phiên bản v${item.versionNumber || '-'}`}
                         </small>
+                        <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                          <small style={{ color: '#64748b' }}>Phạm vi:</small>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.preventDefault()
+                              event.stopPropagation()
+                              handleOpenDeptModal(item)
+                            }}
+                            className="cap-scope-pill-btn"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4,
+                              padding: '2px 8px',
+                              borderRadius: 6,
+                              border: '1px solid #087f6a',
+                              background: '#f0fdf9',
+                              color: '#087f6a',
+                              fontSize: 11,
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              lineHeight: 1.4,
+                              transition: 'all 0.15s ease',
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = '#ccfbf1'; e.currentTarget.style.borderColor = '#0f766e' }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = '#f0fdf9'; e.currentTarget.style.borderColor = '#087f6a' }}
+                            title="Nhấn để xem danh sách khoa/phòng"
+                          >
+                            {(item.allowedDepartmentCount === 0 || (!item.allowedDepartmentCount && (!item.allowedDepartments || item.allowedDepartments.length === 0)))
+                              ? 'Tất cả khoa/phòng'
+                              : `${item.allowedDepartmentCount || item.allowedDepartments.length} khoa/phòng`}
+                          </button>
+                        </div>
                       </span>
                       <em>Hạn: {formatDate(item.validUntil)}</em>
                     </label>
@@ -856,13 +1111,14 @@ function ChecklistAssignmentPage() {
           <section className="cap-assignment-wizard" role="dialog" aria-modal="true" aria-labelledby="cap-assignment-wizard-title">
             <header>
               <div>
-                <span>Bước {wizardStep}/3</span>
+                <span>Bước {wizardStep}/{WIZARD_TOTAL_STEPS}</span>
                 <h2 id="cap-assignment-wizard-title">Giao bảng kiểm</h2>
               </div>
               <button type="button" onClick={closeWizard} aria-label="Đóng giao bảng kiểm"><CloseOutlined /></button>
             </header>
             <div className="cap-assignment-wizard__steps" aria-hidden="true">
-              {[1, 2, 3].map((step) => <span key={step} className={step <= wizardStep ? 'is-active' : ''} />)}
+              {Array.from({ length: WIZARD_TOTAL_STEPS }, (_, index) => index + 1)
+                .map((step) => <span key={step} className={step <= wizardStep ? 'is-active' : ''} />)}
             </div>
             <div className="cap-assignment-wizard__body">
               {wizardError && (
@@ -904,7 +1160,12 @@ function ChecklistAssignmentPage() {
               )}
               {wizardStep === 2 && (
                 <>
-                  <h3>Chọn người nhận active</h3>
+                  <div className="cap-assignment-wizard__heading-row">
+                    <h3>Chọn người chấm</h3>
+                    <button type="button" onClick={selectAllManagers} disabled={managerCandidateLoading}>
+                      {managerCandidateLoading ? <LoadingOutlined spin /> : <UserSwitchOutlined />} Chọn tất cả quản lý
+                    </button>
+                  </div>
                   <div className="cap-assignment-picker-grid">
                     <div className="cap-assignment-picker-main">
                       <SearchableSelect
@@ -915,7 +1176,7 @@ function ChecklistAssignmentPage() {
                         loading={assigneeCandidateLoading}
                         onSearch={searchAssigneeCandidates}
                         onChange={changeWizardAssignees}
-                        placeholder="Tìm và chọn tối đa 100 người nhận..."
+                        placeholder="Tìm và chọn người nhận..."
                         searchPlaceholder="Nhập tên hoặc mã nhân viên..."
                         showSelectedChips={false}
                         keepSearchOnSelect
@@ -924,7 +1185,7 @@ function ChecklistAssignmentPage() {
                     </div>
                     <WizardSelectedList
                       title="Người nhận đã chọn"
-                      count={`${selectedAssigneeIds.length}/${MAX_ASSIGNEES}`}
+                      count={String(selectedAssigneeIds.length)}
                       options={selectedAssigneeOptions}
                       emptyText="Chưa chọn người nhận nào."
                       onRemove={(value) => changeWizardAssignees(selectedAssigneeIds.filter((selectedValue) => selectedValue !== String(value)))}
@@ -933,6 +1194,42 @@ function ChecklistAssignmentPage() {
                 </>
               )}
               {wizardStep === 3 && (
+                <>
+                  <div className="cap-assignment-wizard__heading-row">
+                    <h3>Chọn khoa/phòng được chấm</h3>
+                    <button type="button" onClick={selectAllDepartments} disabled={wizardDepartmentOptions.length === 0}>
+                      <ApartmentOutlined /> Chọn tất cả khoa/phòng
+                    </button>
+                  </div>
+                  <div className="cap-assignment-picker-grid">
+                    <div className="cap-assignment-picker-main">
+                      <SearchableSelect
+                        multiple
+                        value={selectedDepartmentIds}
+                        selectedOptions={selectedDepartmentOptions}
+                        options={wizardDepartmentOptions}
+                        onChange={changeWizardDepartments}
+                        placeholder="Tìm và chọn khoa/phòng..."
+                        searchPlaceholder="Nhập tên khoa/phòng..."
+                        showDescriptions={false}
+                        showSelectedChips={false}
+                        keepSearchOnSelect
+                      />
+                      <p className="cap-assignment-wizard__limit">
+                        Người được giao chỉ được chấm nhân viên thuộc các khoa/phòng đã chọn.
+                      </p>
+                    </div>
+                    <WizardSelectedList
+                      title="Khoa/phòng đã chọn"
+                      count={String(selectedDepartmentIds.length)}
+                      options={selectedDepartmentOptions}
+                      emptyText="Chưa chọn khoa/phòng nào."
+                      onRemove={(value) => changeWizardDepartments(selectedDepartmentIds.filter((selectedValue) => selectedValue !== String(value)))}
+                    />
+                  </div>
+                </>
+              )}
+              {wizardStep === 4 && (
                 <>
                   <h3>Thiết lập hạn và xác nhận</h3>
                   <label className="cap-assignment-date-field">
@@ -966,11 +1263,13 @@ function ChecklistAssignmentPage() {
               >
                 {wizardStep === 1 ? 'Hủy' : 'Quay lại'}
               </button>
-              {wizardStep < 3 ? (
+              {wizardStep < WIZARD_TOTAL_STEPS ? (
                 <button
                   type="button"
                   className="cap-assignment-primary"
-                  disabled={(wizardStep === 1 && selectedFormIds.length === 0) || (wizardStep === 2 && selectedAssigneeIds.length === 0)}
+                  disabled={(wizardStep === 1 && selectedFormIds.length === 0)
+                    || (wizardStep === 2 && selectedAssigneeIds.length === 0)
+                    || (wizardStep === 3 && selectedDepartmentIds.length === 0)}
                   onClick={() => {
                     setWizardError('')
                     setWizardStep((current) => current + 1)
@@ -982,7 +1281,7 @@ function ChecklistAssignmentPage() {
                 <button
                   type="button"
                   className="cap-assignment-primary"
-                  disabled={wizardSubmitting || previewLoading || selectedFormIds.length === 0 || selectedAssigneeIds.length === 0}
+                  disabled={wizardSubmitting || previewLoading || selectedFormIds.length === 0 || selectedAssigneeIds.length === 0 || selectedDepartmentIds.length === 0}
                   onClick={submitWizard}
                 >
                   {wizardSubmitting ? <LoadingOutlined spin /> : <CheckCircleOutlined />} Xác nhận giao
@@ -991,6 +1290,104 @@ function ChecklistAssignmentPage() {
             </footer>
           </section>
         </div>
+      )}
+
+      {deptModalItem && (
+        <Modal
+          title={`Khoa/phòng áp dụng: ${drawer?.type === TAB_FORMS ? (deptModalItem.assigneeName || deptModalItem.fullName) : deptModalItem.formTitle}`}
+          onClose={() => { if (!deptScopeSaving) setDeptModalItem(null) }}
+          size="md"
+          footer={
+            <div className="cap-scope-modal__footer">
+              <button
+                type="button"
+                className="cap-scope-modal__secondary"
+                disabled={deptScopeSaving}
+                onClick={() => setDeptModalItem(null)}
+              >
+                Đóng
+              </button>
+              <button
+                type="button"
+                className="cap-scope-modal__primary"
+                disabled={deptScopeSaving || deptModalItem.loading || (deptModalItem.selectedDepartmentIds || []).length === 0}
+                onClick={saveDeptModalScope}
+              >
+                {deptScopeSaving ? <LoadingOutlined spin /> : <SaveOutlined />} Lưu phạm vi
+              </button>
+            </div>
+          }
+        >
+          {deptModalItem.loading ? (
+            <div className="cap-scope-modal__loading">
+              <LoadingOutlined spin />
+              <div>Đang tải danh sách khoa/phòng...</div>
+            </div>
+          ) : (
+            <div className="cap-scope-modal">
+              {deptModalItem.error && (
+                <div className="cap-scope-modal__error" role="alert">{deptModalItem.error}</div>
+              )}
+              <label className="cap-scope-modal__search">
+                <SearchOutlined />
+                <input
+                  type="search"
+                  value={deptScopeSearch}
+                  onChange={(event) => setDeptScopeSearch(event.target.value)}
+                  placeholder="Tìm khoa/phòng theo tên hoặc mã..."
+                />
+              </label>
+              <div className="cap-scope-modal__summary">
+                <span>Đang áp dụng <strong>{deptModalSelectedDepartments.length}</strong> khoa/phòng</span>
+                {deptModalItem.isAll && <em>Ban đầu là toàn viện, lưu lại để cố định phạm vi mới.</em>}
+              </div>
+              <section className="cap-scope-modal__section">
+                <h4>Khoa/phòng đang áp dụng</h4>
+                <div className="cap-scope-modal__grid">
+                  {visibleSelectedDepartments.length === 0 ? (
+                    <p className="cap-scope-modal__empty">
+                      {deptModalSelectedDepartments.length === 0 ? 'Chưa chọn khoa/phòng nào.' : 'Không có khoa/phòng phù hợp từ khóa.'}
+                    </p>
+                  ) : visibleSelectedDepartments.map((dept) => (
+                    <div className="cap-scope-modal__dept is-selected" key={`selected-${dept.departmentId}`}>
+                      <ApartmentOutlined />
+                      <span>{departmentNameOf(dept)}</span>
+                      <button
+                        type="button"
+                        aria-label={`Xóa ${departmentNameOf(dept)} khỏi phạm vi`}
+                        onClick={() => removeDeptFromModalScope(dept.departmentId)}
+                      >
+                        <CloseOutlined />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+              <section className="cap-scope-modal__section">
+                <h4>Thêm khoa/phòng</h4>
+                <div className="cap-scope-modal__grid">
+                  {visibleAvailableDepartments.length === 0 ? (
+                    <p className="cap-scope-modal__empty">
+                      {deptModalAvailableDepartments.length === 0 ? 'Tất cả khoa/phòng đã được thêm.' : 'Không có khoa/phòng phù hợp từ khóa.'}
+                    </p>
+                  ) : visibleAvailableDepartments.map((dept) => (
+                    <div className="cap-scope-modal__dept" key={`available-${dept.departmentId}`}>
+                      <ApartmentOutlined />
+                      <span>{departmentNameOf(dept)}</span>
+                      <button
+                        type="button"
+                        aria-label={`Thêm ${departmentNameOf(dept)} vào phạm vi`}
+                        onClick={() => addDeptToModalScope(dept.departmentId)}
+                      >
+                        <PlusOutlined />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </div>
+          )}
+        </Modal>
       )}
     </AppShell>
   )

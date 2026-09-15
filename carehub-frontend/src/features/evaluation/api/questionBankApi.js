@@ -20,6 +20,12 @@ export const questionBankApi = {
     })
   },
 
+  checkDuplicates(stem, excludeQuestionId = null) {
+    return httpClient.post('/questions/duplicate-check', { stem, excludeQuestionId }, {
+      headers: authHeaders(),
+    })
+  },
+
   createQuestion(payload) {
     return httpClient.post('/questions', payload, {
       headers: authHeaders(),
@@ -79,8 +85,8 @@ export const questionBankApi = {
     })
   },
 
-  commitImport(rows, importJobId = null, duplicateHandlingMode = 'BLOCK') {
-    return httpClient.post('/questions/import/commit', { importJobId, duplicateHandlingMode, rows }, {
+  commitImport(rows, importJobId = null) {
+    return httpClient.post('/questions/import/commit', { importJobId, rows }, {
       headers: authHeaders(),
     })
   },

@@ -4,9 +4,11 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CognitiveLevel;
 
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.EnumMap;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Bù câu hỏi giữa các mức nhận thức trong cùng một lĩnh vực chuyên môn khi một mức bị thiếu nguồn.
@@ -39,41 +41,112 @@ public final class CognitiveBackfillAllocator {
                 .toList();
     }
 
-    public record CellDemand(CognitiveLevel level, int required, int rawAvailable) {
+    public record CellDemand(CognitiveLevel level, int required) {
     }
 
-    public record CellOutcome(CognitiveLevel level, int required, int rawAvailable, int shortage, int backfilled) {
+    public record FamilyPick(long familyId, CognitiveLevel sourceLevel) {
+    }
+
+    public record CellOutcome(
+            CognitiveLevel level,
+            int required,
+            int rawAvailable,
+            int shortage,
+            int backfilled,
+            List<FamilyPick> picks
+    ) {
     }
 
     /**
      * @param demands phải được sắp theo thứ tự nhận thức (FOUNDATION trước) để khớp với thứ tự
      *                chọn câu hỏi thực tế trong {@code ExamPaperService}.
      */
-    public static List<CellOutcome> allocate(List<CellDemand> demands, boolean backfillEnabled) {
-        Map<CognitiveLevel, Integer> remaining = new EnumMap<>(CognitiveLevel.class);
+    public static List<CellOutcome> allocate(
+            List<CellDemand> demands,
+            Map<CognitiveLevel, Set<Long>> familiesByLevel,
+            boolean backfillEnabled
+    ) {
+        List<CognitiveLevel> slots = new ArrayList<>();
         for (CellDemand demand : demands) {
-            remaining.merge(demand.level(), demand.rawAvailable(), Integer::sum);
+            for (int index = 0; index < demand.required(); index++) slots.add(demand.level());
         }
-        List<CellOutcome> results = new ArrayList<>();
-        for (CellDemand demand : demands) {
-            int own = Math.min(demand.required(), remaining.getOrDefault(demand.level(), 0));
-            remaining.merge(demand.level(), -own, Integer::sum);
-            int shortfall = demand.required() - own;
-            int backfilled = 0;
-            if (shortfall > 0 && backfillEnabled) {
-                for (CognitiveLevel donor : nearestLevels(demand.level())) {
-                    if (shortfall <= 0) break;
-                    int donorRemaining = remaining.getOrDefault(donor, 0);
-                    int take = Math.min(shortfall, donorRemaining);
-                    if (take > 0) {
-                        remaining.merge(donor, -take, Integer::sum);
-                        backfilled += take;
-                        shortfall -= take;
-                    }
+
+        Long[] slotFamilies = new Long[slots.size()];
+        Map<Long, Integer> familyToSlot = new HashMap<>();
+        for (int slot = 0; slot < slots.size(); slot++) {
+            matchOwnLevel(slot, slots, familiesByLevel, familyToSlot, slotFamilies, new HashSet<>());
+        }
+
+        Set<Long> usedFamilies = new HashSet<>(familyToSlot.keySet());
+        FamilyPick[] picks = new FamilyPick[slots.size()];
+        for (int slot = 0; slot < slots.size(); slot++) {
+            if (slotFamilies[slot] != null) {
+                picks[slot] = new FamilyPick(slotFamilies[slot], slots.get(slot));
+            }
+        }
+        if (backfillEnabled) {
+            for (int slot = 0; slot < slots.size(); slot++) {
+                if (picks[slot] != null) continue;
+                for (CognitiveLevel donor : nearestLevels(slots.get(slot))) {
+                    Long familyId = orderedFamilies(familiesByLevel, donor).stream()
+                            .filter(candidate -> !usedFamilies.contains(candidate))
+                            .findFirst()
+                            .orElse(null);
+                    if (familyId == null) continue;
+                    picks[slot] = new FamilyPick(familyId, donor);
+                    usedFamilies.add(familyId);
+                    break;
                 }
             }
-            results.add(new CellOutcome(demand.level(), demand.required(), demand.rawAvailable(), shortfall, backfilled));
+        }
+
+        List<CellOutcome> results = new ArrayList<>();
+        int slot = 0;
+        for (CellDemand demand : demands) {
+            List<FamilyPick> cellPicks = new ArrayList<>();
+            for (int index = 0; index < demand.required(); index++, slot++) {
+                if (picks[slot] != null) cellPicks.add(picks[slot]);
+            }
+            int backfilled = (int) cellPicks.stream()
+                    .filter(pick -> pick.sourceLevel() != demand.level())
+                    .count();
+            results.add(new CellOutcome(
+                    demand.level(),
+                    demand.required(),
+                    orderedFamilies(familiesByLevel, demand.level()).size(),
+                    demand.required() - cellPicks.size(),
+                    backfilled,
+                    List.copyOf(cellPicks)
+            ));
         }
         return results;
+    }
+
+    private static boolean matchOwnLevel(
+            int slot,
+            List<CognitiveLevel> slots,
+            Map<CognitiveLevel, Set<Long>> familiesByLevel,
+            Map<Long, Integer> familyToSlot,
+            Long[] slotFamilies,
+            Set<Long> visited
+    ) {
+        for (Long familyId : orderedFamilies(familiesByLevel, slots.get(slot))) {
+            if (!visited.add(familyId)) continue;
+            Integer previousSlot = familyToSlot.get(familyId);
+            if (previousSlot == null
+                    || matchOwnLevel(previousSlot, slots, familiesByLevel, familyToSlot, slotFamilies, visited)) {
+                familyToSlot.put(familyId, slot);
+                slotFamilies[slot] = familyId;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static List<Long> orderedFamilies(
+            Map<CognitiveLevel, Set<Long>> familiesByLevel,
+            CognitiveLevel level
+    ) {
+        return List.copyOf(familiesByLevel.getOrDefault(level, Set.of()));
     }
 }

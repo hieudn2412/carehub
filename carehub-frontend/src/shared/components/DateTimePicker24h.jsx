@@ -1,5 +1,4 @@
 import { useMemo, useState, useEffect } from 'react'
-import KeyboardDatePicker from './KeyboardDatePicker.jsx'
 import './DateTimePicker24h.css'
 
 export default function DateTimePicker24h({
@@ -86,11 +85,13 @@ export default function DateTimePicker24h({
 
   return (
     <div className={`dt24-picker ${disabled ? 'dt24-picker--disabled' : ''} ${className}`}>
-      <KeyboardDatePicker
+      {/* input type=date: go tay duoc va bam vao bieu tuong lich chon duoc, khong can thu vien */}
+      <input
         id={id}
+        type="date"
         className="dt24-input dt24-input--date"
         value={date}
-        onChange={handleDateChange}
+        onChange={(e) => handleDateChange(e.target.value)}
         disabled={disabled}
       />
       <div className="dt24-time-group">

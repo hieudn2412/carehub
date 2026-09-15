@@ -5,10 +5,17 @@ public record LlmUsage(
         int promptTokens,
         int completionTokens,
         int totalTokens,
-        long latencyMs
+        long latencyMs,
+        int promptCacheHitTokens,
+        int promptCacheMissTokens,
+        double estimatedCostUsd
 ) {
+    public LlmUsage(int callCount, int promptTokens, int completionTokens, int totalTokens, long latencyMs) {
+        this(callCount, promptTokens, completionTokens, totalTokens, latencyMs, 0, promptTokens, 0.0);
+    }
+
     public static LlmUsage empty() {
-        return new LlmUsage(0, 0, 0, 0, 0);
+        return new LlmUsage(0, 0, 0, 0, 0, 0, 0, 0.0);
     }
 
     public LlmUsage plus(LlmUsage other) {
@@ -17,7 +24,10 @@ public record LlmUsage(
                 promptTokens + other.promptTokens(),
                 completionTokens + other.completionTokens(),
                 totalTokens + other.totalTokens(),
-                latencyMs + other.latencyMs()
+                latencyMs + other.latencyMs(),
+                promptCacheHitTokens + other.promptCacheHitTokens(),
+                promptCacheMissTokens + other.promptCacheMissTokens(),
+                estimatedCostUsd + other.estimatedCostUsd()
         );
     }
 }

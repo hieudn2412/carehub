@@ -24,10 +24,12 @@ public interface FormRepository extends JpaRepository<Form, Long> {
     @EntityGraph(attributePaths = {"ownerDepartment", "currentPublishedVersion"})
     @Query("""
             select f from Form f
-            where f.deleted = false
-              and (lower(f.code) like lower(concat('%', :keyword, '%'))
+            where ((:status = vn.vietduc.carehubbackend.form.entity.enums.FormStatus.RETIRED and (f.deleted = true or f.status = vn.vietduc.carehubbackend.form.entity.enums.FormStatus.RETIRED))
+                   or (:status is null and f.deleted = false)
+                   or (:status is not null and :status != vn.vietduc.carehubbackend.form.entity.enums.FormStatus.RETIRED and f.deleted = false and f.status = :status))
+              and (:keyword is null
+                   or lower(f.code) like lower(concat('%', :keyword, '%'))
                    or lower(f.title) like lower(concat('%', :keyword, '%')))
-              and (:status is null or f.status = :status)
               and (:subjectType is null or f.subjectType = :subjectType)
               and (:ownerDepartmentId is null or f.ownerDepartment.id = :ownerDepartmentId)
             """)

@@ -35,7 +35,22 @@
   color: #0f172a;
   padding: 2px 4px;
   font-family: inherit;
+  min-width: 132px;
+}
+
+.dt24-input--date::-webkit-calendar-picker-indicator {
   cursor: pointer;
+  opacity: 0.55;
+  padding: 0;
+}
+
+.dt24-input--date::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+.dt24-input--date:disabled {
+  color: #94a3b8;
+  cursor: not-allowed;
 }
 
 .dt24-time-group {

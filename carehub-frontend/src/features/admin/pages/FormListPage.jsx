@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
+  CaretDownOutlined,
+  CaretUpOutlined,
   DeleteOutlined,
   DownOutlined,
   ExclamationCircleOutlined,
@@ -17,6 +19,7 @@ import { adminApi } from '../api/adminApi'
 import { resolveChecklistSearchKeyword } from '../utils/formCode.js'
 import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
 import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
+import { useToast } from '../../../shared/context/ToastContext.jsx'
 import '../styles/FormListPage.css'
 
 const PAGE_SIZE = 10
@@ -28,62 +31,11 @@ const STATUS_LABELS = {
 }
 const RETIRED_STATUS = 'RETIRED'
 const RETIRED_FORMS_CACHE_KEY = 'carehub.admin.retiredForms'
-const ASSIGNMENT_PAGE_SIZE = 100
 
 function normalizeReferenceList(data) {
   if (Array.isArray(data)) return data
   if (Array.isArray(data?.content)) return data.content
   return []
-}
-
-function getAssignmentPage(response) {
-  const data = response?.data?.data || {}
-  return {
-    content: Array.isArray(data.content) ? data.content : [],
-    totalPages: Math.max(1, Number(data.totalPages) || 1),
-  }
-}
-
-async function fetchAllActiveFormAssignments(formId) {
-  const firstResponse = await adminApi.getFormAssignmentsByForm(formId, {
-    page: 0,
-    size: ASSIGNMENT_PAGE_SIZE,
-    status: 'ACTIVE',
-  })
-  const firstPage = getAssignmentPage(firstResponse)
-  if (firstPage.totalPages === 1) return firstPage.content
-
-  const remainingResponses = await Promise.all(
-    Array.from({ length: firstPage.totalPages - 1 }, (_, index) => (
-      adminApi.getFormAssignmentsByForm(formId, {
-        page: index + 1,
-        size: ASSIGNMENT_PAGE_SIZE,
-        status: 'ACTIVE',
-      })
-    )),
-  )
-
-  return [
-    ...firstPage.content,
-    ...remainingResponses.flatMap((response) => getAssignmentPage(response).content),
-  ]
-}
-
-function countLatestVersionAssignees(assignments, form) {
-  const versionId = form.currentPublishedVersion?.id
-  if (!versionId) return 0
-
-  const assigneeIds = assignments
-    .filter((assignment) => (
-      String(assignment.formVersionId) === String(versionId)
-      && assignment.effectiveStatus === 'ACTIVE'
-      && assignment.itemStatus === 'ACTIVE'
-    ))
-    .map((assignment) => assignment.assignee?.id || assignment.manager?.id)
-    .filter(Boolean)
-    .map(String)
-
-  return new Set(assigneeIds).size
 }
 
 function formatChecklistDate(value) {
@@ -149,6 +101,12 @@ function rememberRetiredForm(form) {
   return retiredForm
 }
 
+function forgetRetiredForm(form) {
+  const existingForms = readRetiredFormsCache()
+  const nextForms = existingForms.filter((item) => item.id !== form.id)
+  writeRetiredFormsCache(nextForms)
+}
+
 function matchesRetiredFilters(form, { departmentId, keyword }) {
   if (
     departmentId !== 'all'
@@ -206,12 +164,16 @@ function getVisiblePages(currentPage, totalPages) {
 
 function FormListPage() {
   const navigate = useNavigate()
+  const { showToast } = useToast()
 
   // Confirm Modal state
   const [confirmModal, setConfirmModal] = useState({
     isOpen: false,
-    form: null
+    form: null,
+    action: 'retire',
   })
+  const [restoringFormId, setRestoringFormId] = useState(null)
+  const [responseSort, setResponseSort] = useState(null)
   const [forms, setForms] = useState([])
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
@@ -226,12 +188,12 @@ function FormListPage() {
   const [departmentId, setDepartmentId] = useState('all')
   const [appliedFilters, setAppliedFilters] = useState({ keyword: '', status: 'all', departmentId: 'all' })
   const [departments, setDepartments] = useState([])
-  const [formStats, setFormStats] = useState({})
   const [refreshKey, setRefreshKey] = useState(0)
   const [importMenuOpen, setImportMenuOpen] = useState(false)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
 
   useEffect(() => {
+    if (!isFilterOpen || departments.length > 0) return undefined
     let active = true
 
     adminApi.getDepartments()
@@ -245,21 +207,7 @@ function FormListPage() {
     return () => {
       active = false
     }
-  }, [])
-
-  useEffect(() => {
-    const nextKeyword = resolveChecklistSearchKeyword(keyword.trim())
-    if (nextKeyword === appliedFilters.keyword) return undefined
-    const timer = window.setTimeout(() => {
-      setErrorMessage('')
-      setLoading(true)
-      setPage(1)
-      setAppliedFilters((current) => (
-        current.keyword === nextKeyword ? current : { ...current, keyword: nextKeyword }
-      ))
-    }, 300)
-    return () => window.clearTimeout(timer)
-  }, [appliedFilters.keyword, keyword])
+  }, [departments.length, isFilterOpen])
 
   useEffect(() => {
     let ignoreResponse = false
@@ -302,7 +250,6 @@ function FormListPage() {
         }
 
         setForms(nextForms)
-        setFormStats({})
         setTotalElements(appliedFilters.status === RETIRED_STATUS
           ? Math.max(serverTotalElements, nextForms.length)
           : serverTotalElements)
@@ -310,37 +257,6 @@ function FormListPage() {
           ? Math.max(nextTotalPages, 1)
           : nextTotalPages)
         setLoading(false)
-
-        const activeForms = nextForms.filter((form) => getEffectiveStatus(form) !== RETIRED_STATUS)
-        const [performanceResult, ...assignmentResults] = await Promise.allSettled([
-          adminApi.getDashboardFormPerformance({ page: 0, size: 100 }),
-          ...activeForms.map((form) => fetchAllActiveFormAssignments(form.id)),
-        ])
-
-        if (ignoreResponse) return
-
-        const nextStats = Object.fromEntries(nextForms.map((form) => [form.id, {
-          responseCount: 0,
-        }]))
-        if (performanceResult.status === 'fulfilled') {
-          const performanceItems = performanceResult.value.data?.data?.content || []
-          performanceItems.forEach((item) => {
-            nextStats[item.formId] = {
-              ...nextStats[item.formId],
-              responseCount: Number(item.submittedCount || item.responseCount || 0),
-            }
-          })
-        }
-
-        assignmentResults.forEach((result, index) => {
-          if (result.status !== 'fulfilled') return
-          const form = activeForms[index]
-          nextStats[form.id] = {
-            ...nextStats[form.id],
-            activeAssignmentCount: countLatestVersionAssignees(result.value, form),
-          }
-        })
-        setFormStats(nextStats)
       } catch (error) {
         if (ignoreResponse) {
           return
@@ -363,6 +279,27 @@ function FormListPage() {
       ignoreResponse = true
     }
   }, [appliedFilters, page, refreshKey])
+
+  const toggleResponseSort = () => {
+    setResponseSort((current) => {
+      if (current === 'desc') return 'asc'
+      if (current === 'asc') return null
+      return 'desc'
+    })
+  }
+
+  const displayForms = useMemo(() => {
+    if (!responseSort) return forms
+    return [...forms].sort((a, b) => {
+      const countA = Number(a.responseCount ?? a.submissionCount ?? 0)
+      const countB = Number(b.responseCount ?? b.submissionCount ?? 0)
+      if (responseSort === 'asc') {
+        return countA - countB
+      } else {
+        return countB - countA
+      }
+    })
+  }, [forms, responseSort])
 
   const visiblePages = useMemo(
     () => getVisiblePages(page, totalPages),
@@ -428,12 +365,20 @@ function FormListPage() {
   const handleRetire = async (form) => {
     setConfirmModal({
       isOpen: true,
-      form
+      form,
+      action: 'retire',
+    })
+  }
+
+  const handleRestore = async (form) => {
+    setConfirmModal({
+      isOpen: true,
+      form,
+      action: 'restore',
     })
   }
 
   const executeRetire = async (form) => {
-
     try {
       setDeletingFormId(form.id)
       setErrorMessage('')
@@ -441,16 +386,40 @@ function FormListPage() {
       setShowRetiredShortcut(false)
       await adminApi.deleteForm(form.id)
       rememberRetiredForm(form)
-      setSuccessMessage(`Đã ngừng hoạt động checklist "${form.title}" và chuyển sang danh sách đã ngừng.`)
+      const successMsg = `Đã ngừng hoạt động bảng kiểm "${form.title}" thành công!`
+      setSuccessMessage(successMsg)
+      showToast(successMsg, 'success')
       setLoading(true)
       setStatus(RETIRED_STATUS)
       setAppliedFilters((current) => ({ ...current, status: RETIRED_STATUS }))
       setPage(1)
       setRefreshKey((current) => current + 1)
     } catch (error) {
-      setErrorMessage(getChecklistErrorMessage(error))
+      const errorMsg = error?.response?.data?.message || getChecklistErrorMessage(error)
+      setErrorMessage(errorMsg)
+      showToast(errorMsg, 'error')
     } finally {
       setDeletingFormId(null)
+    }
+  }
+
+  const executeRestore = async (form) => {
+    try {
+      setRestoringFormId(form.id)
+      setErrorMessage('')
+      setSuccessMessage('')
+      await adminApi.restoreForm(form.id)
+      forgetRetiredForm(form)
+      const successMsg = `Đã khôi phục bảng kiểm "${form.title}" thành công!`
+      setSuccessMessage(successMsg)
+      showToast(successMsg, 'success')
+      setRefreshKey((current) => current + 1)
+    } catch (error) {
+      const errorMsg = error?.response?.data?.message || 'Không thể khôi phục bảng kiểm.'
+      setErrorMessage(errorMsg)
+      showToast(errorMsg, 'error')
+    } finally {
+      setRestoringFormId(null)
     }
   }
 
@@ -678,7 +647,39 @@ function FormListPage() {
                         <th className="flp-col-version">Phiên bản</th>
                         <th className="flp-col-created">Ngày tạo</th>
                         <th className="flp-col-assignees">Người được giao</th>
-                        <th className="flp-col-responses">Lượt đánh giá</th>
+                        <th
+                          className="flp-col-responses flp-col-sortable"
+                          onClick={toggleResponseSort}
+                          style={{ cursor: 'pointer', userSelect: 'none' }}
+                          title="Nhấn để sắp xếp theo lượt đánh giá"
+                        >
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                            <span>Lượt đánh giá</span>
+                            <span
+                              className="flp-sort-icons"
+                              style={{
+                                display: 'inline-flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '9px',
+                                lineHeight: 1,
+                              }}
+                            >
+                              <CaretUpOutlined
+                                style={{
+                                  color: responseSort === 'asc' ? '#14866d' : '#bfbfbf',
+                                  marginBottom: '-3px',
+                                }}
+                              />
+                              <CaretDownOutlined
+                                style={{
+                                  color: responseSort === 'desc' ? '#14866d' : '#bfbfbf',
+                                }}
+                              />
+                            </span>
+                          </div>
+                        </th>
                         <th className="flp-col-score">Điểm sàn</th>
                         <th className="flp-col-status">Trạng thái</th>
                         <th className="flp-col-actions flp-table__actions-heading">Hành động</th>
@@ -704,7 +705,7 @@ function FormListPage() {
                           </td>
                         </tr>
                       ) : (
-                        forms.map((form) => (
+                        displayForms.map((form) => (
                           <tr key={form.id}>
                             <td className="flp-col-name">
                               <div className="flp-form-title-wrapper">
@@ -729,15 +730,21 @@ function FormListPage() {
                             <td className="flp-col-assignees">
                               <button
                                 className="flp-stat-link"
-                                onClick={() => navigate(`/admin/quality/checklist-assignments?formId=${form.id}`)}
+                                onClick={() => {
+                                  if (getEffectiveStatus(form) === RETIRED_STATUS) {
+                                    showToast('Bảng kiểm đã ngừng hoạt động', 'warning')
+                                    return
+                                  }
+                                  navigate(`/admin/quality/checklist-assignments?formId=${form.id}`)
+                                }}
                                 title={`Quản lý người được giao ${form.title}`}
                                 type="button"
                               >
-                                <strong>{formStats[form.id]?.activeAssignmentCount ?? '—'}</strong>
+                                <strong>{Number(form.activeAssignmentCount || 0)}</strong>
                                 <span>Quản lý</span>
                               </button>
                             </td>
-                            <td className="flp-col-responses">{formStats[form.id]?.responseCount ?? '—'}</td>
+                            <td className="flp-col-responses">{Number(form.responseCount || 0)}</td>
                             <td className="flp-col-score">
                               {form.currentPublishedVersion?.passingScore !== undefined && form.currentPublishedVersion?.passingScore !== null ? (
                                 <strong style={{ color: '#0f6e56', fontWeight: 600 }}>
@@ -760,7 +767,13 @@ function FormListPage() {
                                   <button
                                     aria-label={`Thực hiện đánh giá ${form.title}`}
                                     className="flp-btn-action flp-btn-evaluate admin-table-action admin-table-action--icon admin-table-action--success"
-                                    onClick={() => navigate(`/admin/quality/checklists/${form.id}/evaluate/${form.currentPublishedVersion.id}`)}
+                                    onClick={() => {
+                                      if (getEffectiveStatus(form) === RETIRED_STATUS) {
+                                        showToast('Bảng kiểm đã ngừng hoạt động', 'warning')
+                                        return
+                                      }
+                                      navigate(`/admin/quality/checklists/${form.id}/evaluate/${form.currentPublishedVersion.id}`)
+                                    }}
                                     title="Thực hiện đánh giá trực tiếp"
                                     type="button"
                                   >
@@ -770,15 +783,28 @@ function FormListPage() {
                                 <button
                                   aria-label={`Xem chi tiết ${form.title}`}
                                   className="flp-btn-action flp-btn-detail admin-table-action admin-table-action--icon admin-table-action--primary"
-                                  onClick={() =>
-                                    navigate(`/admin/quality/checklists/${form.id}/detail`)
-                                  }
+                                  onClick={() => navigate(`/admin/quality/checklists/${form.id}/detail`)}
                                   title="Xem nội dung bảng kiểm"
                                   type="button"
                                 >
                                   <EyeOutlined />
                                 </button>
-                                {getEffectiveStatus(form) !== 'RETIRED' && (
+                                {getEffectiveStatus(form) === 'RETIRED' ? (
+                                  <button
+                                    aria-label={`Khôi phục ${form.title}`}
+                                    className="flp-btn-action flp-btn-restore admin-table-action admin-table-action--icon admin-table-action--success"
+                                    disabled={restoringFormId === form.id}
+                                    onClick={() => handleRestore(form)}
+                                    title="Khôi phục"
+                                    type="button"
+                                  >
+                                    {restoringFormId === form.id ? (
+                                      <LoadingOutlined spin />
+                                    ) : (
+                                      <ReloadOutlined />
+                                    )}
+                                  </button>
+                                ) : (
                                   <button
                                     aria-label={`Ngừng hoạt động ${form.title}`}
                                     className="flp-btn-action flp-btn-delete admin-table-action admin-table-action--icon admin-table-action--danger"
@@ -846,14 +872,26 @@ function FormListPage() {
             </div>
       <ConfirmModal
         isOpen={confirmModal.isOpen}
-        title="Ngừng hoạt động checklist"
-        message={confirmModal.form ? `Ngừng hoạt động checklist "${confirmModal.form.title}"? Checklist sẽ không còn xuất hiện trong danh sách hoạt động.` : ''}
-        danger={true}
+        title={confirmModal.action === 'restore' ? 'Khôi phục bảng kiểm' : 'Ngừng hoạt động bảng kiểm'}
+        message={
+          confirmModal.form
+            ? confirmModal.action === 'restore'
+              ? `Khôi phục bảng kiểm "${confirmModal.form.title}"? Bảng kiểm sẽ hoạt động trở lại.`
+              : `Ngừng hoạt động bảng kiểm "${confirmModal.form.title}"? Bảng kiểm sẽ không còn xuất hiện trong danh sách hoạt động.`
+            : ''
+        }
+        confirmText={confirmModal.action === 'restore' ? 'Khôi phục' : 'Ngừng hoạt động'}
+        cancelText="Hủy"
+        danger={confirmModal.action !== 'restore'}
         onConfirm={() => {
-          executeRetire(confirmModal.form)
-          setConfirmModal({ isOpen: false, form: null })
+          if (confirmModal.action === 'restore') {
+            executeRestore(confirmModal.form)
+          } else {
+            executeRetire(confirmModal.form)
+          }
+          setConfirmModal({ isOpen: false, form: null, action: 'retire' })
         }}
-        onCancel={() => setConfirmModal({ isOpen: false, form: null })}
+        onCancel={() => setConfirmModal({ isOpen: false, form: null, action: 'retire' })}
       />
     </AppShell>
   )

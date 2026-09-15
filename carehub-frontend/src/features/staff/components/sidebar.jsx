@@ -14,6 +14,7 @@ import {
   LeftOutlined,
   SearchOutlined,
   BellOutlined,
+  BookOutlined,
 } from '@ant-design/icons'
 import { AUTH_ROUTES } from '../../auth/constants/authRoutes.js'
 import { logoutUser } from '../../auth/services/logoutUser.js'
@@ -23,6 +24,7 @@ import {
   hasAnyRole,
 } from '../../auth/utils/authNavigation.js'
 import { getRolesFromAccessToken } from '../../../shared/auth/jwt.js'
+import { staffApi } from '../api/staffApi.js'
 import logo from '../../../assets/logo.png'
 import '../styles/StaffDashBoardScreen.css'
 
@@ -45,6 +47,23 @@ function Sidebar({ alertSummary = {} }) {
   const [isMobileClosing, setIsMobileClosing] = useState(false)
   const [searchKeyword, setSearchKeyword] = useState('')
   const [pendingRoute, setPendingRoute] = useState(null)
+  const [assignedCount, setAssignedCount] = useState(null)
+
+  useEffect(() => {
+    let alive = true
+    staffApi.getAssignedForms({ page: 0, size: 1 })
+      .then((res) => {
+        if (!alive) return
+        const total = res.data?.data?.totalElements
+        if (typeof total === 'number') {
+          setAssignedCount(total)
+        }
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [currentPath])
 
   useLayoutEffect(() => {
     pendingRouteRef.current = pendingRoute
@@ -85,9 +104,11 @@ function Sidebar({ alertSummary = {} }) {
         { icon: <ClockCircleOutlined />, label: 'Đào tạo liên tục', path: '/staff/training' },
         { icon: <CheckSquareOutlined />, label: 'Giám sát tuân thủ', path: '/staff/competency' },
         { icon: <TrophyOutlined />, label: 'Năng lực chuyên môn', path: '/staff/professional-competency' },
-        ...(!isManager && alertSummary.hasChecklistAssignment ? [
+        ...(!isManager ? [
           { icon: <BarChartOutlined />, label: 'Chất lượng chăm sóc', path: '/staff/reports/checklist-dashboard' },
-          { icon: <FileDoneOutlined />, label: 'Bảng kiểm giám sát', path: '/staff/checklists' },
+          { icon: <FileDoneOutlined />, label: 'Bảng kiểm giám sát', path: '/staff/checklists', badge: assignedCount },
+        ] : []),
+        ...(!isManager ? [
           { icon: <HistoryOutlined />, label: 'Lịch sử đánh giá', path: '/staff/quality/history' },
         ] : []),
       ],
@@ -98,9 +119,10 @@ function Sidebar({ alertSummary = {} }) {
   if (isManager) {
     navSections.push(
       {
-        label: 'Đào tạo liên tục',
+        label: 'ĐÀO TẠO LIÊN TỤC',
         items: [
-          { icon: <BarChartOutlined />, label: 'Đào tạo liên tục', path: '/manager/reports/training-dashboard' },
+          { icon: <BarChartOutlined />, label: 'Dashboard giờ đào tạo', path: '/manager/reports/training-dashboard' },
+          { icon: <BookOutlined />, label: 'Giờ đào tạo nhân viên', path: '/training/employees' },
         ],
       },
       {
@@ -108,16 +130,16 @@ function Sidebar({ alertSummary = {} }) {
         items: [
           { icon: <CheckSquareOutlined />, label: 'Tuân thủ chung', path: '/manager/compliance-by-technique' },
           { icon: <CheckSquareOutlined />, label: 'Tuân thủ theo kỹ thuật', path: '/manager/reports/checklist-dashboard' },
-          { icon: <CheckSquareOutlined />, label: 'Bảng kiểm giám sát', path: '/manager/quality/checklists' },
+          { icon: <CheckSquareOutlined />, label: 'Bảng kiểm giám sát', path: '/manager/quality/checklists', badge: assignedCount },
+          { icon: <HistoryOutlined />, label: 'Lịch sử đánh giá', path: '/manager/quality/history' },
         ],
       },
       {
         label: 'Năng lực chuyên môn',
         items: [
-          { icon: <TrophyOutlined />, label: 'Năng lực chuyên môn', path: '/manager/reports/quality-dashboard' },
           // Mục này trước đây tên "Chất lượng chăm sóc" và nằm trong nhóm giám sát tuân thủ,
           // nhưng nội dung là dashboard năng lực nên thuộc về nhóm này.
-          { icon: <BarChartOutlined />, label: 'Dashboard năng lực', path: '/manager/competency-summary' },
+          { icon: <BarChartOutlined />, label: 'Năng lực chuyên môn', path: '/manager/competency-summary' },
           { icon: <FileDoneOutlined />, label: 'Kết quả năng lực chuyên môn', path: '/manager/exam-results' },
         ],
       },
@@ -316,7 +338,7 @@ function Sidebar({ alertSummary = {} }) {
         },
       ],
     },
-    ...(!isManager && alertSummary.hasChecklistAssignment ? [
+    ...(!isManager ? [
       {
         title: 'Đánh giá',
         items: [
@@ -571,7 +593,30 @@ function Sidebar({ alertSummary = {} }) {
                         onClick={() => setIsMobileOpen(false)}
                       >
                         <span className="sidebar__item-icon">{item.icon}</span>
-                        <span>{item.label}</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                          <span>{item.label}</span>
+                          {item.badge !== undefined && item.badge !== null && item.badge > 0 && (
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                minWidth: 20,
+                                height: 18,
+                                padding: '0 5px',
+                                fontSize: 11,
+                                fontWeight: 700,
+                                color: 'inherit',
+                                border: '1px solid #ef4444',
+                                borderRadius: 999,
+                                lineHeight: 1,
+                                textAlign: 'center',
+                              }}
+                            >
+                              {item.badge}
+                            </span>
+                          )}
+                        </span>
                       </NavLink>
                     ))}
                   </div>

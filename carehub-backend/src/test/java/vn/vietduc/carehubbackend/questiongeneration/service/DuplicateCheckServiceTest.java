@@ -38,7 +38,7 @@ import static org.mockito.Mockito.when;
 /**
  * L1 unit tests — sheet {@code DuplicateCheckService}, Test ID prefix {@code L1-DUP}.
  *
- * <p>Boundary references: BV-07 (duplicate.strong-min = 0.97) and BV-08 (duplicate.review-min = 0.93)
+ * <p>Boundary references: BV-07 (duplicate.strong-min = 0.97) and BV-08 (duplicate.review-min = 0.95)
  * in SRS 4.5 Boundary Value Register. Hai ngưỡng được hiệu chỉnh theo phân bố láng giềng gần nhất
  * (nn-max), không theo phân bố cặp — xem {@code ValidationRulesProperties.Duplicate}.
  *
@@ -84,12 +84,12 @@ class DuplicateCheckServiceTest {
     // ── Block: configured thresholds (BV-07 / BV-08 / BV-09) ──────────────────
 
     @Test
-    @DisplayName("L1-DUP-01 | BV-07/08/09: default thresholds are strongMin 0.97, reviewMin 0.93, qualityReject 0.55")
+    @DisplayName("L1-DUP-01 | BV-07/08/09: default thresholds are strongMin 0.97, reviewMin 0.95, qualityReject 0.55")
     void defaultThresholdsMatchTheBoundaryRegister() {
         ValidationRulesProperties defaults = new ValidationRulesProperties();
 
         assertThat(defaults.getDuplicate().getStrongMin()).isEqualTo(0.97);
-        assertThat(defaults.getDuplicate().getReviewMin()).isEqualTo(0.93);
+        assertThat(defaults.getDuplicate().getReviewMin()).isEqualTo(0.95);
         assertThat(defaults.getQuality().getRejectMin()).isEqualTo(0.55);
     }
 
@@ -101,9 +101,8 @@ class DuplicateCheckServiceTest {
             "0.98, true,  true",   // BVA-Max+1: just above strongMin
             "0.97, true,  true",   // BVA-Max: exactly strongMin — inclusive
             "0.96, false, true",   // BVA-Max-1: just below strongMin, still needs review
-            "0.94, false, true",   // inside the review band
-            "0.93, false, true",   // BVA-Min: exactly reviewMin — inclusive
-            "0.92, false, false",  // BVA-Min-1: just below reviewMin
+            "0.95, false, true",   // BVA-Min: exactly reviewMin — inclusive
+            "0.94, false, false",  // BVA-Min-1: just below reviewMin
             "0.00, false, false"   // no similarity at all
     })
     @DisplayName("L1-DUP-02 | BVA: strongDuplicate/needsReview flags across every threshold edge")
@@ -209,8 +208,8 @@ class DuplicateCheckServiceTest {
     // ── Block: ANN search path ────────────────────────────────────────────────
 
     @Test
-    @DisplayName("L1-DUP-08 | BC-TRUE: ANN returns a strong match → checker e5-ann, exact scan skipped")
-    void annStrongMatchShortCircuitsExactScan() {
+    @DisplayName("L1-DUP-08 | ANN strong match still runs exact scan so maxSimilarity is the true maximum")
+    void annStrongMatchStillReturnsExactMaximum() {
         when(annIndex.isReady()).thenReturn(true);
         when(embeddingService.embedCandidateStem(STEM)).thenReturn(CANDIDATE_VECTOR);
         when(embeddingCache.approvedStemEmbeddings()).thenReturn(List.of(
@@ -222,9 +221,9 @@ class DuplicateCheckServiceTest {
 
         DuplicateCheckResult result = service.check(STEM);
 
-        assertThat(result.checker()).isEqualTo("e5-ann");
-        assertThat(result.matchedQuestionId()).isEqualTo(42L);
-        assertThat(result.maxSimilarity()).isCloseTo(0.97, within(1e-12));
+        assertThat(result.checker()).isEqualTo("e5-exact");
+        assertThat(result.matchedQuestionId()).isEqualTo(11L);
+        assertThat(result.maxSimilarity()).isCloseTo(0.99, within(1e-12));
         assertThat(result.strongDuplicate()).isTrue();
     }
 
@@ -348,6 +347,21 @@ class DuplicateCheckServiceTest {
         assertThat(vectors).hasDimensions(2, 2);
         assertThat(vectors[0]).containsExactly(1.0, 0.0);
         assertThat(vectors[1]).containsExactly(0.0, 1.0);
+    }
+
+    @Test
+    @DisplayName("L1-DUP-17B | E5 batch unavailable: same-response duplicates still use lexical fallback")
+    void withinBatchFallsBackToLexicalWhenVectorsAreUnavailable() {
+        DuplicateCheckResult result = service.checkWithinBatch(
+                List.of("Rửa tay thường quy", "RUA TAY THUONG QUY"),
+                null,
+                1
+        );
+
+        assertThat(result.checker()).isEqualTo("lexical-batch");
+        assertThat(result.maxSimilarity()).isEqualTo(1.0);
+        assertThat(result.strongDuplicate()).isTrue();
+        assertThat(result.needsReview()).isTrue();
     }
 
     // ── Block: lexicalCheck() — pagination and the candidate-batch stage ──────

@@ -55,7 +55,42 @@ class ParaphraseValidationServiceTest {
         ParaphraseValidationResult result = service.validate(source, candidate);
 
         assertThat(result.rejected()).isTrue();
-        assertThat(result.warnings()).anyMatch(warning -> warning.contains("Mất thuật ngữ"));
+        assertThat(result.warnings()).anyMatch(warning -> warning.contains("mất thuật ngữ"));
+    }
+
+    @Test
+    void rejectsCandidateThatDropsAgeAndLaboratoryUnit() {
+        QuestionBankQuestion source = sourceQuestion(
+                "Người bệnh 65 tuổi có hs-TnT 120 ng/L, chẩn đoán nào phù hợp nhất?"
+        );
+        ParaphrasedMcq candidate = validCandidate(
+                "Người bệnh có xét nghiệm hs-TnT tăng, chẩn đoán nào phù hợp nhất?"
+        );
+
+        ParaphraseValidationResult result = service.validate(source, candidate);
+
+        assertThat(result.rejected()).isTrue();
+        assertThat(result.warnings()).anyMatch(warning ->
+                warning.contains("Câu hỏi mất") && warning.contains("65 tuổi") && warning.contains("120 ng/L"));
+    }
+
+    @Test
+    void doesNotAllowAStemFactToLeakIntoAnAnswerOption() {
+        QuestionBankQuestion source = sourceQuestion("ECG cho thấy ST chênh lên, chẩn đoán nào phù hợp nhất?");
+        ParaphrasedMcq candidate = new ParaphrasedMcq(
+                "Kết quả cho thấy ST chênh lên, chẩn đoán nào phù hợp nhất?",
+                "ECG xác nhận nhồi máu cơ tim",
+                source.getOptionB(),
+                source.getOptionC(),
+                source.getOptionD(),
+                "raw"
+        );
+
+        ParaphraseValidationResult result = service.validate(source, candidate);
+
+        assertThat(result.rejected()).isTrue();
+        assertThat(result.warnings()).anyMatch(warning ->
+                warning.contains("Câu hỏi mất") && warning.contains("ECG"));
     }
 
     /**
@@ -72,7 +107,7 @@ class ParaphraseValidationServiceTest {
         ParaphraseValidationResult result = service.validate(source, candidate);
 
         assertThat(result.warnings()).noneMatch(warning -> warning.contains("từ phủ định"));
-        assertThat(result.rejected()).isFalse();
+        assertThat(result.rejected()).as(result.warnings().toString()).isFalse();
     }
 
     @Test
@@ -83,7 +118,7 @@ class ParaphraseValidationServiceTest {
         ParaphraseValidationResult result = service.validate(source, candidate);
 
         assertThat(result.warnings()).noneMatch(warning -> warning.contains("từ phủ định"));
-        assertThat(result.rejected()).isFalse();
+        assertThat(result.rejected()).as(result.warnings().toString()).isFalse();
     }
 
     /** Mất một chữ "không" là đảo ngược đáp án đúng — chốt chặn này vẫn phải bắt được. */
@@ -132,7 +167,7 @@ class ParaphraseValidationServiceTest {
     }
 
     @Test
-    void rejectsStrongDuplicateOutsideSourceQuestion() {
+    void flagsStrongDuplicateOutsideSourceQuestionForReview() {
         when(duplicateCheckService.check(anyString(), anySet())).thenReturn(new DuplicateCheckResult(
                 0.96,
                 99L,
@@ -147,9 +182,22 @@ class ParaphraseValidationServiceTest {
 
         ParaphraseValidationResult result = service.validate(source, candidate);
 
-        assertThat(result.rejected()).isTrue();
+        assertThat(result.rejected()).isFalse();
+        assertThat(result.needsReview()).isTrue();
         assertThat(result.duplicateQuestionId()).isEqualTo(99L);
         assertThat(result.warnings()).anyMatch(warning -> warning.contains("Trùng ngữ nghĩa mạnh"));
+    }
+
+    @Test
+    void sendsEveryValidAiCandidateToHumanReview() {
+        QuestionBankQuestion source = sourceQuestion("Cần xác định đúng người bệnh bằng cách nào?");
+        ParaphrasedMcq candidate = validCandidate("Có thể xác định đúng người bệnh theo cách nào?");
+
+        ParaphraseValidationResult result = service.validate(source, candidate);
+
+        assertThat(result.rejected()).isFalse();
+        assertThat(result.needsReview()).isTrue();
+        assertThat(result.warnings()).anyMatch(warning -> warning.contains("cần người duyệt xác nhận"));
     }
 
     @Test
@@ -178,6 +226,17 @@ class ParaphraseValidationServiceTest {
 
         assertThat(result.rejected()).isTrue();
         assertThat(result.warnings()).anyMatch(warning -> warning.contains("phủ định"));
+    }
+
+    @Test
+    void rejectsChangedClinicalDirection() {
+        QuestionBankQuestion source = sourceQuestion("Dấu hiệu sớm của biến chứng sau phẫu thuật là gì?");
+        ParaphrasedMcq candidate = validCandidate("Dấu hiệu muộn của biến chứng sau phẫu thuật là gì?");
+
+        ParaphraseValidationResult result = service.validate(source, candidate);
+
+        assertThat(result.rejected()).isTrue();
+        assertThat(result.warnings()).anyMatch(warning -> warning.contains("phủ định hoặc từ định lượng"));
     }
 
     private QuestionBankQuestion sourceQuestion(String stem) {

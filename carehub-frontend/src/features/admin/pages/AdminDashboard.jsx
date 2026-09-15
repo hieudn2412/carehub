@@ -202,7 +202,7 @@ export default function AdminDashboard({ variant = 'overview' }) {
 
   const domains = {
     training: { ...dashboard.training, path: '/admin/reports/training-dashboard' },
-    exams: { ...dashboard.exams, path: '/admin/reports/quality-dashboard' },
+    exams: { ...dashboard.exams, path: '/admin/evaluation/competency-summary?view=theory' },
     quality: { ...dashboard.quality, path: '/admin/reports/checklist-dashboard' },
   }
 

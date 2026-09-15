@@ -100,20 +100,11 @@ function ComplianceTargetSettingsPage() {
   }, [appliedKeyword, statusFilter])
 
   useEffect(() => {
-    const nextKeyword = keyword.trim()
-    if (nextKeyword === appliedKeyword) return undefined
-    const timer = window.setTimeout(() => {
-      setAppliedKeyword(nextKeyword)
-      setPage(0)
-    }, 300)
-    return () => window.clearTimeout(timer)
-  }, [appliedKeyword, keyword])
-
-  useEffect(() => {
     if (isFilterOpen) setDraftStatusFilter(statusFilter)
   }, [isFilterOpen, statusFilter])
 
   useEffect(() => {
+    if (!targetModalForm || departments.length > 0) return undefined
     let active = true
     adminApi.getDepartments()
       .then((response) => {
@@ -124,7 +115,7 @@ function ComplianceTargetSettingsPage() {
         if (active) setError(apiErrorMessage(requestError))
       })
     return () => { active = false }
-  }, [reloadKey])
+  }, [departments.length, reloadKey, targetModalForm])
 
   useEffect(() => {
     let active = true

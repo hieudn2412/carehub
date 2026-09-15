@@ -22,11 +22,11 @@ import TrainingSearchFilters from './components/TrainingSearchFilters.jsx'
 import {
   countActiveFilterGroups,
   createEmptyTrainingFilters,
-  isDateRangeValid,
   parseTrainingQuery,
   serializeTrainingQuery,
   toTrainingListApiParams,
 } from './utils/trainingRecordQuery.js'
+import { formatLocalDate, validateHistoricalDateRange } from '../../../../shared/utils/dateRange.js'
 import '../../../training/styles/TrainingHours.css'
 
 const STATUS_FILTER_OPTIONS = [
@@ -281,8 +281,9 @@ function TrainingHoursListScreen() {
   }
 
   const handleApplyFilters = () => {
-    if (!isDateRangeValid(filterDraft.dateFrom, filterDraft.dateTo)) {
-      setFilterDateError('Đến ngày phải lớn hơn hoặc bằng Từ ngày.')
+    const validationError = validateHistoricalDateRange(filterDraft.dateFrom, filterDraft.dateTo)
+    if (validationError) {
+      setFilterDateError(validationError)
       return
     }
     setUrlSearchParams(serializeTrainingQuery({ ...filterDraft, page: 1 }))
@@ -296,8 +297,9 @@ function TrainingHoursListScreen() {
   }
 
   const handleMobileApplyFilters = (close) => {
-    if (!isDateRangeValid(filterDraft.dateFrom, filterDraft.dateTo)) {
-      setFilterDateError('Đến ngày phải lớn hơn hoặc bằng Từ ngày.')
+    const validationError = validateHistoricalDateRange(filterDraft.dateFrom, filterDraft.dateTo)
+    if (validationError) {
+      setFilterDateError(validationError)
       return
     }
 
@@ -314,7 +316,7 @@ function TrainingHoursListScreen() {
         if (event.key === 'Enter') handleMobileApplyFilters(close)
       }}
       filters={filterDraft}
-      onFilterChange={setFilterDraft}
+      onFilterChange={(nextFilters) => { setFilterDateError(''); setFilterDraft(nextFilters) }}
       filterOptions={filterOptions}
       filterOptionsLoading={filterOptionsLoading}
       filterOptionsError={filterOptionsError}
@@ -466,11 +468,11 @@ function TrainingHoursListScreen() {
                       />
                       <label>
                         <span>Từ ngày</span>
-                        <KeyboardDatePicker value={filterDraft.dateFrom} onChange={val => setFilterDraft(current => ({ ...current, dateFrom: val }))} aria-label="Lọc từ ngày" />
+                        <KeyboardDatePicker allowInvalidValue value={filterDraft.dateFrom} max={filterDraft.dateTo || formatLocalDate()} onChange={val => { setFilterDateError(''); setFilterDraft(current => ({ ...current, dateFrom: val })) }} aria-label="Lọc từ ngày" />
                       </label>
                       <label>
                         <span>Đến ngày</span>
-                        <KeyboardDatePicker value={filterDraft.dateTo} onChange={val => setFilterDraft(current => ({ ...current, dateTo: val }))} aria-label="Lọc đến ngày" />
+                        <KeyboardDatePicker allowInvalidValue value={filterDraft.dateTo} min={filterDraft.dateFrom || undefined} max={formatLocalDate()} onChange={val => { setFilterDateError(''); setFilterDraft(current => ({ ...current, dateTo: val })) }} aria-label="Lọc đến ngày" />
                       </label>
                       <FilterSelectField
                         ariaLabel="Lọc theo lĩnh vực chuyên môn"

@@ -13,6 +13,7 @@ import vn.vietduc.carehubbackend.questiongeneration.embedding.QuestionEmbeddingS
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.DriverManager;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -25,21 +26,22 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
- * Hiệu chỉnh hai ngưỡng so trùng câu hỏi ({@code validation.duplicate.strong-min} = 0.93 và
- * {@code validation.duplicate.review-min} = 0.80) bằng số liệu thật, thay vì con số đoán.
+ * Hiệu chỉnh hai ngưỡng so trùng câu hỏi ({@code validation.duplicate.strong-min} = 0.97 và
+ * {@code validation.duplicate.review-min} = 0.95) bằng số liệu thật, thay vì con số đoán.
  *
- * <p>Nghiệp vụ: câu ứng viên có cosine ≥ strongMin bị LOẠI (trùng mạnh), ≥ reviewMin thì bị gắn cờ
- * CẦN XEM LẠI, thấp hơn thì chấp nhận. Đặt ngưỡng quá thấp làm mất câu hỏi tốt và ngập việc cho
- * người duyệt; đặt quá cao thì câu trùng lọt vào ngân hàng. Vì vậy phải nhìn PHÂN BỐ cosine thật
+ * <p>Nghiệp vụ: câu ứng viên có cosine ≥ strongMin nhận cảnh báo trùng mạnh,
+ * ≥ reviewMin thì nhận cảnh báo cần xem lại; cosine không tự loại câu hỏi.
+ * Đặt ngưỡng quá thấp làm ngập việc cho người duyệt; đặt quá cao thì câu trùng dễ bị bỏ qua.
+ * Vì vậy phải nhìn PHÂN BỐ cosine thật
  * trên ngân hàng câu hỏi seed (270 câu y tế tiếng Việt) chứ không chỉ nhìn một vài ví dụ.</p>
  *
- * <p>Nhãn tự nhiên để hiệu chỉnh: trường {@code lesson} của corpus. Hai câu CÙNG BÀI là cùng chủ đề
- * (được phép giống nhau ở mức vừa phải), hai câu KHÁC BÀI là khác chủ đề — nếu một cặp khác bài mà
- * vượt ngưỡng trùng thì gần như chắc chắn đó là DƯƠNG TÍNH GIẢ. Ngưỡng tốt là ngưỡng nằm trên toàn
- * bộ đuôi phân bố của nhóm khác bài.</p>
+ * <p>Ngưỡng review được chọn từ phân bố láng giềng gần nhất (nn-max), đúng với phép đo lúc chạy thật.
+ * Trường {@code lesson} của seed hoặc {@code source_document} của DB chỉ dùng để chẩn đoán thêm,
+ * không được coi là nhãn trùng/không trùng.</p>
  *
  * <p>Benchmark mặc định TẮT (nạp model ONNX 449 MB tốn hàng trăm MB RAM). Bật bằng:
  * {@code RUN_E5_CALIBRATION=true ./mvnw.cmd test -Dtest=E5SimilarityCalibrationTest}.
+ * Thêm {@code E5_CALIBRATION_DB=true} để đo toàn bộ câu APPROVED trong PostgreSQL thay vì corpus seed.
  * Số vòng đo lặp lại phần tìm kiếm ANN chỉnh qua {@code BENCH_ITERATIONS} (mặc định 3),
  * kích thước corpus chỉnh qua {@code E5_CALIBRATION_LIMIT} (mặc định 270 = dùng hết).</p>
  */
@@ -70,14 +72,18 @@ class E5SimilarityCalibrationTest {
                 "Thiếu model.onnx của E5 — bỏ qua hiệu chỉnh");
         assumeTrue(Files.isRegularFile(MODEL_ROOT.resolve("onnx").resolve("tokenizer.json")),
                 "Thiếu tokenizer.json của E5 — bỏ qua hiệu chỉnh");
-        assumeTrue(Files.isRegularFile(CORPUS_PATH),
-                "Thiếu corpus hospital-review-questions.json — bỏ qua hiệu chỉnh");
+        boolean databaseCorpus = Boolean.parseBoolean(System.getenv("E5_CALIBRATION_DB"));
+        if (!databaseCorpus) {
+            assumeTrue(Files.isRegularFile(CORPUS_PATH),
+                    "Thiếu corpus hospital-review-questions.json — bỏ qua hiệu chỉnh");
+        }
 
         // Tối thiểu 1 vòng: BENCH_ITERATIONS=0 sẽ làm mảng mẫu rỗng và recall@1 luôn bằng 0.
         int annIterations = Math.max(1, envInt("BENCH_ITERATIONS", 3));
         int corpusLimit = envInt("E5_CALIBRATION_LIMIT", Integer.MAX_VALUE);
 
-        Corpus corpus = loadCorpus(CORPUS_PATH, corpusLimit);
+        Corpus corpus = databaseCorpus ? loadDatabaseCorpus(corpusLimit) : loadCorpus(CORPUS_PATH, corpusLimit);
+        String corpusSource = databaseCorpus ? "PostgreSQL questions (APPROVED)" : CORPUS_PATH.toString();
         int questionCount = corpus.stems().size();
         assumeTrue(questionCount >= 2, "Corpus phải có ít nhất 2 câu để tạo cặp");
 
@@ -91,7 +97,7 @@ class E5SimilarityCalibrationTest {
                         Runtime.getRuntime().maxMemory() / (1024d * 1024d * 1024d),
                         System.getProperty("os.name"),
                         System.getProperty("java.version"))
-                .note("Corpus: %s — %d câu hỏi, %d bài", CORPUS_PATH, questionCount, corpus.lessonSizes().size())
+                .note("Corpus: %s — %d câu hỏi, %d nhóm nguồn", corpusSource, questionCount, corpus.lessonSizes().size())
                 .note("Ngưỡng đang cấu hình: strongMin=%.2f, reviewMin=%.2f", currentStrongMin, currentReviewMin)
                 .note("Số cặp so sánh: %d", questionCount * (questionCount - 1) / 2);
 
@@ -250,19 +256,25 @@ class E5SimilarityCalibrationTest {
                     currentStrongMin - meanShift, currentReviewMin - meanShift);
             report.text("và bắt buộc phải hiệu chỉnh lại theo phần C bên dưới.");
 
-            // ── B. Cùng bài vs khác bài ──
+            String groupName = databaseCorpus ? "nhóm nguồn" : "bài";
+
+            // ── B. Cùng nhóm vs khác nhóm ──
             report.section("B. Phân bố theo chủ đề (nhúng đối xứng)");
-            report.text("Cùng `lesson` = cùng chủ đề (được phép giống nhau); khác `lesson` = khác chủ đề");
-            report.text("(vượt ngưỡng trùng ở nhóm này gần như chắc chắn là dương tính giả).");
+            if (databaseCorpus) {
+                report.text("Nhóm DB lấy từ `source_document`; đây chỉ là lát cắt chẩn đoán, không phải nhãn trùng.");
+                report.text("Không dùng cùng/khác nguồn để chọn ngưỡng — ngưỡng được chọn từ nn-max ở phần C2.");
+            } else {
+                report.text("Cùng `lesson` = cùng chủ đề; khác `lesson` = khác chủ đề.");
+            }
             report.text("");
             report.columns("Nhóm cặp", "số cặp", "p50", "p90", "p95", "p99", "max");
-            report.row("cùng bài", sameLessonCount,
+            report.row("cùng " + groupName, sameLessonCount,
                     BenchmarkReport.percentileOf(sameLesson, 0.50),
                     BenchmarkReport.percentileOf(sameLesson, 0.90),
                     BenchmarkReport.percentileOf(sameLesson, 0.95),
                     BenchmarkReport.percentileOf(sameLesson, 0.99),
                     BenchmarkReport.percentileOf(sameLesson, 1.00));
-            report.row("khác bài", crossLessonCount,
+            report.row("khác " + groupName, crossLessonCount,
                     BenchmarkReport.percentileOf(crossLesson, 0.50),
                     BenchmarkReport.percentileOf(crossLesson, 0.90),
                     BenchmarkReport.percentileOf(crossLesson, 0.95),
@@ -272,15 +284,15 @@ class E5SimilarityCalibrationTest {
 
             double sameLessonMean = mean(sameLesson);
             double crossLessonMean = mean(crossLesson);
-            report.text("TB cùng bài = %.4f, TB khác bài = %.4f, chênh lệch = %+.4f.",
-                    sameLessonMean, crossLessonMean, sameLessonMean - crossLessonMean);
-            report.text("Chênh lệch dương xác nhận model PHÂN BIỆT ĐƯỢC chủ đề; nếu âm thì pipeline nhúng đang hỏng.");
+            report.text("TB cùng %s = %.4f, TB khác %s = %.4f, chênh lệch = %+.4f.",
+                    groupName, sameLessonMean, groupName, crossLessonMean, sameLessonMean - crossLessonMean);
 
             // ── C. Quét ngưỡng ứng viên ──
             report.section("C. Quét ngưỡng ứng viên");
-            report.text("Với mỗi ngưỡng t: đếm số cặp vượt t ở từng nhóm. Cặp KHÁC BÀI vượt t = dương tính giả tiềm năng.");
+            report.text("Với mỗi ngưỡng t: đếm số cặp vượt t ở từng nhóm; bảng này chỉ để chẩn đoán.");
             report.text("");
-            report.columns("ngưỡng", "cặp khác bài vượt", "cặp cùng bài vượt", "tỉ lệ khác bài (%)");
+            report.columns("ngưỡng", "cặp khác " + groupName + " vượt", "cặp cùng " + groupName + " vượt",
+                    "tỉ lệ khác " + groupName + " (%)");
 
             double recommendedStrongMin = Double.NaN;
             double lowestNearZeroThreshold = Double.NaN;
@@ -312,8 +324,8 @@ class E5SimilarityCalibrationTest {
                     : (!Double.isNaN(lowestNearZeroThreshold) ? lowestNearZeroThreshold : 0.98);
 
             double[] nearestNeighbour = nearestNeighbourScores(queryVectors);
-            report.text("Đọc theo CẶP: ở mức %.2f có %d cặp khác bài vượt, p99 của nhóm khác bài là %.4f.",
-                    strongMinProposal, countAtLeast(crossLesson, strongMinProposal), crossP99);
+            report.text("Đọc theo CẶP: ở mức %.2f có %d cặp khác %s vượt, p99 của nhóm khác %s là %.4f.",
+                    strongMinProposal, countAtLeast(crossLesson, strongMinProposal), groupName, groupName, crossP99);
             report.text("");
             report.text("KHÔNG chọn ngưỡng từ bảng này. Bảng đếm theo CẶP, còn lúc chạy thật mỗi câu được chấm");
             report.text("bằng MAX cosine trên toàn bộ ngân hàng — xem phần C2. Hai cách đếm lệch nhau cả chục lần:");
@@ -328,11 +340,12 @@ class E5SimilarityCalibrationTest {
                     questionCount - 1);
             report.text("mà `DuplicateCheckService` tính lúc chạy thật, nên tỉ lệ gắn cờ đọc được ở đây là tỉ lệ thật.");
             report.text("");
-            report.columns("p05", "p25", "p50", "p75", "p95", "min", "max");
+            report.columns("p05", "p25", "p50", "p75", "p90", "p95", "min", "max");
             report.row(BenchmarkReport.percentileOf(nearestNeighbour, 0.05),
                     BenchmarkReport.percentileOf(nearestNeighbour, 0.25),
                     BenchmarkReport.percentileOf(nearestNeighbour, 0.50),
                     BenchmarkReport.percentileOf(nearestNeighbour, 0.75),
+                    BenchmarkReport.percentileOf(nearestNeighbour, 0.90),
                     BenchmarkReport.percentileOf(nearestNeighbour, 0.95),
                     BenchmarkReport.percentileOf(nearestNeighbour, 0.00),
                     BenchmarkReport.percentileOf(nearestNeighbour, 1.00));
@@ -348,28 +361,28 @@ class E5SimilarityCalibrationTest {
             // reviewMin đặt ở p90 của nn-max: khoảng 10% số câu vào hàng đợi — khối lượng một đội
             // duyệt được. Đây là tham số VẬN HÀNH (sức duyệt), không phải hằng số của model.
             double nnReviewMin = Math.round(BenchmarkReport.percentileOf(nearestNeighbour, 0.90) * 100) / 100d;
-            report.text("ĐỀ XUẤT reviewMin = %.2f — p90 của nn-max, tức khoảng 10%% số câu bị gắn cờ.",
-                    nnReviewMin);
+            int nnReviewFlagged = countAtLeast(nearestNeighbour, nnReviewMin);
+            report.text("ĐỀ XUẤT reviewMin = %.2f — p90 nn-max làm tròn; tại ngưỡng này gắn cờ %d/%d câu (%.1f%%).",
+                    nnReviewMin, nnReviewFlagged, questionCount, 100d * nnReviewFlagged / questionCount);
             report.text("Đây là tham số VẬN HÀNH: chọn phân vị khớp với sức duyệt của đội, không phải hằng số model.");
             report.text("");
-            report.text("ĐỀ XUẤT strongMin: đặt CAO (0.97+) và coi việc loại thẳng là ngoại lệ hiếm. Lý do nằm ở");
-            report.text("bảng D: cặp điểm cao nhất toàn corpus lại là cặp KHÁC BÀI, tức dương tính giả. Không có");
-            report.text("ngưỡng nào vừa loại được câu trùng thật vừa không loại nhầm — mà loại thẳng thì không ai");
-            report.text("xem lại, còn gắn cờ sai thì chỉ tốn một lượt duyệt. Bất đối xứng đó nghiêng về ngưỡng cao.");
+            report.text("ĐỀ XUẤT strongMin: 0.97+ chỉ là cảnh báo mạnh cho người duyệt. Lý do nằm ở");
+            report.text("bảng D: các cặp điểm cao nhất vẫn phải đọc ngữ cảnh mới kết luận được. Không có");
+            report.text("nhãn người gán để chứng minh một ngưỡng an toàn cho tự loại; cosine chỉ gắn cờ.");
             report.text("");
             report.text("So với cấu hình hiện tại (strongMin=%.2f, reviewMin=%.2f): reviewMin chênh %+.2f.",
                     currentStrongMin, currentReviewMin, nnReviewMin - currentReviewMin);
             report.text("LƯU Ý 1: tỉ lệ gắn cờ TĂNG theo kích thước ngân hàng — ngân hàng càng nhiều câu thì láng");
             report.text("giềng gần nhất của mỗi câu càng gần. Phải đo lại khi ngân hàng lớn lên đáng kể.");
-            report.text("LƯU Ý 2: đây là %d câu SEED của một học phần. Ngân hàng thật của bệnh viện trải nhiều",
-                    questionCount);
-            report.text("chuyên khoa, nên PHẢI chạy lại phép đo này trước khi chốt giá trị vào `application.yaml`.");
+            report.text(databaseCorpus
+                    ? "Nguồn lần chạy này là toàn bộ câu APPROVED trong PostgreSQL tại thời điểm calibration."
+                    : "Nguồn lần chạy này là corpus seed; cần chạy chế độ DB trước khi chốt ngưỡng production.");
 
             // ── D. Top 15 cặp giống nhau nhất ──
             report.section("D. Top 15 cặp giống nhau nhất (đối xứng)");
             report.text("Đọc bằng mắt để tự phán: điểm cao ở đây có thật sự là trùng lặp, hay chỉ là cùng khuôn câu hỏi?");
             report.text("");
-            report.columns("điểm", "bài A", "bài B", "stem A (rút gọn)", "stem B (rút gọn)");
+            report.columns("điểm", groupName + " A", groupName + " B", "stem A (rút gọn)", "stem B (rút gọn)");
             List<ScoredPair> rankedPairs = new ArrayList<>(topPairs);
             rankedPairs.sort(Comparator.comparingDouble(ScoredPair::score).reversed());
             for (ScoredPair pair : rankedPairs) {
@@ -451,9 +464,11 @@ class E5SimilarityCalibrationTest {
                         .isCloseTo(1.0d, org.assertj.core.data.Offset.offset(1e-6d));
             }
 
-            assertThat(sameLessonMean)
-                    .as("cặp cùng bài phải giống nhau hơn cặp khác bài — nếu không, pipeline nhúng đang hỏng")
-                    .isGreaterThan(crossLessonMean);
+            if (!databaseCorpus) {
+                assertThat(sameLessonMean)
+                        .as("cặp cùng bài phải giống nhau hơn cặp khác bài — nếu không, pipeline nhúng đang hỏng")
+                        .isGreaterThan(crossLessonMean);
+            }
 
             // CHỈ assert khoảng hợp lệ. KHÔNG assert recall > một mức cụ thể: với random-projection LSH,
             // xác suất láng giềng thật rơi vào bucket cách ≤1 bit là p^b + b·p^(b-1)·(1-p) với
@@ -600,6 +615,40 @@ class E5SimilarityCalibrationTest {
             allLessons.add(question.path("lesson").asText("(không rõ bài)"));
         }
 
+        return corpus(allStems, allLessons, limit);
+    }
+
+    /** Đọc đúng tập mà luồng chống trùng production so sánh: toàn bộ câu APPROVED trong DB. */
+    private Corpus loadDatabaseCorpus(int limit) throws Exception {
+        String url = System.getenv("DB_URL");
+        String username = System.getenv("DB_USERNAME");
+        String password = System.getenv("DB_PASSWORD");
+        assertThat(url).as("DB_URL").isNotBlank();
+        assertThat(username).as("DB_USERNAME").isNotBlank();
+        assertThat(password).as("DB_PASSWORD").isNotNull();
+
+        List<String> stems = new ArrayList<>();
+        List<String> lessons = new ArrayList<>();
+        String sql = """
+                SELECT stem, COALESCE(NULLIF(BTRIM(source_document), ''), 'field:' || professional_field_id)
+                FROM questions
+                WHERE status = 'APPROVED' AND BTRIM(stem) <> ''
+                ORDER BY id
+                """;
+        try (var connection = DriverManager.getConnection(url, username, password)) {
+            connection.setReadOnly(true);
+            try (var statement = connection.createStatement();
+                 var rows = statement.executeQuery(sql)) {
+                while (rows.next()) {
+                    stems.add(rows.getString(1).trim());
+                    lessons.add(rows.getString(2));
+                }
+            }
+        }
+        return corpus(stems, lessons, limit);
+    }
+
+    private Corpus corpus(List<String> allStems, List<String> allLessons, int limit) {
         List<String> stems = allStems;
         List<String> lessons = allLessons;
         if (limit > 0 && limit < allStems.size()) {

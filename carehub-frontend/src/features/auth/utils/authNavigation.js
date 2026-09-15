@@ -5,7 +5,6 @@ export const AUTH_ROLE = {
   admin: 'ADMIN',
   manager: 'MANAGER',
   user: 'USER',
-  systemJob: 'SYSTEM_JOB',
 }
 
 export const ADMIN_ROLES = [AUTH_ROLE.admin]

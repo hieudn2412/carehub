@@ -106,6 +106,14 @@ public class FormBuilderController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/{formId}/restore")
+    public ResponseEntity<ApiResponse<FormResponse>> restoreForm(@PathVariable Long formId) {
+        return ResponseEntity.ok(ApiResponse.success(
+                "Khôi phục bảng kiểm thành công",
+                formService.restore(formId)
+        ));
+    }
+
     @GetMapping("/{formId}/versions")
     public ResponseEntity<ApiResponse<PageResponse<FormVersionSummaryResponse>>> listVersions(
             @PathVariable Long formId,
