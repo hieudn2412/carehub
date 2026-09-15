@@ -26,7 +26,7 @@ public class UserRepositoryCustomImpl implements UserRepositoryCustom {
                 FROM users u
                 LEFT JOIN user_roles ur
                     ON ur.user_id = u.id
-                WHERE u.is_deleted = false
+                WHERE 1 = 1
                 """);
 
         Map<String, Object> params = new HashMap<>();
@@ -59,7 +59,7 @@ public class UserRepositoryCustomImpl implements UserRepositoryCustom {
                 FROM users u
                 LEFT JOIN user_roles ur
                     ON ur.user_id = u.id
-                WHERE u.is_deleted = false
+                WHERE 1 = 1
                 """);
 
         StringBuilder countSql = new StringBuilder("""
@@ -67,7 +67,7 @@ public class UserRepositoryCustomImpl implements UserRepositoryCustom {
                 FROM users u
                 LEFT JOIN user_roles ur
                     ON ur.user_id = u.id
-                WHERE u.is_deleted = false
+                WHERE 1 = 1
                 """);
 
         Map<String, Object> params = new HashMap<>();

@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 import vn.vietduc.carehubbackend.form.entity.Form;
 import vn.vietduc.carehubbackend.form.entity.FormVersion;
@@ -14,6 +15,7 @@ import vn.vietduc.carehubbackend.form.submission.entity.FormSubmissionResult;
 import vn.vietduc.carehubbackend.form.submission.repository.FormSubmissionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttempt;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAttemptStatus;
+import vn.vietduc.carehubbackend.questiongeneration.dto.request.EvaluationResultFilter;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionCategoryRepository;
 import vn.vietduc.carehubbackend.user.entity.Department;
@@ -98,6 +100,7 @@ class CompetencyServiceTest {
                 LocalDate.now().minusDays(30),
                 LocalDate.now(),
                 null,
+                null,
                 PageRequest.of(0, 10)
         );
 
@@ -142,6 +145,7 @@ class CompetencyServiceTest {
                 null,
                 LocalDate.now().minusDays(30),
                 LocalDate.now(),
+                null,
                 null,
                 PageRequest.of(1, 1)
         );
@@ -194,6 +198,7 @@ class CompetencyServiceTest {
                 LocalDate.of(2026, 1, 1),
                 LocalDate.of(2026, 8, 10),
                 null,
+                null,
                 PageRequest.of(0, 10)
         );
 
@@ -216,10 +221,35 @@ class CompetencyServiceTest {
                 LocalDate.of(2026, 1, 1),
                 LocalDate.of(2026, 8, 10),
                 null,
+                null,
                 PageRequest.of(0, 10)
         );
 
         assertThat(response.targetScore()).isEqualByComparingTo("6.00");
+    }
+
+    @Test
+    void summaryFiltersResultBeforePagination() {
+        User firstPassed = User.builder().id(20L).employeeCode("NV020").name("An").department(department).build();
+        User failed = User.builder().id(21L).employeeCode("NV021").name("Bình").department(department).build();
+        User secondPassed = User.builder().id(22L).employeeCode("NV022").name("Chi").department(department).build();
+        when(userRepository.findCompetencySummaryCandidates(eq(10L), isNull(), argThat(Pageable::isUnpaged)))
+                .thenReturn(new PageImpl<>(List.of(firstPassed, failed, secondPassed)));
+        when(attemptRepository.findScoredAttemptsByUserIdsAndDateRange(any(), any(), any()))
+                .thenReturn(List.of(
+                        ExamAttempt.builder().id(30L).user(firstPassed).score(new BigDecimal("7.00")).build(),
+                        ExamAttempt.builder().id(31L).user(failed).score(new BigDecimal("5.00")).build(),
+                        ExamAttempt.builder().id(32L).user(secondPassed).score(new BigDecimal("8.00")).build()
+                ));
+
+        var response = service.getSummary(
+                10L, LocalDate.now().minusDays(30), LocalDate.now(), null,
+                EvaluationResultFilter.PASSED, PageRequest.of(0, 1)
+        );
+
+        assertThat(response.items()).extracting("employeeId").containsExactly(20L);
+        assertThat(response.totalElements()).isEqualTo(2);
+        assertThat(response.totalPages()).isEqualTo(2);
     }
 
     @Test
@@ -255,6 +285,7 @@ class CompetencyServiceTest {
                 50L,
                 LocalDate.now().minusDays(30),
                 LocalDate.now(),
+                null,
                 null,
                 PageRequest.of(0, 10)
         );
@@ -296,6 +327,7 @@ class CompetencyServiceTest {
                 LocalDate.now().minusDays(30),
                 LocalDate.now(),
                 null,
+                null,
                 PageRequest.of(0, 10)
         );
 
@@ -335,6 +367,7 @@ class CompetencyServiceTest {
                 LocalDate.now().minusDays(30),
                 LocalDate.now(),
                 null,
+                null,
                 PageRequest.of(0, 10)
         );
 
@@ -344,6 +377,29 @@ class CompetencyServiceTest {
             // 9.52 vượt điểm sàn 6.00 nên kết luận Đạt.
             assertThat(item.isPassed()).isTrue();
         });
+    }
+
+    @Test
+    void techniqueFiltersResultBeforePagination() {
+        User passed = User.builder().id(20L).employeeCode("NV020").name("An").department(department).build();
+        User failed = User.builder().id(21L).employeeCode("NV021").name("Bình").department(department).build();
+        when(submissionRepository.summarizeCompetencyTechnique(
+                eq(10L), isNull(), isNull(), any(), any(), argThat(Pageable::isUnpaged)
+        )).thenReturn(new PageImpl<>(List.of(
+                techniqueAggregate(passed, "7.00", 1L, 1L),
+                techniqueAggregate(failed, "5.00", 1L, 0L)
+        )));
+        when(submissionRepository.findCompetencyTechniqueOptions(eq(10L), any(), any()))
+                .thenReturn(List.of());
+
+        var response = service.getByTechnique(
+                10L, null, LocalDate.now().minusDays(30), LocalDate.now(), null,
+                EvaluationResultFilter.FAILED, PageRequest.of(0, 1)
+        );
+
+        assertThat(response.items()).extracting("employeeId").containsExactly(21L);
+        assertThat(response.totalElements()).isEqualTo(1);
+        assertThat(response.totalPages()).isEqualTo(1);
     }
 
     @Test
