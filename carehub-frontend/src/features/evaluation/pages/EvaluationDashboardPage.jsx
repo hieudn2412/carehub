@@ -2,12 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   BarChartOutlined,
   CheckCircleOutlined,
-  ClockCircleOutlined,
   CloseCircleOutlined,
   FileDoneOutlined,
-  FileTextOutlined,
   InfoCircleOutlined,
   LoadingOutlined,
+  DownloadOutlined,
   TrophyOutlined,
 } from '@ant-design/icons'
 import {
@@ -32,6 +31,7 @@ import { useToast } from '../../../shared/context/ToastContext.jsx'
 import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
 import { currentYearDateRange, validateHistoricalDateRange } from '../../../shared/utils/dateRange.js'
+import { downloadCsv, exportFileName } from '../../../shared/utils/tableExport.js'
 import '../styles/EvaluationDashboardPage.css'
 
 function numberOrNull(value) {
@@ -261,10 +261,42 @@ export function EvaluationDashboardContent({ role = 'admin' }) {
     setIsFilterOpen(false)
   }
 
+  function handleExport() {
+    const total = overview?.attempts || {}
+    const rows = [
+      ['Tổng quan', '', 'Tổng cộng', overview?.assignmentCount, overview?.targetCount, overview?.notStartedCount,
+        total.gradedAttempts, total.passedAttempts, total.failedAttempts, total.averageScore,
+        numberOrNull(total.passRate) == null ? '' : Number(total.passRate) * 100,
+        appliedFilters.fromDate, appliedFilters.toDate],
+      ...(overview?.byProfessionalField || []).map((item) => [
+        'Lĩnh vực chuyên môn', item.professionalFieldCode, item.professionalFieldName,
+        item.assignmentCount, item.targetCount, item.notStartedCount, item.gradedAttempts,
+        item.passedAttempts, item.failedAttempts, item.averageScore,
+        numberOrNull(item.passRate) == null ? '' : Number(item.passRate) * 100,
+        appliedFilters.fromDate, appliedFilters.toDate,
+      ]),
+      ...(overview?.byPaper || []).map((item) => [
+        'Bài kiểm tra', item.paperCode, item.paperName, item.assignmentCount, item.targetCount,
+        item.notStartedCount, item.gradedAttempts, item.passedAttempts, item.failedAttempts,
+        item.averageScore, numberOrNull(item.passRate) == null ? '' : Number(item.passRate) * 100,
+        appliedFilters.fromDate, appliedFilters.toDate,
+      ]),
+    ]
+    downloadCsv(
+      exportFileName('ky-nang-ly-thuyet'),
+      ['Nhóm dữ liệu', 'Mã', 'Tên', 'Số đợt', 'Lượt phân công', 'Chưa bắt đầu', 'Đã chấm', 'Đạt', 'Không đạt', 'Điểm trung bình', 'Tỷ lệ đạt (%)', 'Từ ngày', 'Đến ngày'],
+      rows,
+    )
+  }
+
   return (
         <div className="exam-dashboard">
           <AppliedFilterToolbar
             activeCount={activeFilterCount}
+            actions={<button type="button" className="competency-dashboard-export" onClick={handleExport}
+              disabled={loading || !overview}>
+              <DownloadOutlined /> Xuất Excel
+            </button>}
             ariaLabel="Bộ lọc dashboard năng lực chuyên môn"
             className="exam-dashboard__toolbar"
             errorMessage={filterError}
@@ -364,14 +396,10 @@ export function EvaluationDashboardContent({ role = 'admin' }) {
           ) : (
             <>
               <section className="exam-dashboard__metrics">
-                <Metric icon={<FileTextOutlined />} label="Đợt kiểm tra" value={overview?.assignmentCount} detail="Số đợt trong phạm vi" />
-                <Metric icon={<FileDoneOutlined />} label="Lượt được phân công" value={overview?.targetCount} detail="Nhân viên × đợt kiểm tra" />
-                <Metric icon={<FileDoneOutlined />} label="Đã hoàn thành" value={completed} detail="Lượt đã nộp/chấm" tone="success" />
-                <Metric icon={<ClockCircleOutlined />} label="Chưa bắt đầu" value={overview?.notStartedCount} detail="Chưa từng mở bài" tone="warning" />
+                <Metric icon={<FileDoneOutlined />} label="Tổng lượt đã chấm" value={completed} detail="Theo bộ lọc hiện tại" />
                 <Metric icon={<CheckCircleOutlined />} label="Đạt" value={passed} detail="Lượt đạt" tone="success" />
                 <Metric icon={<CloseCircleOutlined />} label="Không đạt" value={failed} detail="Lượt không đạt" tone="danger" />
                 <Metric icon={<TrophyOutlined />} label="Tỷ lệ đạt" value={formatPercent(summary?.passRate)} raw detail="Trên số lượt đã chấm" />
-                <Metric icon={<BarChartOutlined />} label="Điểm trung bình" value={`${formatNumber(summary?.averageScore, 2)}/10`} raw detail="Điểm bài kiểm tra (thang 10)" />
               </section>
 
               <section className="exam-dashboard__analytics">

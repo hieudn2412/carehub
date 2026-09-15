@@ -18,6 +18,7 @@ function OtpScreen() {
   const initialOtpExpiresAt = location.state?.otpExpiresAt
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
   const [errorMessage, setErrorMessage] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [isResending, setIsResending] = useState(false)
   const [resendCooldown, setResendCooldown] = useState(RESEND_COOLDOWN_SECONDS)
   const inputRefs = useRef([])
@@ -93,7 +94,7 @@ function OtpScreen() {
     fillOtpFromIndex(event.clipboardData.getData('text'), index)
   }
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
 
     if (otpValue.length < 6) {
@@ -101,13 +102,22 @@ function OtpScreen() {
       return
     }
 
-    navigate(AUTH_ROUTES.resetPassword, {
-      state: {
-        email,
-        otp: otpValue,
-        otpExpiresAt: expiresAt,
-      },
-    })
+    try {
+      setIsSubmitting(true)
+      setErrorMessage('')
+      await authApi.verifyResetOtp({ email, otp: otpValue })
+      navigate(AUTH_ROUTES.resetPassword, {
+        state: {
+          email,
+          otp: otpValue,
+          otpExpiresAt: expiresAt,
+        },
+      })
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error, 'Mã OTP không chính xác'))
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleResendOtp = async () => {
@@ -177,8 +187,8 @@ function OtpScreen() {
             </p>
           </div>
 
-          <button className="primary-button" disabled={isExpired} type="submit">
-            Xác nhận
+          <button className="primary-button" disabled={isSubmitting || isExpired} type="submit">
+            {isSubmitting ? 'Đang xác thực...' : 'Xác nhận'}
           </button>
         </form>
 

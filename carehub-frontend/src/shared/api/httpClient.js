@@ -23,6 +23,7 @@ const REFRESH_IGNORED_PATHS = [
   '/auth/refresh-token',
   '/auth/logout',
   '/auth/forgot-password',
+  '/auth/verify-reset-otp',
   '/auth/reset-password',
 ]
 

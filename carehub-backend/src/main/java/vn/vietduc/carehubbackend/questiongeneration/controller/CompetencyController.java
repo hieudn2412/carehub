@@ -18,6 +18,7 @@ import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencyByTec
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencyClassificationResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencyEmployeeByTechniqueResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencySummaryResponse;
+import vn.vietduc.carehubbackend.questiongeneration.dto.request.EvaluationResultFilter;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttempt;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAttemptStatus;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptRepository;
@@ -95,11 +96,12 @@ public class CompetencyController {
             @RequestParam(required = false) LocalDate fromDate,
             @RequestParam(required = false) LocalDate toDate,
             @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) EvaluationResultFilter resultStatus,
             @PageableDefault(size = 10) Pageable pageable,
             Authentication authentication) {
         requireManagerDepartmentScope(departmentId, authentication);
         CompetencyByTechniqueResponse data = competencyService.getByTechnique(
-                departmentId, formId, fromDate, toDate, keyword, pageable
+                departmentId, formId, fromDate, toDate, keyword, resultStatus, pageable
         );
         return ResponseEntity.ok(ApiResponse.success("Lấy tuân thủ kỹ thuật thành công", data));
     }
@@ -124,11 +126,12 @@ public class CompetencyController {
             @RequestParam(required = false) LocalDate fromDate,
             @RequestParam(required = false) LocalDate toDate,
             @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) EvaluationResultFilter resultStatus,
             @PageableDefault(size = 10) Pageable pageable,
             Authentication authentication) {
         requireManagerDepartmentScope(departmentId, authentication);
         CompetencySummaryResponse data = competencyService.getSummary(
-                departmentId, fromDate, toDate, keyword, pageable
+                departmentId, fromDate, toDate, keyword, resultStatus, pageable
         );
         return ResponseEntity.ok(ApiResponse.success("Lấy tổng hợp năng lực thành công", data));
     }

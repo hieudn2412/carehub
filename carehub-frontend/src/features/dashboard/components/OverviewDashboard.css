@@ -683,6 +683,18 @@
   .overview-summary-card p { margin-bottom: 2px; font-size: 11px; }
   .overview-summary-card strong { font-size: 21px; }
   .overview-summary-card div > span { display: none; }
+  .overview-management-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .overview-management-kpi {
+    min-height: 0;
+    aspect-ratio: 1;
+    gap: 8px;
+    padding: 12px;
+  }
+  .overview-management-kpi__label { font-size: 14px; }
+  .overview-management-kpi__metrics { gap: 6px; }
+  .overview-management-kpi__metrics strong { font-size: 13px; }
+  .overview-management-kpi__metrics b { font-size: 20px; }
+  .overview-management-kpi small { margin-top: 3px; font-size: 10px; }
   .overview-domain { padding: 15px; }
   .overview-domain__header { grid-template-columns: 40px 1fr; }
   .overview-domain__header h2 { font-size: 15px; }
