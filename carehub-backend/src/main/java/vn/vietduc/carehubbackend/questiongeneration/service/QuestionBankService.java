@@ -107,12 +107,12 @@ public class QuestionBankService {
         Map<String, Long> counts = approvedQuestions.stream()
                 .filter(question -> question.getCategory() != null && question.getCategory().getStatus() == vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionCategoryStatus.ACTIVE)
                 .filter(question -> question.getProfessionalField() != null && question.getProfessionalField().isActive())
-                .filter(question -> question.getCognitiveLevel() != null && question.getCognitiveVerifiedAt() != null && question.getCognitiveVerifiedBy() != null)
+                .filter(question -> question.getCognitiveLevel() != null)
                 .collect(Collectors.groupingBy(question -> question.getProfessionalField().getId() + ":" + question.getCognitiveLevel().name(), Collectors.counting()));
         return approvedQuestions.stream()
                 .filter(question -> question.getCategory() != null && question.getCategory().getStatus() == vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionCategoryStatus.ACTIVE)
                 .filter(question -> question.getProfessionalField() != null && question.getProfessionalField().isActive())
-                .filter(question -> question.getCognitiveLevel() != null && question.getCognitiveVerifiedAt() != null && question.getCognitiveVerifiedBy() != null)
+                .filter(question -> question.getCognitiveLevel() != null)
                 .filter(question -> counts.containsKey(question.getProfessionalField().getId() + ":" + question.getCognitiveLevel().name()))
                 .map(question -> new QuestionBankAvailabilityResponse(
                         question.getProfessionalField().getId(),
