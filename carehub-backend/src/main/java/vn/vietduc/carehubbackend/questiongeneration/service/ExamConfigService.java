@@ -397,7 +397,7 @@ public class ExamConfigService {
         List<QuestionBankQuestion> pool = questionRepository.findByStatusAndProfessionalFieldIdInOrderByIdAsc(QuestionBankStatus.APPROVED, fields).stream()
                 .filter(q -> q.getCategory() != null && q.getCategory().getStatus() == QuestionCategoryStatus.ACTIVE)
                 .filter(q -> q.getProfessionalField() != null && q.getProfessionalField().isActive())
-                .filter(q -> q.getCognitiveLevel() != null && q.getCognitiveVerifiedAt() != null && q.getCognitiveVerifiedBy() != null)
+                .filter(q -> q.getCognitiveLevel() != null)
                 .sorted(Comparator.comparing(QuestionBankQuestion::getId))
                 .toList();
         if (filters == null) return pool;
