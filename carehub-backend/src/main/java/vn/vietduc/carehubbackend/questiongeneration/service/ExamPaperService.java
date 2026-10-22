@@ -731,8 +731,7 @@ public class ExamPaperService {
         Set<Long> excludeDocuments = filterIds(filters, ExamConfigSourceFilter.FilterType.EXCLUDE_DOCUMENT);
         return questionRepository.findByStatusAndProfessionalFieldIdInOrderByIdAsc(QuestionBankStatus.APPROVED, fieldIds).stream()
                 .filter(question -> question.getCategory() != null && question.getCategory().getStatus() == QuestionCategoryStatus.ACTIVE)
-                .filter(question -> question.getProfessionalField() != null && question.getProfessionalField().isActive())
-                .filter(question -> question.getCognitiveLevel() != null && question.getCognitiveVerifiedAt() != null && question.getCognitiveVerifiedBy() != null)
+                .filter(question -> question.getCognitiveLevel() != null)
                 .filter(question -> includeCategories.isEmpty() || question.getCategory() != null && includeCategories.contains(question.getCategory().getId()))
                 .filter(question -> question.getCategory() == null || !excludeCategories.contains(question.getCategory().getId()))
                 .filter(question -> includeDocuments.isEmpty() || question.getSourceDocumentRef() != null && includeDocuments.contains(question.getSourceDocumentRef().getId()))
