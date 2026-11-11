@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.DataValidation;
 import org.apache.poi.ss.usermodel.DataValidationConstraint;
 import org.apache.poi.ss.usermodel.DataValidationHelper;
@@ -82,6 +83,7 @@ public class QuestionBankImportExportService {
     private final QuestionCategoryRepository categoryRepository;
     private final ProfessionalFieldRepository professionalFieldRepository;
     private final QuestionDocumentRepository questionDocumentRepository;
+    private final DataFormatter dataFormatter = new DataFormatter();
 
     @Autowired
     public QuestionBankImportExportService(
@@ -239,12 +241,12 @@ public class QuestionBankImportExportService {
         }
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public QuestionBankImportPreviewResponse preview(MultipartFile file, String actor) {
         return preview(file, actor, null);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public QuestionBankImportPreviewResponse preview(MultipartFile file, String actor, String columnMappingJson) {
         ParsedRows parsed = parseFile(file, parseColumnMapping(columnMappingJson));
         List<QuestionBankImportRowResultResponse> results = parsed.rows().stream()
@@ -346,12 +348,15 @@ public class QuestionBankImportExportService {
     private ParsedRows parseWorkbook(MultipartFile file, Map<String, String> columnMapping) throws IOException {
         try (Workbook workbook = WorkbookFactory.create(file.getInputStream())) {
             Sheet sheet = workbook.getSheetAt(0);
-            if (sheet == null || sheet.getPhysicalNumberOfRows() < 2) {
+            if (sheet == null || sheet.getPhysicalNumberOfRows() == 0) {
                 return new ParsedRows(List.of(), List.of());
             }
             Row headerRow = sheet.getRow(0);
             Map<String, Integer> headers = headerIndex(headerRow);
             List<String> sourceHeaders = sourceHeaders(headerRow);
+            if (sheet.getPhysicalNumberOfRows() < 2) {
+                return new ParsedRows(List.of(), sourceHeaders);
+            }
             List<QuestionBankImportRowRequest> rows = new ArrayList<>();
             for (int rowIndex = 1; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
                 Row row = sheet.getRow(rowIndex);
@@ -370,10 +375,13 @@ public class QuestionBankImportExportService {
     private ParsedRows parseCsv(MultipartFile file, Map<String, String> columnMapping) throws IOException {
         String content = new String(file.getBytes(), StandardCharsets.UTF_8);
         List<String> lines = content.lines().filter(line -> !line.isBlank()).toList();
-        if (lines.size() < 2) {
+        if (lines.isEmpty()) {
             return new ParsedRows(List.of(), List.of());
         }
         List<String> headerValues = parseCsvLine(lines.get(0));
+        if (lines.size() < 2) {
+            return new ParsedRows(List.of(), headerValues);
+        }
         Map<String, Integer> headers = new HashMap<>();
         for (int index = 0; index < headerValues.size(); index++) {
             headers.put(normalizeHeader(headerValues.get(index)), index);
@@ -653,10 +661,33 @@ public class QuestionBankImportExportService {
         Matcher matcher = CATEGORY_CODE_PATTERN.matcher(reference);
         if (matcher.find()) {
             String code = matcher.group(1).trim();
-            return categoryRepository.findByCodeIgnoreCase(code)
-                    .filter(category -> category.getStatus() == QuestionCategoryStatus.ACTIVE)
-                    .map(category -> new CategoryResolution(category, null))
-                    .orElseGet(() -> new CategoryResolution(null, "Không nhận diện được mã danh mục [" + code + "]"));
+            Optional<QuestionCategory> byCode = categoryRepository.findByCodeIgnoreCase(code)
+                    .filter(category -> category.getStatus() == QuestionCategoryStatus.ACTIVE);
+            if (byCode.isPresent()) {
+                return new CategoryResolution(byCode.get(), null);
+            }
+            String namePart = reference.substring(matcher.end()).trim();
+            if (!namePart.isBlank()) {
+                String normalizedName = normalizeText(namePart);
+                List<QuestionCategory> byName = categoryRepository
+                        .findByStatusOrderByNameAsc(QuestionCategoryStatus.ACTIVE).stream()
+                        .filter(category -> normalizeText(category.getName()).equals(normalizedName))
+                        .toList();
+                if (byName.size() == 1) {
+                    return new CategoryResolution(byName.get(0), null);
+                }
+                List<QuestionCategory> byContains = categoryRepository
+                        .findByStatusOrderByNameAsc(QuestionCategoryStatus.ACTIVE).stream()
+                        .filter(category -> {
+                            String catNorm = normalizeText(category.getName());
+                            return catNorm.contains(normalizedName) || normalizedName.contains(catNorm);
+                        })
+                        .toList();
+                if (byContains.size() == 1) {
+                    return new CategoryResolution(byContains.get(0), null);
+                }
+            }
+            return new CategoryResolution(null, "Không nhận diện được mã danh mục [" + code + "]");
         }
         Optional<QuestionCategory> byCode = categoryRepository.findByCodeIgnoreCase(reference)
                 .filter(category -> category.getStatus() == QuestionCategoryStatus.ACTIVE);
@@ -676,10 +707,10 @@ public class QuestionBankImportExportService {
     }
 
     private FieldResolution resolveField(QuestionBankImportRowRequest row) {
+        if (professionalFieldRepository == null) {
+            return new FieldResolution(null, null);
+        }
         if (row.professionalFieldId() != null) {
-            if (professionalFieldRepository == null) {
-                return new FieldResolution(null, null);
-            }
             return professionalFieldRepository.findById(row.professionalFieldId())
                     .filter(ProfessionalField::isActive)
                     .map(field -> new FieldResolution(field, null))
@@ -687,13 +718,12 @@ public class QuestionBankImportExportService {
         }
         String reference = blank(row.professionalFieldReference()).trim();
         if (reference.isBlank()) {
-            if (professionalFieldRepository == null) {
-                return new FieldResolution(null, null);
-            }
             return new FieldResolution(null, "Thiếu lĩnh vực chuyên môn");
         }
         Matcher matcher = CATEGORY_CODE_PATTERN.matcher(reference);
+        String namePart = null;
         if (matcher.find()) {
+            namePart = reference.substring(matcher.end()).trim();
             reference = matcher.group(1).trim();
         }
         String normalizedReference = normalizeText(reference);
@@ -707,6 +737,15 @@ public class QuestionBankImportExportService {
                 .toList();
         if (byName.size() == 1) {
             return new FieldResolution(byName.get(0), null);
+        }
+        if (namePart != null && !namePart.isBlank()) {
+            String normalizedNamePart = normalizeText(namePart);
+            List<ProfessionalField> byNamePart = professionalFieldRepository.findByActiveTrueOrderByNameAsc().stream()
+                    .filter(field -> normalizeText(field.getName()).equals(normalizedNamePart))
+                    .toList();
+            if (byNamePart.size() == 1) {
+                return new FieldResolution(byNamePart.get(0), null);
+            }
         }
         return new FieldResolution(null, byName.isEmpty()
                 ? "Không nhận diện được lĩnh vực: " + row.professionalFieldReference()
@@ -868,8 +907,7 @@ public class QuestionBankImportExportService {
         if (cell == null) {
             return "";
         }
-        cell.setCellType(CellType.STRING);
-        return cell.getStringCellValue() == null ? "" : cell.getStringCellValue().trim();
+        return dataFormatter.formatCellValue(cell).trim();
     }
 
     private boolean isBlank(String value) {

@@ -5,11 +5,15 @@ import {
   CloseOutlined,
   DeleteOutlined,
   DownloadOutlined,
+  ExclamationCircleOutlined,
   ExportOutlined,
+  FileExcelOutlined,
   FormOutlined,
+  InfoCircleOutlined,
   LoadingOutlined,
   PlusCircleOutlined,
   UploadOutlined,
+  WarningOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
@@ -95,6 +99,7 @@ function QuestionBankListPage() {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
   const [importColumnMapping, setImportColumnMapping] = useState({})
+  const [isMappingExpanded, setIsMappingExpanded] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
   const [keyword, setKeyword] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
@@ -258,7 +263,16 @@ function QuestionBankListPage() {
     setIsImporting(true)
     try {
       const response = await questionBankApi.previewImport(importFile, cleanedImportColumnMapping())
-      setImportPreview(apiData(response))
+      const data = apiData(response)
+      setImportPreview(data)
+      const hasNonStandard = (data?.sourceHeaders || []).length > 0 &&
+        !data.sourceHeaders.some(h => {
+          const norm = normalizeText(h).toLowerCase()
+          return norm.includes('cau hoi') || norm.includes('noi dung') || norm.includes('stem')
+        })
+      if (hasNonStandard) {
+        setIsMappingExpanded(true)
+      }
       showToast('Đã preview file import.', 'success')
     } catch (error) {
       showToast(apiErrorMessage(error), 'error')
@@ -337,6 +351,7 @@ function QuestionBankListPage() {
     setImportPreview(null)
     setIsImporting(false)
     setImportColumnMapping({})
+    setIsMappingExpanded(false)
   }
 
   function updateImportColumnMapping(field, value) {
@@ -593,35 +608,38 @@ function QuestionBankListPage() {
       </AppShell>
       {isImportModalOpen && (
         <div className="qbl-modal-backdrop" onClick={closeImportModal}>
-          <div className="qbl-modal qbl-modal--wide" role="dialog" aria-modal="true" aria-labelledby="import-question-bank-title" onClick={(event) => event.stopPropagation()}>
+          <div className="qbl-modal qbl-modal--wide qbl-import-modal" role="dialog" aria-modal="true" aria-labelledby="import-question-bank-title" onClick={(event) => event.stopPropagation()}>
             <div className="qbl-modal-heading">
-              <h2 id="import-question-bank-title">Import ngân hàng câu hỏi</h2>
+              <div className="qbl-modal-heading-text">
+                <h2 id="import-question-bank-title">Import ngân hàng câu hỏi</h2>
+                {importPreview?.importJobId && (
+                  <span className="qbl-job-tag">Mã import: #{importPreview.importJobId}</span>
+                )}
+              </div>
               <button type="button" className="qbl-detail-close" onClick={closeImportModal} aria-label="Đóng cửa sổ import">
                 <CloseOutlined />
               </button>
             </div>
 
-            <label className="qbl-field">
-              <span>File import</span>
+            <label className="qbl-field qbl-file-field">
+              <span>File import (Excel .xlsx, .xls hoặc .csv)</span>
               <input
                 type="file"
                 accept=".xlsx,.xls,.csv"
+                className="qbl-file-input"
                 onChange={(event) => {
                   setImportFile(event.target.files?.[0] || null)
                   setImportPreview(null)
                   setImportColumnMapping({})
+                  setIsMappingExpanded(false)
                 }}
               />
             </label>
 
-            <p className="qbl-modal-subtitle">
-              Câu trùng mạnh sẽ được lưu dưới dạng bản nháp để người duyệt quyết định.
-            </p>
-
-            {(importPreview?.sourceHeaders || []).length > 0 && (
-              <div className="qbl-import-preview">
-                <p className="qbl-modal-subtitle">Mapping cột từ file nguồn. Chỉ cần chỉnh các cột chưa tự nhận đúng, rồi bấm Preview lại.</p>
-                <div className="qbl-detail-meta-grid">
+            {isMappingExpanded && (importPreview?.sourceHeaders || []).length > 0 && (
+              <div className="qbl-mapping-container">
+                <p className="qbl-modal-subtitle">Mapping cột từ file nguồn. Chỉ cần chỉnh các cột chưa tự nhận đúng, rồi bấm Xem trước lại.</p>
+                <div className="qbl-detail-meta-grid qbl-mapping-grid">
                   {IMPORT_MAPPING_FIELDS.map((field) => (
                     <label key={field.key} className="qbl-field">
                       <span>{field.label}</span>
@@ -642,44 +660,68 @@ function QuestionBankListPage() {
             {importPreview && (
               <>
                 <div className="qbl-import-summary">
-                  {importPreview.importJobId && <span>Mã import: #{importPreview.importJobId}</span>}
-                  <span>Tổng dòng: {importPreview.totalRows}</span>
-                  <span>Sẵn sàng import: {importPreview.validRows ?? importPreview.createdCount}</span>
-                  <span>Bỏ qua: {importPreview.skippedRows ?? importPreview.skippedCount ?? 0}</span>
-                  <span>Lỗi: {importPreview.invalidRows ?? importPreview.failedCount}</span>
+                  <div className="qbl-summary-card qbl-summary-card--total">
+                    <span>Tổng dòng: {importPreview.totalRows}</span>
+                  </div>
+                  <div className="qbl-summary-card qbl-summary-card--valid">
+                    <span>Sẵn sàng import: {importPreview.validRows ?? importPreview.createdCount}</span>
+                  </div>
+                  <div className="qbl-summary-card qbl-summary-card--skipped">
+                    <span>Bỏ qua: {importPreview.skippedRows ?? importPreview.skippedCount ?? 0}</span>
+                  </div>
+                  <div className="qbl-summary-card qbl-summary-card--invalid">
+                    <span>Lỗi: {importPreview.invalidRows ?? importPreview.failedCount}</span>
+                  </div>
                 </div>
+
                 {(importPreview.skippedRows ?? importPreview.skippedCount ?? 0) > 0 && (
-                  <p className="qbl-import-errors">Các dòng không nhận diện được danh mục sẽ không được lưu. Hãy tải báo cáo để sửa và import lại.</p>
+                  <div className="qbl-import-alert qbl-import-alert--warning">
+                    <WarningOutlined className="qbl-alert-icon" />
+                    <p className="qbl-import-errors">Các dòng không nhận diện được danh mục sẽ không được lưu. Hãy tải báo cáo để sửa và import lại.</p>
+                  </div>
                 )}
+                {((importPreview.invalidRows ?? importPreview.failedCount ?? 0) > 0) && (
+                  <div className="qbl-import-alert qbl-import-alert--danger">
+                    <ExclamationCircleOutlined className="qbl-alert-icon" />
+                    <p className="qbl-import-errors">Có dòng phát hiện lỗi dữ liệu. Vui lòng kiểm tra cột kết quả trong bảng hoặc tải báo cáo lỗi.</p>
+                  </div>
+                )}
+                {((importPreview.validRows ?? importPreview.createdCount) === importPreview.totalRows && importPreview.totalRows > 0) && (
+                  <div className="qbl-import-alert qbl-import-alert--success">
+                    <CheckCircleOutlined className="qbl-alert-icon" />
+                    <span>Tất cả dữ liệu hợp lệ! Bạn có thể nhấn &quot;Nhập các dòng đã preview&quot; để lưu vào ngân hàng.</span>
+                  </div>
+                )}
+
                 <div className="qbl-import-preview">
-                  <table className="qbl-table">
+                  <table className="qbl-table qbl-import-table">
                     <thead>
                       <tr>
-                        <th>Dòng</th>
-                        <th>Câu hỏi</th>
-                        <th>Danh mục</th>
-                        <th>Lĩnh vực</th>
-                        <th>Mức độ nhận thức</th>
-                        <th>Kết quả</th>
+                        <th className="qbl-col-row">Dòng</th>
+                        <th className="qbl-col-stem">Câu hỏi</th>
+                        <th className="qbl-col-category">Danh mục</th>
+                        <th className="qbl-col-field">Lĩnh vực</th>
+                        <th className="qbl-col-cognitive">Mức độ nhận thức</th>
+                        <th className="qbl-col-result">Kết quả</th>
                       </tr>
                     </thead>
                     <tbody>
                       {(importPreview.rows || []).slice(0, 20).map((row) => (
                         <tr key={`${row.rowNumber}-${row.stem}`}>
-                          <td>{row.rowNumber}</td>
-                          <td>{row.stem}</td>
-                          <td>{row.categoryCode ? `[${row.categoryCode}] ${row.categoryName}` : row.categoryReference || 'Chưa nhận diện'}</td>
-                          <td>{row.professionalFieldName || '—'}</td>
-                          <td>{cognitiveLevelText(row.cognitiveLevel)}</td>
-                          <td>
+                          <td className="qbl-col-row"><strong>#{row.rowNumber}</strong></td>
+                          <td className="qbl-col-stem">{row.stem}</td>
+                          <td className="qbl-col-category">{row.categoryCode ? `[${row.categoryCode}] ${row.categoryName}` : row.categoryReference || 'Chưa nhận diện'}</td>
+                          <td className="qbl-col-field">{row.professionalFieldName || '—'}</td>
+                          <td className="qbl-col-cognitive">{cognitiveLevelText(row.cognitiveLevel)}</td>
+                          <td className="qbl-col-result">
                             {row.createdQuestionId ? (
                               <span className="qbl-badge qbl-badge--active">Đã lưu #{row.createdQuestionId}</span>
                             ) : row.skipped ? (
-                              <span className="qbl-import-errors">{row.skipReason || 'Bỏ qua'}</span>
+                              <span className="qbl-badge qbl-badge--skipped">{row.skipReason || 'Bỏ qua'}</span>
                             ) : row.valid ? (
                               <span className="qbl-badge qbl-badge--active">Hợp lệ</span>
                             ) : (
-                              <span className="qbl-import-errors">{(row.errors || []).join(', ')}</span>
+                              <span className="qbl-badge qbl-badge--error">{(row.errors || []).join(', ')}</span>
                             )}
                           </td>
                         </tr>
@@ -687,29 +729,33 @@ function QuestionBankListPage() {
                     </tbody>
                   </table>
                   {(importPreview.rows || []).length > 20 && (
-                    <p className="qbl-modal-subtitle">Chỉ hiển thị 20 dòng đầu trong preview.</p>
+                    <p className="qbl-modal-subtitle" style={{ padding: '8px 12px' }}>Chỉ hiển thị 20 dòng đầu trong preview.</p>
                   )}
                 </div>
               </>
             )}
 
-            <div className="qbl-modal-actions">
-              <button type="button" className="qbl-btn-secondary" onClick={downloadImportTemplate} disabled={isExporting || isImporting}>
-                {isExporting ? <LoadingOutlined /> : <DownloadOutlined />}
-                <span>Tải file mẫu</span>
-              </button>
-              <button type="button" className="qbl-btn-secondary" onClick={previewImport} disabled={isImporting || !importFile}>
-                {isImporting ? <LoadingOutlined /> : <UploadOutlined />}
-                <span>Xem trước</span>
-              </button>
-              <button type="button" className="qbl-btn-secondary" onClick={downloadImportErrorReport} disabled={!importPreview || (importPreview.rows || []).every((row) => row.valid)}>
-                <DownloadOutlined />
-                <span>Tải báo cáo lỗi</span>
-              </button>
-              <button type="button" className="qbl-btn-primary" onClick={commitImport} disabled={isImporting || !importPreview || (importPreview.rows || []).length === 0}>
-                {isImporting ? <LoadingOutlined /> : <CheckCircleOutlined />}
-                <span>Nhập các dòng đã preview</span>
-              </button>
+            <div className="qbl-modal-actions qbl-import-actions">
+              <div className="qbl-import-actions-left">
+                <button type="button" className="qbl-btn-secondary" onClick={downloadImportTemplate} disabled={isExporting || isImporting}>
+                  {isExporting ? <LoadingOutlined /> : <DownloadOutlined />}
+                  <span>Tải file mẫu</span>
+                </button>
+                <button type="button" className="qbl-btn-secondary" onClick={downloadImportErrorReport} disabled={!importPreview || (importPreview.rows || []).every((row) => row.valid)}>
+                  <DownloadOutlined />
+                  <span>Tải báo cáo lỗi</span>
+                </button>
+              </div>
+              <div className="qbl-import-actions-right">
+                <button type="button" className="qbl-btn-secondary" onClick={previewImport} disabled={isImporting || !importFile}>
+                  {isImporting ? <LoadingOutlined /> : <UploadOutlined />}
+                  <span>Xem trước</span>
+                </button>
+                <button type="button" className="qbl-btn-primary" onClick={commitImport} disabled={isImporting || !importPreview || (importPreview.rows || []).length === 0}>
+                  {isImporting ? <LoadingOutlined /> : <CheckCircleOutlined />}
+                  <span>Nhập các dòng đã preview</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
