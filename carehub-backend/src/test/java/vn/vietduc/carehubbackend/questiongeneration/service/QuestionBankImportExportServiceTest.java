@@ -12,6 +12,8 @@ import vn.vietduc.carehubbackend.questiongeneration.dto.response.QuestionBankQue
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionCategory;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionCategoryStatus;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionCategoryRepository;
+import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
+import vn.vietduc.carehubbackend.training.repository.ProfessionalFieldRepository;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -32,6 +34,7 @@ class QuestionBankImportExportServiceTest {
     private final QuestionBankService questionBankService = mock(QuestionBankService.class);
     private final EvaluationImportHistoryService importHistoryService = mock(EvaluationImportHistoryService.class);
     private final QuestionCategoryRepository categoryRepository = mock(QuestionCategoryRepository.class);
+    private final ProfessionalFieldRepository fieldRepository = mock(ProfessionalFieldRepository.class);
     private final AtomicLong ids = new AtomicLong(100);
     private QuestionBankImportExportService service;
 
@@ -42,6 +45,10 @@ class QuestionBankImportExportServiceTest {
                 .status(QuestionCategoryStatus.ACTIVE).build();
         QuestionCategory emergency = QuestionCategory.builder().id(11L).code("CAP_CUU").name("Cấp cứu")
                 .status(QuestionCategoryStatus.ACTIVE).build();
+        ProfessionalField field = ProfessionalField.builder().id(20L).code("LV_01").name("Lĩnh vực 1").active(true).build();
+        when(fieldRepository.findByActiveTrueOrderByNameAsc()).thenReturn(List.of(field));
+        when(fieldRepository.findByCode("LV_01")).thenReturn(Optional.of(field));
+        when(fieldRepository.findById(20L)).thenReturn(Optional.of(field));
         when(categoryRepository.findByStatusOrderByNameAsc(QuestionCategoryStatus.ACTIVE))
                 .thenReturn(List.of(topic, emergency));
         when(categoryRepository.findById(10L)).thenReturn(Optional.of(topic));
@@ -268,6 +275,61 @@ class QuestionBankImportExportServiceTest {
             assertThat(workbook.getSheet("Hướng dẫn").getRow(0).getCell(0).getStringCellValue()).contains("cột bắt buộc");
             assertThat(workbook.getSheet("Câu hỏi").getDataValidations()).hasSize(4);
         }
+    }
+
+    @Test
+    void previewEmptyTemplateXlsxReturnsZeroRowsWithSourceHeaders() {
+        byte[] templateBytes = service.importTemplateXlsx();
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "mau-import-ngan-hang-cau-hoi (1).xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                templateBytes
+        );
+        var preview = service.preview(file, "admin");
+        assertThat(preview.totalRows()).isZero();
+        assertThat(preview.sourceHeaders()).contains("Danh mục kiến thức", "Lĩnh vực chuyên môn", "Nội dung câu hỏi");
+        assertThat(preview.rows()).isEmpty();
+    }
+
+    @Test
+    void previewXlsxWithQuestionRowsParsesCorrectly() throws Exception {
+        byte[] templateBytes = service.importTemplateXlsx();
+        byte[] populatedBytes;
+        try (org.apache.poi.ss.usermodel.Workbook workbook = new XSSFWorkbook(new ByteArrayInputStream(templateBytes));
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            org.apache.poi.ss.usermodel.Sheet sheet = workbook.getSheet("Câu hỏi");
+            org.apache.poi.ss.usermodel.Row row = sheet.createRow(1);
+            row.createCell(0).setCellValue("[DM_01] Chủ đề");
+            row.createCell(1).setCellValue("[LV_01] Lĩnh vực 1");
+            row.createCell(2).setCellValue("Nội dung câu hỏi mẫu?");
+            row.createCell(3).setCellValue("Phương án A");
+            row.createCell(4).setCellValue("Phương án B");
+            row.createCell(5).setCellValue("Phương án C");
+            row.createCell(6).setCellValue("Phương án D");
+            row.createCell(7).setCellValue("A");
+            row.createCell(8).setCellValue("Kiến thức nền tảng");
+            row.createCell(9).setCellValue("Giải thích chi tiết");
+            workbook.write(out);
+            populatedBytes = out.toByteArray();
+        }
+
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "mau-import-ngan-hang-cau-hoi (1).xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                populatedBytes
+        );
+        var serviceWithField = new QuestionBankImportExportService(
+                questionBankService, importHistoryService, new ObjectMapper(), categoryRepository, fieldRepository, null
+        );
+        var preview = serviceWithField.preview(file, "admin");
+        assertThat(preview.totalRows()).isEqualTo(1);
+        assertThat(preview.validRows()).isEqualTo(1);
+        assertThat(preview.rows().get(0).stem()).isEqualTo("Nội dung câu hỏi mẫu?");
+        assertThat(preview.rows().get(0).correctAnswer()).isEqualTo("A");
+        assertThat(preview.rows().get(0).categoryId()).isEqualTo(10L);
+        assertThat(preview.rows().get(0).professionalFieldId()).isEqualTo(20L);
     }
 
     private MockMultipartFile csv(String content) {

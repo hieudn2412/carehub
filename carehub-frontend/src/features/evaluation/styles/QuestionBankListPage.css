@@ -231,30 +231,274 @@
   cursor: not-allowed;
 }
 
+.qbl-import-modal {
+  width: min(1040px, 96vw);
+  max-height: 90vh;
+}
+
+.qbl-modal-heading-text {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.qbl-job-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.qbl-file-field {
+  margin-top: 14px;
+}
+
+.qbl-file-input {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  background: #fff;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 8px;
+  color: #334155;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.qbl-file-input:hover {
+  border-color: #0f766e;
+  background: #f0fdf4;
+}
+
+/* Mapping Container (Only displayed if non-standard headers are detected) */
+.qbl-mapping-container {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.qbl-mapping-grid {
+  margin: 10px 0 0;
+  border: none;
+  gap: 10px;
+}
+
+/* Preview Summary Badges */
 .qbl-import-summary {
   display: flex;
   align-items: center;
   gap: 10px;
+  margin-top: 14px;
   flex-wrap: wrap;
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: #f8fafc;
-  color: #334155;
-  font-size: 13px;
-  font-weight: 700;
 }
 
+.qbl-summary-card {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.qbl-summary-card--total {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #1e293b;
+}
+
+.qbl-summary-card--valid {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #047857;
+}
+
+.qbl-summary-card--skipped {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #b45309;
+}
+
+.qbl-summary-card--invalid {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+/* Import Alerts */
+.qbl-import-alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-top: 10px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.qbl-import-alert p {
+  margin: 0;
+}
+
+.qbl-import-alert--warning {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+}
+
+.qbl-import-alert--danger {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+.qbl-import-alert--success {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+  font-weight: 600;
+}
+
+.qbl-alert-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+/* Table styling */
 .qbl-import-preview {
-  max-height: 360px;
-  overflow: auto;
+  max-height: 380px;
+  overflow-y: auto;
+  overflow-x: hidden;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
+  margin-top: 12px;
+}
+
+.qbl-import-table {
+  table-layout: fixed;
+  width: 100%;
+  min-width: 0 !important;
+  border-collapse: collapse;
+  margin: 0;
+}
+
+.qbl-import-table th,
+.qbl-import-table td {
+  padding: 10px 12px;
+  vertical-align: top;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+
+.qbl-import-table th {
+  background: #f8fafc;
+  font-weight: 700;
+  color: #475569;
+  border-bottom: 1px solid #e2e8f0;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.qbl-import-table td {
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.qbl-col-row {
+  width: 50px;
+  text-align: center;
+  color: #64748b;
+  font-size: 12.5px;
+}
+
+.qbl-col-stem {
+  width: 44%;
+  line-height: 1.5;
+  color: #0f172a;
+  word-break: break-word;
+  white-space: normal;
+}
+
+.qbl-col-category {
+  width: 18%;
+  line-height: 1.4;
+  color: #334155;
+  font-size: 12.5px;
+  word-break: break-word;
+  white-space: normal;
+}
+
+.qbl-col-field {
+  width: 16%;
+  line-height: 1.4;
+  color: #475569;
+  font-size: 12.5px;
+  word-break: break-word;
+  white-space: normal;
+}
+
+.qbl-col-cognitive {
+  width: 12%;
+  font-size: 12px;
+  color: #0f766e;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.qbl-col-result {
+  width: 10%;
+  min-width: 84px;
+  text-align: center;
 }
 
 .qbl-import-errors {
   color: #b91c1c;
   font-size: 12.5px;
   font-weight: 700;
+}
+
+.qbl-badge--skipped {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 12px;
+  display: inline-block;
+}
+
+.qbl-badge--error {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 12px;
+  display: inline-block;
+}
+
+/* Import actions button bar */
+.qbl-import-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.qbl-import-actions-left,
+.qbl-import-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .qbl-warning {
@@ -788,11 +1032,19 @@
   .qbl-search-filter-group,
   .qbl-toolbar-actions,
   .qbl-modal-actions,
+  .qbl-import-actions,
+  .qbl-import-actions-left,
+  .qbl-import-actions-right,
   .qbl-model-status-grid,
   .qbl-detail-meta-grid,
   .qbl-detail-options {
     grid-template-columns: 1fr;
     flex-direction: column;
+    align-items: stretch;
+  }
+
+  .qbl-step-arrow {
+    display: none;
   }
 
   .qbl-filter-trigger {
