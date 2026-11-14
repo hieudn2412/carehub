@@ -39,6 +39,8 @@ public interface QuestionBankQuestionRepository extends JpaRepository<QuestionBa
 
     List<QuestionBankQuestion> findByStatusAndProfessionalFieldIdInOrderByIdAsc(QuestionBankStatus status, Collection<Long> professionalFieldIds);
 
+    List<QuestionBankQuestion> findByStatusAndCategoryIdInOrderByIdAsc(QuestionBankStatus status, Collection<Long> categoryIds);
+
     long countByCategoryIdAndStatus(Long categoryId, QuestionBankStatus status);
 
     List<QuestionBankQuestion> findByCategoryIdAndStatus(Long categoryId, QuestionBankStatus status);

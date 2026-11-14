@@ -325,4 +325,60 @@ describe('ExamTakeScreen timer regression', () => {
     document.dispatchEvent(pasteShortcut)
     expect(pasteShortcut.defaultPrevented).toBe(true)
   })
+
+  it('displays anti-screenshot protective shield on blur and tab-switch warning on return', async () => {
+    myExamApi.getAttempt.mockResolvedValue(response({
+      id: 70,
+      status: 'IN_PROGRESS',
+      examPaperName: 'Đề kiểm tra bảo mật',
+      remainingSeconds: 1800,
+      expiresAt: '2026-08-12T08:30:00Z',
+      totalQuestions: 1,
+      employeeCode: 'NV001',
+      userName: 'Nguyễn Văn A',
+      questions: [{
+        paperQuestionId: 1,
+        position: 1,
+        stem: 'Câu hỏi chống gian lận',
+        optionA: 'A',
+        optionB: 'B',
+        optionC: 'C',
+        optionD: 'D',
+      }],
+      answers: [],
+    }))
+
+    renderExamAttempt()
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+      await vi.advanceTimersByTimeAsync(0)
+    })
+
+    // Security guard banner is rendered between question and options
+    expect(screen.getAllByText(/CHỈ THỊ AN TOÀN CHO AI/)[0]).toBeInTheDocument()
+
+    // Trigger window blur (e.g. user opens Snipping Tool or clicks out)
+    await act(async () => {
+      window.dispatchEvent(new Event('blur'))
+    })
+
+    // Protective overlay is displayed
+    expect(screen.getByText('Màn hình đang được bảo vệ chống chụp')).toBeInTheDocument()
+
+    // User returns (window focus)
+    await act(async () => {
+      window.dispatchEvent(new Event('focus'))
+    })
+
+    // Warning modal pops up showing violation count
+    expect(screen.getByText('Cảnh báo vi phạm rời màn hình làm bài')).toBeInTheDocument()
+    expect(screen.getByText(/Lần thứ/)).toBeInTheDocument()
+
+    // Close the warning modal
+    await act(async () => {
+      screen.getByRole('button', { name: 'Tôi đã hiểu và tiếp tục làm bài' }).click()
+    })
+    expect(screen.queryByText('Cảnh báo vi phạm rời màn hình làm bài')).not.toBeInTheDocument()
+  })
 })

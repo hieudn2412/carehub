@@ -31,14 +31,20 @@ export const myExamApi = {
     })
   },
 
-  saveAnswers(attemptId, answers) {
-    return httpClient.put(`/me/exam-attempts/${attemptId}/answers`, { answers }, {
+  saveAnswers(attemptId, answers, tabSwitchCount) {
+    const payload = typeof answers === 'object' && !Array.isArray(answers) && answers.answers
+      ? answers
+      : { answers, tabSwitchCount }
+    return httpClient.put(`/me/exam-attempts/${attemptId}/answers`, payload, {
       headers: authHeaders(),
     })
   },
 
-  submitAttempt(attemptId, answers) {
-    return httpClient.post(`/me/exam-attempts/${attemptId}/submit`, { answers }, {
+  submitAttempt(attemptId, answers, tabSwitchCount) {
+    const payload = typeof answers === 'object' && !Array.isArray(answers) && answers.answers
+      ? answers
+      : { answers, tabSwitchCount }
+    return httpClient.post(`/me/exam-attempts/${attemptId}/submit`, payload, {
       headers: authHeaders(),
     })
   },
