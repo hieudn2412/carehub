@@ -981,7 +981,8 @@ public class ExamAssignmentService {
                 bestPassed,
                 latest == null ? null : latest.getStartedAt(),
                 latest == null ? null : latest.getSubmittedAt(),
-                latest == null ? null : latest.getTimeSpentSeconds()
+                latest == null ? null : latest.getTimeSpentSeconds(),
+                latest == null || latest.getTabSwitchCount() == null ? 0 : latest.getTabSwitchCount()
         );
     }
 

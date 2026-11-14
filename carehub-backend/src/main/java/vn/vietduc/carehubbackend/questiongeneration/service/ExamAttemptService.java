@@ -293,6 +293,11 @@ public class ExamAttemptService {
     }
 
     private void upsertAnswers(ExamAttempt attempt, SaveExamAttemptAnswersRequest request) {
+        if (request != null && request.tabSwitchCount() != null && request.tabSwitchCount() >= 0) {
+            int current = attempt.getTabSwitchCount() != null ? attempt.getTabSwitchCount() : 0;
+            attempt.setTabSwitchCount(Math.max(current, request.tabSwitchCount()));
+            attemptRepository.save(attempt);
+        }
         if (request == null || request.answers() == null) {
             return;
         }
@@ -367,6 +372,7 @@ public class ExamAttemptService {
                 attempt.getTotalQuestions(),
                 revealScore ? attempt.getPassed() : null,
                 attempt.getTimeSpentSeconds(),
+                attempt.getTabSwitchCount() != null ? attempt.getTabSwitchCount() : 0,
                 questions,
                 answers
         );

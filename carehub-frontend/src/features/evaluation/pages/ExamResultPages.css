@@ -298,7 +298,8 @@
 }
 
 .ear-result-badge,
-.ear-status {
+.ear-status,
+.ear-tag {
   display: inline-flex;
   width: fit-content;
   align-items: center;
@@ -307,6 +308,19 @@
   font-size: 11.5px;
   font-weight: 700;
   white-space: nowrap;
+}
+
+.ear-tag--clean {
+  background: #f1f5f9;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.ear-tag--warning {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  font-weight: 700;
 }
 
 .ear-result-badge--passed { background: #dcfce7; color: #166534; }
