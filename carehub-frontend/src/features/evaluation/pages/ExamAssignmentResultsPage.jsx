@@ -167,13 +167,14 @@ export default function ExamAssignmentResultsPage() {
                       <th>Lượt làm</th>
                       <th>Điểm cao nhất <small>/10</small></th>
                       <th>Điểm mới nhất <small>/10</small></th>
+                      <th>Giám sát</th>
                       <th>Đánh giá</th>
                       <th>Lượt mới nhất</th>
                       <th>Hành động</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.length === 0 ? <EmptyTableRow colSpan={8}>Chưa có nhân viên trong đợt giao này.</EmptyTableRow> : rows.map((row) => (
+                    {rows.length === 0 ? <EmptyTableRow colSpan={9}>Chưa có nhân viên trong đợt giao này.</EmptyTableRow> : rows.map((row) => (
                       <tr key={row.userId}>
                         <td>
                           <strong>{row.userName || 'Chưa có tên'}</strong>
@@ -183,6 +184,17 @@ export default function ExamAssignmentResultsPage() {
                         <td>{row.attemptCount || 0}</td>
                         <td><strong>{formatScore(row.bestScore)}</strong></td>
                         <td>{formatScore(row.latestScore)}</td>
+                        <td>
+                          {row.latestTabSwitchCount > 0 ? (
+                            <span className="ear-tag ear-tag--warning" title="Phát hiện rời màn hình làm bài">
+                              ⚠️ {row.latestTabSwitchCount} lần out
+                            </span>
+                          ) : (
+                            <span className="ear-tag ear-tag--clean" title="Không phát hiện rời màn hình">
+                              0 lần
+                            </span>
+                          )}
+                        </td>
                         <td><span className={`ear-result-badge ear-result-badge--${resultTone(row.bestPassed)}`}>{resultLabel(row.bestPassed)}</span></td>
                         <td>
                           {row.latestStatus === 'GRADED' || row.latestStatus === 'SUBMITTED' ? (

@@ -97,6 +97,9 @@ public class QuestionCategoryService {
                 category.getId(),
                 QuestionBankStatus.APPROVED
         );
+        Long fieldId = category.getProfessionalField() == null ? null : category.getProfessionalField().getId();
+        String fieldCode = category.getProfessionalField() == null ? null : category.getProfessionalField().getCode();
+        String fieldName = category.getProfessionalField() == null ? null : category.getProfessionalField().getName();
         return new QuestionCategoryResponse(
                 category.getId(),
                 category.getCode(),
@@ -106,7 +109,10 @@ public class QuestionCategoryService {
                 QuestionGenerationLabels.questionCategoryStatus(category.getStatus()),
                 questionCount,
                 category.getCreatedAt(),
-                category.getUpdatedAt()
+                category.getUpdatedAt(),
+                fieldId,
+                fieldCode,
+                fieldName
         );
     }
 

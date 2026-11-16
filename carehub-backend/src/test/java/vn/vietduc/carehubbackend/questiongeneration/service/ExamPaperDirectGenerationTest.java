@@ -357,6 +357,37 @@ class ExamPaperDirectGenerationTest {
                 .containsExactlyElementsOf(originalQuestions.stream().map(question -> question.sourceDocumentFilename()).toList());
     }
 
+    @Test
+    void generatesDirectlyFromBankWithCategoryBlueprint() {
+        QuestionCategory cat1 = category(11L, "CC-A", "Cấp cứu");
+        QuestionCategory cat2 = category(12L, "CC-B", "Chấn thương");
+        ExamBlueprintField catField1 = ExamBlueprintField.builder()
+                .id(301L).examConfig(config).category(cat1)
+                .percentage(BigDecimal.valueOf(50)).questionCount(1).displayOrder(0).build();
+        ExamBlueprintField catField2 = ExamBlueprintField.builder()
+                .id(302L).examConfig(config).category(cat2)
+                .percentage(BigDecimal.valueOf(50)).questionCount(1).displayOrder(1).build();
+
+        when(blueprintFieldRepository.findByExamConfigIdOrderByDisplayOrderAsc(config.getId()))
+                .thenReturn(List.of(catField1, catField2));
+        when(blueprintCellRepository.findByBlueprintFieldId(301L))
+                .thenReturn(cognitiveCells(catField1, 401L, 1));
+        when(blueprintCellRepository.findByBlueprintFieldId(302L))
+                .thenReturn(cognitiveCells(catField2, 411L, 1));
+        when(questionRepository.findByStatusAndCategoryIdInOrderByIdAsc(any(), anySet()))
+                .thenReturn(pool);
+
+        var papers = service.generate(request("cat-direct-1", 1, 100L, false), "publisher");
+
+        assertThat(papers).hasSize(1);
+        assertThat(papers.get(0).coverage()).hasSize(6).allMatch(cell -> cell.matchesBlueprint());
+        assertThat(papers.get(0).coverage()).extracting(cell -> cell.categoryId())
+                .contains(11L, 12L);
+        assertThat(papers.get(0).coverage()).extracting(cell -> cell.categoryName())
+                .contains("Cấp cứu", "Chấn thương");
+        verify(questionRepository).findByStatusAndCategoryIdInOrderByIdAsc(any(), anySet());
+    }
+
     private GenerateExamPaperRequest request(String key, int variants, Long seed, boolean zeroOverlap) {
         return new GenerateExamPaperRequest(config.getId(), "Đề đa lĩnh vực", variants, seed, key, zeroOverlap);
     }

@@ -16,10 +16,22 @@ globalThis.React = React
 vi.mock('../../../shared/components/DepartmentCombobox.jsx', () => ({
   default: ({ departments, value, onChange, placeholder }) => (
     <select aria-label={placeholder} value={value} onChange={(event) => onChange(event.target.value)}>
-      <option value="">Chọn lĩnh vực</option>
-      {departments.map((field) => <option key={field.id} value={field.id}>{field.name}</option>)}
+      <option value="">Chọn danh mục</option>
+      {departments.map((cat) => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
     </select>
   ),
+}))
+vi.mock('../api/questionCategoryApi.js', () => ({
+  questionCategoryApi: {
+    listCategories: vi.fn().mockResolvedValue({
+      data: {
+        data: [
+          { id: 101, name: 'Cấp cứu ngừng tuần hoàn', code: 'BAI_1', professionalFieldId: 1, professionalFieldName: 'Hồi sức cấp cứu' },
+          { id: 102, name: 'Đặt ống nội khí quản', code: 'BAI_2', professionalFieldId: 1, professionalFieldName: 'Hồi sức cấp cứu' },
+        ],
+      },
+    }),
+  },
 }))
 vi.mock('../../training/api/trainingApi.js', () => ({
   trainingApi: {
@@ -74,23 +86,23 @@ describe('ExamConfigPage blueprint flow', () => {
     createAssignment.mockResolvedValue({ data: { data: { id: 100 } } })
   })
 
-  it('renders the field×cognitive blueprint without question-set purpose controls', async () => {
+  it('renders the category×cognitive blueprint without question-set purpose controls', async () => {
     const { default: ExamConfigPage } = await import('./ExamConfigPage.jsx')
     render(<MemoryRouter><ExamConfigPage /></MemoryRouter>)
 
-    expect(await screen.findByRole('option', { name: 'Hồi sức cấp cứu' })).toBeInTheDocument()
+    expect(await screen.findByRole('option', { name: /Cấp cứu ngừng tuần hoàn/ })).toBeInTheDocument()
     expect(screen.queryByText(/Bộ câu hỏi/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/Mục đích/i)).not.toBeInTheDocument()
   })
 
-  it('sends field and cognitive percentages directly, without a questionSetId', async () => {
+  it('sends category and cognitive percentages directly, without a questionSetId', async () => {
     generateExamPapers.mockReturnValue(new Promise(() => {}))
     const { default: ExamConfigPage } = await import('./ExamConfigPage.jsx')
     render(<MemoryRouter><ExamConfigPage /></MemoryRouter>)
 
-    fireEvent.change(await screen.findByLabelText('Tìm kiếm và chọn lĩnh vực chuyên môn...'), { target: { value: '1' } })
+    fireEvent.change(await screen.findByLabelText('Tìm kiếm và chọn danh mục câu hỏi...'), { target: { value: '101' } })
     fireEvent.change(screen.getByLabelText(/Tên bài kiểm tra/), { target: { value: 'Kiểm tra HSCC' } })
-    fireEvent.change(screen.getByLabelText('Số câu hỏi lĩnh vực này:'), { target: { value: '30' } })
+    fireEvent.change(screen.getByLabelText('Số câu hỏi danh mục này:'), { target: { value: '30' } })
     fireEvent.click(screen.getByRole('button', { name: 'Chọn tất cả' }))
     fireEvent.click(screen.getByRole('button', { name: /Tạo đề/ }))
 
@@ -101,15 +113,15 @@ describe('ExamConfigPage blueprint flow', () => {
     const payload = createExamConfig.mock.calls.at(-1)[0]
     expect(payload).not.toHaveProperty('questionSetId')
     expect(payload).toMatchObject({ totalQuestions: 30, status: 'ACTIVE' })
-    expect(payload.fieldBlueprints[0].professionalFieldId).toBe(1)
-    expect(payload.fieldBlueprints[0].cognitive).toHaveLength(3)
+    expect(payload.categoryBlueprints[0].categoryId).toBe(101)
+    expect(payload.categoryBlueprints[0].cognitive).toHaveLength(3)
   })
 
   it('hien loi tai truong va khong goi API khi thong tin khong hop le', async () => {
     const { default: ExamConfigPage } = await import('./ExamConfigPage.jsx')
     render(<MemoryRouter><ExamConfigPage /></MemoryRouter>)
 
-    await screen.findByRole('option', { name: 'Hồi sức cấp cứu' })
+    await screen.findByRole('option', { name: /Cấp cứu ngừng tuần hoàn/ })
     fireEvent.change(screen.getByLabelText(/Tên bài kiểm tra/), { target: { value: '   ' } })
     fireEvent.change(screen.getByLabelText(/Tổng số câu hỏi/), { target: { value: '0' } })
     fireEvent.change(screen.getByLabelText(/Thời gian làm bài/), { target: { value: '301' } })
@@ -120,7 +132,7 @@ describe('ExamConfigPage blueprint flow', () => {
     expect(screen.getByText('Tổng số câu hỏi phải là số nguyên từ 1 đến 200.')).toBeInTheDocument()
     expect(screen.getByText('Thời gian làm bài phải là số nguyên từ 1 đến 300 phút.')).toBeInTheDocument()
     expect(screen.getByText('Điểm đạt chuẩn phải là số nguyên từ 0 đến 10.')).toBeInTheDocument()
-    expect(screen.getByText('Vui lòng chọn ít nhất một lĩnh vực chuyên môn.')).toBeInTheDocument()
+    expect(screen.getByText('Vui lòng chọn ít nhất một danh mục câu hỏi.')).toBeInTheDocument()
     expect(screen.getByText('Vui lòng chọn ít nhất một nhân viên nhận đề.')).toBeInTheDocument()
     expect(previewExamConfig).not.toHaveBeenCalled()
     expect(createExamConfig).not.toHaveBeenCalled()

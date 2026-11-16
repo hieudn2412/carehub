@@ -16,6 +16,7 @@ import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import vn.vietduc.carehubbackend.common.entity.BaseEntity;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionCategoryStatus;
+import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
 
 @Entity
 @Getter
@@ -41,6 +42,10 @@ public class QuestionCategory extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 24)
     private QuestionCategoryStatus status;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "professional_field_id")
+    private ProfessionalField professionalField;
 
     @Column(name = "created_by", length = 100)
     private String createdBy;

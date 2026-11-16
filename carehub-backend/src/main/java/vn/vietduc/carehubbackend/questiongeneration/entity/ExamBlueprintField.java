@@ -26,8 +26,8 @@ import java.math.BigDecimal;
 @Table(
         name = "exam_blueprint_fields",
         uniqueConstraints = @UniqueConstraint(
-                name = "uq_exam_blueprint_fields_config_field",
-                columnNames = {"exam_config_id", "professional_field_id"}
+                name = "uq_exam_blueprint_fields_config_category",
+                columnNames = {"exam_config_id", "category_id"}
         )
 )
 public class ExamBlueprintField extends BaseEntity {
@@ -36,8 +36,12 @@ public class ExamBlueprintField extends BaseEntity {
     @JoinColumn(name = "exam_config_id", nullable = false)
     private ExamConfig examConfig;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "professional_field_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private QuestionCategory category;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "professional_field_id")
     private ProfessionalField professionalField;
 
     @Column(nullable = false, precision = 5, scale = 2)

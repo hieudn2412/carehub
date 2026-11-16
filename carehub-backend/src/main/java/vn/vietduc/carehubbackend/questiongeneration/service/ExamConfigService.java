@@ -15,6 +15,7 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.ExamBlueprintField;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamBlueprintCell;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamConfigSourceFilter;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionBankQuestion;
+import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionCategory;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CognitiveLevel;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionBankStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamConfigStatus;
@@ -197,8 +198,8 @@ public class ExamConfigService {
         int total = positive(request.totalQuestions(), "Tổng số câu hỏi phải lớn hơn 0");
         validateBlueprintInput(request, total);
         BlueprintPreview preview = buildBlueprintPreview(request, variantCount, zeroOverlap);
-        List<QuestionBankQuestion> pool = directPool(request.sourceFilters(), request.fieldBlueprints().stream()
-                .map(UpsertExamConfigRequest.FieldBlueprint::professionalFieldId)
+        List<QuestionBankQuestion> pool = directPool(request.sourceFilters(), request.effectiveCategoryBlueprints().stream()
+                .map(UpsertExamConfigRequest.CategoryBlueprint::categoryId)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet()));
         return new ExamConfigPreviewResponse(
@@ -288,11 +289,13 @@ public class ExamConfigService {
         boolean backfill = Boolean.TRUE.equals(config.getBackfillNearestCognitiveLevel());
         int distributed = 0;
         Set<Long> usedFamilies = new HashSet<>();
-        for (ExamBlueprintField field : fields) {
-            List<ExamBlueprintCell> cells = new ArrayList<>(blueprintCellRepository.findByBlueprintFieldId(field.getId()));
+        for (ExamBlueprintField blueprintItem : fields) {
+            List<ExamBlueprintCell> cells = new ArrayList<>(blueprintCellRepository.findByBlueprintFieldId(blueprintItem.getId()));
             cells.sort(Comparator.comparingInt(cell -> CognitiveBackfillAllocator.order(cell.getCognitiveLevel())));
+            Long targetCategoryId = blueprintItem.getCategory() != null ? blueprintItem.getCategory().getId()
+                    : (blueprintItem.getProfessionalField() != null ? blueprintItem.getProfessionalField().getId() : null);
             Map<CognitiveLevel, Set<Long>> familiesByLevel = familiesByLevel(
-                    pool, field.getProfessionalField().getId(), usedFamilies);
+                    pool, targetCategoryId, usedFamilies);
             List<CognitiveBackfillAllocator.CellDemand> demands = new ArrayList<>();
             for (ExamBlueprintCell cell : cells) {
                 int required = zeroOverlap ? cell.getQuestionCount() * variantCount : cell.getQuestionCount();
@@ -304,20 +307,28 @@ public class ExamConfigService {
                     .map(CognitiveBackfillAllocator.FamilyPick::familyId)
                     .forEach(usedFamilies::add);
             List<ExamBlueprintFieldPreviewResponse.ExamBlueprintCellPreviewResponse> cellResponses = new ArrayList<>();
-            int availableField = Math.toIntExact(familiesByLevel.values().stream().flatMap(Set::stream).distinct().count());
-            int backfilledField = 0;
-            int fieldShortage = 0;
+            int availableCount = Math.toIntExact(familiesByLevel.values().stream().flatMap(Set::stream).distinct().count());
+            int backfilledCount = 0;
+            int shortage = 0;
+            String displayName = blueprintItem.getCategory() != null ? blueprintItem.getCategory().getName()
+                    : (blueprintItem.getProfessionalField() != null ? blueprintItem.getProfessionalField().getName() : "Danh mục #" + targetCategoryId);
             for (int i = 0; i < cells.size(); i++) {
                 ExamBlueprintCell cell = cells.get(i);
                 CognitiveBackfillAllocator.CellOutcome outcome = outcomes.get(i);
-                backfilledField += outcome.backfilled();
-                fieldShortage += outcome.shortage();
-                if (outcome.shortage() > 0) warnings.add(field.getProfessionalField().getName() + " / " + cell.getCognitiveLevel().name() + " thiếu " + outcome.shortage() + " câu");
+                backfilledCount += outcome.backfilled();
+                shortage += outcome.shortage();
+                if (outcome.shortage() > 0) warnings.add(displayName + " / " + cell.getCognitiveLevel().name() + " thiếu " + outcome.shortage() + " câu");
                 cellResponses.add(new ExamBlueprintFieldPreviewResponse.ExamBlueprintCellPreviewResponse(cell.getCognitiveLevel().name(), cell.getPercentage(), cell.getQuestionCount(), outcome.rawAvailable(), outcome.shortage(), outcome.backfilled()));
             }
-            if (fieldShortage > 0 && cells.isEmpty()) warnings.add(field.getProfessionalField().getName() + " thiếu nguồn câu hỏi");
-            distributed += field.getQuestionCount();
-            responses.add(new ExamBlueprintFieldPreviewResponse(field.getProfessionalField().getId(), field.getProfessionalField().getCode(), field.getProfessionalField().getName(), field.getPercentage(), field.getQuestionCount(), availableField, fieldShortage, backfilledField, field.getDisplayOrder(), cellResponses));
+            if (shortage > 0 && cells.isEmpty()) warnings.add(displayName + " thiếu nguồn câu hỏi");
+            distributed += blueprintItem.getQuestionCount();
+            Long catId = blueprintItem.getCategory() != null ? blueprintItem.getCategory().getId() : null;
+            String catCode = blueprintItem.getCategory() != null ? blueprintItem.getCategory().getCode() : null;
+            String catName = blueprintItem.getCategory() != null ? blueprintItem.getCategory().getName() : null;
+            Long fieldId = blueprintItem.getProfessionalField() != null ? blueprintItem.getProfessionalField().getId() : null;
+            String fieldCode = blueprintItem.getProfessionalField() != null ? blueprintItem.getProfessionalField().getCode() : null;
+            String fieldName = blueprintItem.getProfessionalField() != null ? blueprintItem.getProfessionalField().getName() : null;
+            responses.add(new ExamBlueprintFieldPreviewResponse(catId, catCode, catName, fieldId, fieldCode, fieldName, blueprintItem.getPercentage(), blueprintItem.getQuestionCount(), availableCount, shortage, backfilledCount, blueprintItem.getDisplayOrder(), cellResponses));
         }
         if (distributed != config.getTotalQuestions()) warnings.add("Tổng blueprint " + distributed + " câu chưa khớp tổng đề " + config.getTotalQuestions());
         return new BlueprintPreview(distributed, warnings.isEmpty(), responses, warnings);
@@ -326,17 +337,19 @@ public class ExamConfigService {
     private BlueprintPreview buildBlueprintPreview(UpsertExamConfigRequest request, int variantCount, boolean zeroOverlap) {
         List<String> warnings = new ArrayList<>();
         int total = positive(request.totalQuestions(), "Tổng số câu hỏi phải lớn hơn 0");
-        List<UpsertExamConfigRequest.FieldBlueprint> fields = request.fieldBlueprints() == null ? List.of() : request.fieldBlueprints();
-        List<Integer> fieldCounts = fields.isEmpty() ? List.of() : allocateCounts(fields.stream().map(UpsertExamConfigRequest.FieldBlueprint::percentage).toList(), fields.stream().map(UpsertExamConfigRequest.FieldBlueprint::questionCount).toList(), total);
-        List<QuestionBankQuestion> pool = directPool(request.sourceFilters(), fields.stream().map(UpsertExamConfigRequest.FieldBlueprint::professionalFieldId).filter(Objects::nonNull).collect(Collectors.toSet()));
+        List<UpsertExamConfigRequest.CategoryBlueprint> categories = request.effectiveCategoryBlueprints();
+        List<Integer> categoryCounts = categories.isEmpty() ? List.of() : allocateCounts(categories.stream().map(UpsertExamConfigRequest.CategoryBlueprint::percentage).toList(), categories.stream().map(UpsertExamConfigRequest.CategoryBlueprint::questionCount).toList(), total);
+        List<QuestionBankQuestion> pool = directPool(request.sourceFilters(), categories.stream().map(UpsertExamConfigRequest.CategoryBlueprint::categoryId).filter(Objects::nonNull).collect(Collectors.toSet()));
         boolean backfill = Boolean.TRUE.equals(request.backfillNearestCognitiveLevel());
         List<ExamBlueprintFieldPreviewResponse> responses = new ArrayList<>();
         Set<Long> usedFamilies = new HashSet<>();
-        for (int i = 0; i < fields.size(); i++) {
-            UpsertExamConfigRequest.FieldBlueprint draft = fields.get(i);
-            ProfessionalField field = professionalFieldRepository == null ? null : professionalFieldRepository.findById(draft.professionalFieldId()).orElse(null);
-            int fieldCount = i < fieldCounts.size() ? fieldCounts.get(i) : 0;
-            List<Integer> cellCounts = allocateCounts(draft.cognitive().stream().map(UpsertExamConfigRequest.CognitiveDistribution::percentage).toList(), draft.cognitive().stream().map(UpsertExamConfigRequest.CognitiveDistribution::questionCount).toList(), fieldCount);
+        for (int i = 0; i < categories.size(); i++) {
+            UpsertExamConfigRequest.CategoryBlueprint draft = categories.get(i);
+            QuestionCategory category = categoryRepository == null ? null : categoryRepository.findById(draft.categoryId()).orElse(null);
+            ProfessionalField field = category != null && category.getProfessionalField() != null ? category.getProfessionalField()
+                    : (professionalFieldRepository != null ? professionalFieldRepository.findById(draft.categoryId()).orElse(null) : null);
+            int catCount = i < categoryCounts.size() ? categoryCounts.get(i) : 0;
+            List<Integer> cellCounts = allocateCounts(draft.cognitive().stream().map(UpsertExamConfigRequest.CognitiveDistribution::percentage).toList(), draft.cognitive().stream().map(UpsertExamConfigRequest.CognitiveDistribution::questionCount).toList(), catCount);
             record IndexedCell(UpsertExamConfigRequest.CognitiveDistribution cell, CognitiveLevel level, int baseRequired) { }
             List<IndexedCell> orderedCognitive = new ArrayList<>();
             for (int c = 0; c < draft.cognitive().size(); c++) {
@@ -345,7 +358,7 @@ public class ExamConfigService {
             }
             orderedCognitive.sort(Comparator.comparingInt(ic -> CognitiveBackfillAllocator.order(ic.level())));
             Map<CognitiveLevel, Set<Long>> familiesByLevel = familiesByLevel(
-                    pool, draft.professionalFieldId(), usedFamilies);
+                    pool, draft.categoryId(), usedFamilies);
             List<CognitiveBackfillAllocator.CellDemand> demands = new ArrayList<>();
             for (IndexedCell ic : orderedCognitive) {
                 int required = zeroOverlap ? ic.baseRequired() * variantCount : ic.baseRequired();
@@ -357,32 +370,39 @@ public class ExamConfigService {
                     .map(CognitiveBackfillAllocator.FamilyPick::familyId)
                     .forEach(usedFamilies::add);
             List<ExamBlueprintFieldPreviewResponse.ExamBlueprintCellPreviewResponse> cells = new ArrayList<>();
-            int availableField = Math.toIntExact(familiesByLevel.values().stream().flatMap(Set::stream).distinct().count());
-            int backfilledField = 0;
-            int fieldShortage = 0;
+            int availableCount = Math.toIntExact(familiesByLevel.values().stream().flatMap(Set::stream).distinct().count());
+            int backfilledCount = 0;
+            int shortage = 0;
+            String catName = category != null ? category.getName() : (field != null ? field.getName() : "Danh mục #" + draft.categoryId());
             for (int c = 0; c < orderedCognitive.size(); c++) {
                 IndexedCell ic = orderedCognitive.get(c);
                 CognitiveBackfillAllocator.CellOutcome outcome = outcomes.get(c);
-                backfilledField += outcome.backfilled();
-                fieldShortage += outcome.shortage();
-                if (outcome.shortage() > 0) warnings.add((field == null ? "Lĩnh vực #" + draft.professionalFieldId() : field.getName()) + " / " + ic.level().name() + " thiếu " + outcome.shortage() + " câu");
+                backfilledCount += outcome.backfilled();
+                shortage += outcome.shortage();
+                if (outcome.shortage() > 0) warnings.add(catName + " / " + ic.level().name() + " thiếu " + outcome.shortage() + " câu");
                 cells.add(new ExamBlueprintFieldPreviewResponse.ExamBlueprintCellPreviewResponse(ic.level() == null ? ic.cell().cognitiveLevel() : ic.level().name(), ic.cell().percentage(), outcome.required(), outcome.rawAvailable(), outcome.shortage(), outcome.backfilled()));
             }
-            String code = field == null ? null : field.getCode(); String name = field == null ? null : field.getName();
-            responses.add(new ExamBlueprintFieldPreviewResponse(draft.professionalFieldId(), code, name, draft.percentage(), fieldCount, availableField, fieldShortage, backfilledField, draft.displayOrder() == null ? i : draft.displayOrder(), cells));
+            String catCode = category == null ? null : category.getCode();
+            Long fieldId = field == null ? null : field.getId();
+            String fieldCode = field == null ? null : field.getCode();
+            String fieldName = field == null ? null : field.getName();
+            responses.add(new ExamBlueprintFieldPreviewResponse(
+                    draft.categoryId(), catCode, catName, fieldId, fieldCode, fieldName,
+                    draft.percentage(), catCount, availableCount, shortage, backfilledCount,
+                    draft.displayOrder() == null ? i : draft.displayOrder(), cells));
         }
-        return new BlueprintPreview(fieldCounts.stream().mapToInt(Integer::intValue).sum(), warnings.isEmpty(), responses, warnings);
+        return new BlueprintPreview(categoryCounts.stream().mapToInt(Integer::intValue).sum(), warnings.isEmpty(), responses, warnings);
     }
 
     private Map<CognitiveLevel, Set<Long>> familiesByLevel(
             List<QuestionBankQuestion> pool,
-            Long professionalFieldId,
+            Long categoryId,
             Set<Long> excludedFamilies
     ) {
         Map<CognitiveLevel, Set<Long>> result = new EnumMap<>(CognitiveLevel.class);
         pool.stream()
-                .filter(question -> question.getProfessionalField() != null
-                        && Objects.equals(question.getProfessionalField().getId(), professionalFieldId))
+                .filter(question -> (question.getCategory() != null && Objects.equals(question.getCategory().getId(), categoryId))
+                        || (question.getProfessionalField() != null && Objects.equals(question.getProfessionalField().getId(), categoryId)))
                 .filter(question -> !excludedFamilies.contains(ExamGenerationDeterminism.familyId(question)))
                 .forEach(question -> result.computeIfAbsent(question.getCognitiveLevel(), ignored -> new LinkedHashSet<>())
                         .add(ExamGenerationDeterminism.familyId(question)));
@@ -390,19 +410,35 @@ public class ExamConfigService {
     }
 
     private List<QuestionBankQuestion> directPool(ExamConfig config) {
-        Set<Long> fields = blueprintFieldRepository.findByExamConfigIdOrderByDisplayOrderAsc(config.getId()).stream().map(f -> f.getProfessionalField().getId()).collect(Collectors.toSet());
-        return directPool(sourceFilterRepository.findByExamConfigOrderByIdAsc(config), fields);
+        Set<Long> categoryIds = blueprintFieldRepository.findByExamConfigIdOrderByDisplayOrderAsc(config.getId()).stream()
+                .map(f -> f.getCategory() != null ? f.getCategory().getId() : (f.getProfessionalField() != null ? f.getProfessionalField().getId() : null))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        return directPool(sourceFilterRepository.findByExamConfigOrderByIdAsc(config), categoryIds);
     }
-    private List<QuestionBankQuestion> directPool(UpsertExamConfigRequest.SourceFilters filters, Set<Long> fields) {
-        List<QuestionBankQuestion> pool = questionRepository.findByStatusAndProfessionalFieldIdInOrderByIdAsc(QuestionBankStatus.APPROVED, fields).stream()
+
+    private List<QuestionBankQuestion> directPool(UpsertExamConfigRequest.SourceFilters filters, Set<Long> categoryIds) {
+        List<QuestionBankQuestion> pool = questionRepository.findByStatusAndCategoryIdInOrderByIdAsc(QuestionBankStatus.APPROVED, categoryIds);
+        if (pool.isEmpty()) {
+            pool = questionRepository.findByStatusAndProfessionalFieldIdInOrderByIdAsc(QuestionBankStatus.APPROVED, categoryIds);
+        }
+        pool = pool.stream()
                 .filter(q -> q.getCategory() != null && q.getCategory().getStatus() == QuestionCategoryStatus.ACTIVE)
-                .filter(q -> q.getProfessionalField() != null && q.getProfessionalField().isActive())
+                .filter(q -> q.getProfessionalField() == null || q.getProfessionalField().isActive())
                 .filter(q -> q.getCognitiveLevel() != null)
                 .sorted(Comparator.comparing(QuestionBankQuestion::getId))
                 .toList();
         if (filters == null) return pool;
-        Set<Long> includeCategories = set(filters.includedCategoryIds()); Set<Long> excludeCategories = set(filters.excludedCategoryIds()); Set<Long> includeDocuments = set(filters.includedDocumentIds()); Set<Long> excludeDocuments = set(filters.excludedDocumentIds());
-        return pool.stream().filter(q -> includeCategories.isEmpty() || (q.getCategory() != null && includeCategories.contains(q.getCategory().getId()))).filter(q -> q.getCategory() == null || !excludeCategories.contains(q.getCategory().getId())).filter(q -> includeDocuments.isEmpty() || (q.getSourceDocumentRef() != null && includeDocuments.contains(q.getSourceDocumentRef().getId()))).filter(q -> q.getSourceDocumentRef() == null || !excludeDocuments.contains(q.getSourceDocumentRef().getId())).toList();
+        Set<Long> includeCategories = set(filters.includedCategoryIds());
+        Set<Long> excludeCategories = set(filters.excludedCategoryIds());
+        Set<Long> includeDocuments = set(filters.includedDocumentIds());
+        Set<Long> excludeDocuments = set(filters.excludedDocumentIds());
+        return pool.stream()
+                .filter(q -> includeCategories.isEmpty() || (q.getCategory() != null && includeCategories.contains(q.getCategory().getId())))
+                .filter(q -> q.getCategory() == null || !excludeCategories.contains(q.getCategory().getId()))
+                .filter(q -> includeDocuments.isEmpty() || (q.getSourceDocumentRef() != null && includeDocuments.contains(q.getSourceDocumentRef().getId())))
+                .filter(q -> q.getSourceDocumentRef() == null || !excludeDocuments.contains(q.getSourceDocumentRef().getId()))
+                .toList();
     }
     private List<QuestionBankQuestion> directPool(List<ExamConfigSourceFilter> filters, Set<Long> fields) {
         return directPool(new UpsertExamConfigRequest.SourceFilters(idsByType(filters, ExamConfigSourceFilter.FilterType.INCLUDE_CATEGORY), idsByType(filters, ExamConfigSourceFilter.FilterType.EXCLUDE_CATEGORY), idsByType(filters, ExamConfigSourceFilter.FilterType.INCLUDE_DOCUMENT), idsByType(filters, ExamConfigSourceFilter.FilterType.EXCLUDE_DOCUMENT)), fields);
@@ -431,13 +467,14 @@ public class ExamConfigService {
 
     private boolean isBlueprintRequest(UpsertExamConfigRequest request) {
         return request != null && (request.audienceId() != null
+                || (request.categoryBlueprints() != null && !request.categoryBlueprints().isEmpty())
                 || (request.fieldBlueprints() != null && !request.fieldBlueprints().isEmpty()));
     }
 
     private void requireBlueprintRequest(UpsertExamConfigRequest request) {
         if (!isBlueprintRequest(request)) {
             throw new BadRequestException(
-                    "Cấu hình đề kiểm tra phải khai báo ma trận lĩnh vực × mức độ nhận thức");
+                    "Cấu hình đề kiểm tra phải khai báo ma trận danh mục câu hỏi × mức độ nhận thức");
         }
     }
 
@@ -449,7 +486,7 @@ public class ExamConfigService {
     private void requireBlueprintConfig(ExamConfig config) {
         if (!isBlueprintConfig(config)) {
             throw new BadRequestException(
-                    "Cấu hình này chưa có ma trận lĩnh vực × mức độ nhận thức, vui lòng cấu hình lại");
+                    "Cấu hình này chưa có ma trận danh mục câu hỏi × mức độ nhận thức, vui lòng cấu hình lại");
         }
     }
 
@@ -506,34 +543,36 @@ public class ExamConfigService {
 
     private void validateBlueprintInput(UpsertExamConfigRequest request, int total) {
         if (parseSelectionMode(request.questionSelectionMode()) != ExamQuestionSelectionMode.FIXED_PAPER) throw new BadRequestException("Blueprint đa lĩnh vực hiện chỉ hỗ trợ FIXED_PAPER");
-        List<UpsertExamConfigRequest.FieldBlueprint> fields = request.fieldBlueprints();
-        if (fields == null || fields.isEmpty()) throw new BadRequestException("Phải chọn ít nhất một lĩnh vực chuyên môn");
-        boolean usingPercent = fields.stream().allMatch(f -> f.percentage() != null);
-        boolean usingCount = fields.stream().allMatch(f -> f.questionCount() != null);
-        if (!usingPercent && !usingCount) throw new BadRequestException("Mỗi lĩnh vực phải nhập tỷ lệ hoặc số câu đầy đủ");
-        if (usingPercent && fields.stream().anyMatch(f -> f.questionCount() != null)) throw new BadRequestException("Không trộn tỷ lệ và số câu ở cấp lĩnh vực");
-        if (usingPercent && sum(fields.stream().map(UpsertExamConfigRequest.FieldBlueprint::percentage).toList()).compareTo(java.math.BigDecimal.valueOf(100)) != 0) throw new BadRequestException("Tổng tỷ lệ lĩnh vực phải bằng 100%");
-        if (usingCount && fields.stream().mapToInt(f -> f.questionCount() == null ? 0 : f.questionCount()).sum() != total) throw new BadRequestException("Tổng số câu các lĩnh vực phải bằng tổng đề");
-        if (fields.stream().anyMatch(f -> f.percentage() != null && (f.percentage().signum() < 0 || f.percentage().compareTo(java.math.BigDecimal.valueOf(100)) > 0))) throw new BadRequestException("Tỷ lệ lĩnh vực phải trong khoảng 0-100%");
-        List<Integer> allocatedFieldCounts = allocateCounts(
-                fields.stream().map(UpsertExamConfigRequest.FieldBlueprint::percentage).toList(),
-                fields.stream().map(UpsertExamConfigRequest.FieldBlueprint::questionCount).toList(), total);
+        List<UpsertExamConfigRequest.CategoryBlueprint> categories = request.effectiveCategoryBlueprints();
+        if (categories == null || categories.isEmpty()) throw new BadRequestException("Phải chọn ít nhất một danh mục câu hỏi");
+        boolean usingPercent = categories.stream().allMatch(f -> f.percentage() != null);
+        boolean usingCount = categories.stream().allMatch(f -> f.questionCount() != null);
+        if (!usingPercent && !usingCount) throw new BadRequestException("Mỗi danh mục phải nhập tỷ lệ hoặc số câu đầy đủ");
+        if (usingPercent && categories.stream().anyMatch(f -> f.questionCount() != null)) throw new BadRequestException("Không trộn tỷ lệ và số câu ở cấp danh mục");
+        if (usingPercent && sum(categories.stream().map(UpsertExamConfigRequest.CategoryBlueprint::percentage).toList()).compareTo(java.math.BigDecimal.valueOf(100)) != 0) throw new BadRequestException("Tổng tỷ lệ danh mục phải bằng 100%");
+        if (usingCount && categories.stream().mapToInt(f -> f.questionCount() == null ? 0 : f.questionCount()).sum() != total) throw new BadRequestException("Tổng số câu các danh mục phải bằng tổng đề");
+        if (categories.stream().anyMatch(f -> f.percentage() != null && (f.percentage().signum() < 0 || f.percentage().compareTo(java.math.BigDecimal.valueOf(100)) > 0))) throw new BadRequestException("Tỷ lệ danh mục phải trong khoảng 0-100%");
+        List<Integer> allocatedCategoryCounts = allocateCounts(
+                categories.stream().map(UpsertExamConfigRequest.CategoryBlueprint::percentage).toList(),
+                categories.stream().map(UpsertExamConfigRequest.CategoryBlueprint::questionCount).toList(), total);
         Set<Long> ids = new HashSet<>();
-        for (int fieldIndex = 0; fieldIndex < fields.size(); fieldIndex++) {
-            UpsertExamConfigRequest.FieldBlueprint field = fields.get(fieldIndex);
-            if (field.professionalFieldId() == null || !ids.add(field.professionalFieldId())) throw new BadRequestException("Lĩnh vực bị thiếu hoặc trùng");
-            if (field.cognitive() == null || field.cognitive().size() != 3) throw new BadRequestException("Mỗi lĩnh vực phải có đúng 3 mức nhận thức");
-            if (field.cognitive().stream().map(UpsertExamConfigRequest.CognitiveDistribution::cognitiveLevel).distinct().count() != 3) throw new BadRequestException("Ba mức nhận thức không được trùng");
-            if (field.cognitive().stream().anyMatch(c -> parseCognitive(c.cognitiveLevel()) == null)) throw new BadRequestException("Mức nhận thức không hợp lệ");
-            boolean cognitivePercent = field.cognitive().stream().allMatch(c -> c.percentage() != null);
-            boolean cognitiveCount = field.cognitive().stream().allMatch(c -> c.questionCount() != null);
+        for (int catIndex = 0; catIndex < categories.size(); catIndex++) {
+            UpsertExamConfigRequest.CategoryBlueprint draft = categories.get(catIndex);
+            if (draft.categoryId() == null || !ids.add(draft.categoryId())) throw new BadRequestException("Danh mục bị thiếu hoặc trùng");
+            if (draft.cognitive() == null || draft.cognitive().size() != 3) throw new BadRequestException("Mỗi danh mục phải có đúng 3 mức nhận thức");
+            if (draft.cognitive().stream().map(UpsertExamConfigRequest.CognitiveDistribution::cognitiveLevel).distinct().count() != 3) throw new BadRequestException("Ba mức nhận thức không được trùng");
+            if (draft.cognitive().stream().anyMatch(c -> parseCognitive(c.cognitiveLevel()) == null)) throw new BadRequestException("Mức nhận thức không hợp lệ");
+            boolean cognitivePercent = draft.cognitive().stream().allMatch(c -> c.percentage() != null);
+            boolean cognitiveCount = draft.cognitive().stream().allMatch(c -> c.questionCount() != null);
             if (!cognitivePercent && !cognitiveCount) throw new BadRequestException("Mỗi mức nhận thức phải nhập tỷ lệ hoặc số câu");
-            if (field.cognitive().stream().anyMatch(c -> c.percentage() != null && c.percentage().signum() < 0)) throw new BadRequestException("Tỷ lệ nhận thức không được âm");
-            if (field.cognitive().stream().anyMatch(c -> c.questionCount() != null && c.questionCount() < 0)) throw new BadRequestException("Số câu nhận thức không được âm");
-            if (cognitivePercent && sum(field.cognitive().stream().map(UpsertExamConfigRequest.CognitiveDistribution::percentage).toList()).compareTo(java.math.BigDecimal.valueOf(100)) != 0) throw new BadRequestException("Tổng tỷ lệ nhận thức trong mỗi lĩnh vực phải bằng 100%");
-            if (cognitiveCount && field.cognitive().stream().mapToInt(c -> c.questionCount() == null ? 0 : c.questionCount()).sum() != allocatedFieldCounts.get(fieldIndex)) throw new BadRequestException("Tổng cell phải bằng số câu của lĩnh vực");
+            if (draft.cognitive().stream().anyMatch(c -> c.percentage() != null && c.percentage().signum() < 0)) throw new BadRequestException("Tỷ lệ nhận thức không được âm");
+            if (draft.cognitive().stream().anyMatch(c -> c.questionCount() != null && c.questionCount() < 0)) throw new BadRequestException("Số câu nhận thức không được âm");
+            if (cognitivePercent && sum(draft.cognitive().stream().map(UpsertExamConfigRequest.CognitiveDistribution::percentage).toList()).compareTo(java.math.BigDecimal.valueOf(100)) != 0) throw new BadRequestException("Tổng tỷ lệ nhận thức trong mỗi danh mục phải bằng 100%");
+            if (cognitiveCount && draft.cognitive().stream().mapToInt(c -> c.questionCount() == null ? 0 : c.questionCount()).sum() != allocatedCategoryCounts.get(catIndex)) throw new BadRequestException("Tổng cell phải bằng số câu của danh mục");
         }
-        if (professionalFieldRepository != null && professionalFieldRepository.findAllById(ids).size() != ids.size()) throw new BadRequestException("Lĩnh vực chuyên môn không hợp lệ");
+        boolean allValidCategories = categoryRepository != null && categoryRepository.findAllById(ids).size() == ids.size();
+        boolean allValidFields = professionalFieldRepository != null && professionalFieldRepository.findAllById(ids).size() == ids.size();
+        if (!allValidCategories && !allValidFields) throw new BadRequestException("Danh mục câu hỏi không hợp lệ");
         validateSourceFilters(request.sourceFilters());
     }
 
@@ -571,19 +610,29 @@ public class ExamConfigService {
         if (blueprintFieldRepository == null) throw new BadRequestException("Blueprint repository chưa được cấu hình");
         blueprintFieldRepository.deleteByExamConfig(config);
         sourceFilterRepository.deleteByExamConfig(config);
-        List<UpsertExamConfigRequest.FieldBlueprint> fields = request.fieldBlueprints();
-        List<Integer> fieldCounts = allocateCounts(fields.stream().map(UpsertExamConfigRequest.FieldBlueprint::percentage).toList(), fields.stream().map(UpsertExamConfigRequest.FieldBlueprint::questionCount).toList(), total);
-        for (int i = 0; i < fields.size(); i++) {
-            UpsertExamConfigRequest.FieldBlueprint draft = fields.get(i);
-            ProfessionalField field = professionalFieldRepository.findById(draft.professionalFieldId()).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy lĩnh vực chuyên môn"));
-            int fieldCount = fieldCounts.get(i);
-            java.math.BigDecimal fieldPercentage = draft.percentage() == null ? java.math.BigDecimal.valueOf(fieldCount * 100.0 / total).setScale(2, java.math.RoundingMode.HALF_UP) : draft.percentage();
-            ExamBlueprintField saved = blueprintFieldRepository.save(ExamBlueprintField.builder().examConfig(config).professionalField(field).percentage(fieldPercentage).questionCount(fieldCount).displayOrder(draft.displayOrder() == null ? i : draft.displayOrder()).passingThreshold(draft.passingThreshold()).build());
-            List<Integer> cellCounts = allocateCounts(draft.cognitive().stream().map(UpsertExamConfigRequest.CognitiveDistribution::percentage).toList(), draft.cognitive().stream().map(UpsertExamConfigRequest.CognitiveDistribution::questionCount).toList(), fieldCount);
+        List<UpsertExamConfigRequest.CategoryBlueprint> categories = request.effectiveCategoryBlueprints();
+        List<Integer> categoryCounts = allocateCounts(categories.stream().map(UpsertExamConfigRequest.CategoryBlueprint::percentage).toList(), categories.stream().map(UpsertExamConfigRequest.CategoryBlueprint::questionCount).toList(), total);
+        for (int i = 0; i < categories.size(); i++) {
+            UpsertExamConfigRequest.CategoryBlueprint draft = categories.get(i);
+            QuestionCategory category = categoryRepository != null ? categoryRepository.findById(draft.categoryId()).orElse(null) : null;
+            ProfessionalField field = category != null && category.getProfessionalField() != null ? category.getProfessionalField()
+                    : (professionalFieldRepository != null ? professionalFieldRepository.findById(draft.categoryId()).orElse(null) : null);
+            int catCount = categoryCounts.get(i);
+            java.math.BigDecimal catPercentage = draft.percentage() == null ? java.math.BigDecimal.valueOf(catCount * 100.0 / total).setScale(2, java.math.RoundingMode.HALF_UP) : draft.percentage();
+            ExamBlueprintField saved = blueprintFieldRepository.save(ExamBlueprintField.builder()
+                    .examConfig(config)
+                    .category(category)
+                    .professionalField(field)
+                    .percentage(catPercentage)
+                    .questionCount(catCount)
+                    .displayOrder(draft.displayOrder() == null ? i : draft.displayOrder())
+                    .passingThreshold(draft.passingThreshold())
+                    .build());
+            List<Integer> cellCounts = allocateCounts(draft.cognitive().stream().map(UpsertExamConfigRequest.CognitiveDistribution::percentage).toList(), draft.cognitive().stream().map(UpsertExamConfigRequest.CognitiveDistribution::questionCount).toList(), catCount);
             for (int c = 0; c < draft.cognitive().size(); c++) {
                 UpsertExamConfigRequest.CognitiveDistribution cell = draft.cognitive().get(c);
                 int count = cellCounts.get(c);
-                java.math.BigDecimal percentage = cell.percentage() == null ? java.math.BigDecimal.valueOf(count * 100.0 / Math.max(1, fieldCount)).setScale(2, java.math.RoundingMode.HALF_UP) : cell.percentage();
+                java.math.BigDecimal percentage = cell.percentage() == null ? java.math.BigDecimal.valueOf(count * 100.0 / Math.max(1, catCount)).setScale(2, java.math.RoundingMode.HALF_UP) : cell.percentage();
                 blueprintCellRepository.save(ExamBlueprintCell.builder().blueprintField(saved).cognitiveLevel(parseCognitive(cell.cognitiveLevel())).percentage(percentage).questionCount(count).build());
             }
         }

@@ -77,4 +77,9 @@ public class ExamAttempt extends BaseEntity {
 
     @Column(name = "presentation_seed")
     private Long presentationSeed;
+
+    @org.hibernate.annotations.ColumnDefault("0")
+    @Column(name = "tab_switch_count", nullable = false)
+    @lombok.Builder.Default
+    private Integer tabSwitchCount = 0;
 }

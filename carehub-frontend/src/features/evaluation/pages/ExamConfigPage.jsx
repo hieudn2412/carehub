@@ -19,6 +19,7 @@ import { examConfigApi } from '../api/examConfigApi.js'
 import { examPaperApi } from '../api/examPaperApi.js'
 import { examAssignmentApi } from '../api/examAssignmentApi.js'
 import { evaluationAudienceApi } from '../api/evaluationAudienceApi.js'
+import { questionCategoryApi } from '../api/questionCategoryApi.js'
 import { adminApi } from '../../admin/api/adminApi.js'
 import { trainingApi } from '../../training/api/trainingApi.js'
 import DateTimePicker24h from '../../../shared/components/DateTimePicker24h.jsx'
@@ -33,9 +34,9 @@ const COGNITIVE = [
   ['CLINICAL_REASONING_ANALYSIS', 'Tư duy phân tích'],
 ]
 
-function emptyField(id) {
+function emptyCategory(id) {
   return {
-    professionalFieldId: Number(id),
+    categoryId: Number(id),
     questionCount: 0,
     cognitive: COGNITIVE.map(([level, label], index) => ({
       cognitiveLevel: level,
@@ -60,6 +61,8 @@ export default function ExamConfigPage() {
 
   // Matrix (ma trận đề)
   const [fields, setFields] = useState([])
+  const [categories, setCategories] = useState([])
+  const [fieldFilter, setFieldFilter] = useState('')
   const [form, setForm] = useState({ name: '', description: '', totalQuestions: 30, timeLimitMinutes: 45, passingScore: 7, maxRetakes: 0 })
   const [blueprint, setBlueprint] = useState([])
   const [backfillNearestCognitiveLevel, setBackfillNearestCognitiveLevel] = useState(false)
@@ -93,11 +96,14 @@ export default function ExamConfigPage() {
       adminApi.getDepartments(),
       adminApi.getPositions(),
       adminApi.getUsers({ status: 'ACTIVE', size: 500 }),
+      questionCategoryApi.listCategories({ status: 'ACTIVE' }),
     ])
-      .then(([optionsRes, deptRes, positionRes, usersRes]) => {
+      .then(([optionsRes, deptRes, positionRes, usersRes, catRes]) => {
         setFields(data(optionsRes, {})?.professionalFields || [])
         setDepartments(data(deptRes, []) || [])
         setPositions(data(positionRes, []) || [])
+        const catData = data(catRes, [])
+        setCategories(Array.isArray(catData) ? catData : (catData?.content || []))
         const usersData = data(usersRes, {})
         const users = usersData?.content || (Array.isArray(usersData) ? usersData : [])
         // Tai khoan admin khong phai doi tuong lam bai nen khong dua vao danh sach giao de.
@@ -106,6 +112,19 @@ export default function ExamConfigPage() {
       .catch((error) => showToast(apiErrorMessage(error), 'error'))
       .finally(() => setLoading(false))
   }, [showToast])
+
+  const categoryOptions = useMemo(() => {
+    return categories
+      .filter((cat) => {
+        if (!fieldFilter) return true
+        return String(cat.professionalFieldId) === String(fieldFilter)
+      })
+      .map((cat) => ({
+        id: cat.id,
+        name: cat.professionalFieldName ? `${cat.name} (${cat.professionalFieldName})` : cat.name,
+        departmentCode: cat.code,
+      }))
+  }, [categories, fieldFilter])
 
   // Lay tu danh muc chuc danh (/positions) chu khong suy ra tu danh sach user,
   // vi suy ra chi hien duoc nhung chuc danh dang co nguoi.
@@ -140,25 +159,25 @@ export default function ExamConfigPage() {
   const totalAllocated = useMemo(() => blueprint.reduce((sum, item) => sum + Number(item.questionCount || 0), 0), [blueprint])
   const totalQuestions = Number(form.totalQuestions) || 0
 
-  function addField(id) {
+  function addCategory(id) {
     const numId = Number(id)
     if (!numId) return
-    setBlueprint((current) => (current.some((item) => item.professionalFieldId === numId) ? current : [...current, emptyField(numId)]))
+    setBlueprint((current) => (current.some((item) => (item.categoryId || item.professionalFieldId) === numId) ? current : [...current, emptyCategory(numId)]))
   }
 
-  function removeField(id) {
-    setBlueprint((current) => current.filter((item) => item.professionalFieldId !== id))
+  function removeCategory(id) {
+    setBlueprint((current) => current.filter((item) => (item.categoryId || item.professionalFieldId) !== id))
   }
 
-  function updateField(id, key, value) {
+  function updateCategory(id, key, value) {
     if (key === 'questionCount') value = Number(value) || 0
-    setBlueprint((current) => current.map((item) => (item.professionalFieldId === id ? { ...item, [key]: value } : item)))
+    setBlueprint((current) => current.map((item) => ((item.categoryId || item.professionalFieldId) === id ? { ...item, [key]: value } : item)))
   }
 
-  function updateCognitive(fieldId, level, value) {
+  function updateCognitive(categoryId, level, value) {
     setBlueprint((current) =>
       current.map((item) =>
-        item.professionalFieldId !== fieldId
+        (item.categoryId || item.professionalFieldId) !== categoryId
           ? item
           : {
               ...item,
@@ -201,11 +220,18 @@ export default function ExamConfigPage() {
       backfillNearestCognitiveLevel,
       questionSelectionMode: 'FIXED_PAPER',
       status,
-      fieldBlueprints: blueprint.map((field, index) => ({
-        professionalFieldId: field.professionalFieldId,
-        questionCount: Number(field.questionCount),
+      categoryBlueprints: blueprint.map((item, index) => ({
+        categoryId: item.categoryId || item.professionalFieldId,
+        questionCount: Number(item.questionCount),
         displayOrder: index,
-        cognitive: field.cognitive.map((cell) => ({ cognitiveLevel: cell.cognitiveLevel, percentage: Number(cell.percentage) })),
+        cognitive: item.cognitive.map((cell) => ({ cognitiveLevel: cell.cognitiveLevel, percentage: Number(cell.percentage) })),
+      })),
+      fieldBlueprints: blueprint.map((item, index) => ({
+        categoryId: item.categoryId || item.professionalFieldId,
+        professionalFieldId: item.categoryId || item.professionalFieldId,
+        questionCount: Number(item.questionCount),
+        displayOrder: index,
+        cognitive: item.cognitive.map((cell) => ({ cognitiveLevel: cell.cognitiveLevel, percentage: Number(cell.percentage) })),
       })),
       sourceFilters: { includedCategoryIds: [], excludedCategoryIds: [], includedDocumentIds: [], excludedDocumentIds: [] },
     }
@@ -231,21 +257,22 @@ export default function ExamConfigPage() {
     }
 
     if (!blueprint.length) {
-      errors.blueprint = 'Vui lòng chọn ít nhất một lĩnh vực chuyên môn.'
+      errors.blueprint = 'Vui lòng chọn ít nhất một danh mục câu hỏi.'
     } else {
-      blueprint.forEach((field) => {
-        const count = Number(field.questionCount)
-        const cognitiveSum = field.cognitive.reduce((sum, cell) => sum + Number(cell.percentage), 0)
+      blueprint.forEach((category) => {
+        const id = category.categoryId || category.professionalFieldId
+        const count = Number(category.questionCount)
+        const cognitiveSum = category.cognitive.reduce((sum, cell) => sum + Number(cell.percentage), 0)
         if (!Number.isInteger(count) || count < 1 || count > totalQuestions) {
-          errors[`field-${field.professionalFieldId}-count`] = `Số câu của mỗi lĩnh vực phải là số nguyên từ 1 đến ${Math.max(totalQuestions, 1)}.`
+          errors[`category-${id}-count`] = `Số câu của mỗi danh mục phải là số nguyên từ 1 đến ${Math.max(totalQuestions, 1)}.`
         }
-        if (field.cognitive.some((cell) => !Number.isFinite(Number(cell.percentage)) || Number(cell.percentage) < 0 || Number(cell.percentage) > 100)
+        if (category.cognitive.some((cell) => !Number.isFinite(Number(cell.percentage)) || Number(cell.percentage) < 0 || Number(cell.percentage) > 100)
           || Math.abs(cognitiveSum - 100) > 0.001) {
-          errors[`field-${field.professionalFieldId}-cognitive`] = 'Tổng tỷ lệ ba mức nhận thức phải bằng 100% và mỗi tỷ lệ nằm trong khoảng 0–100%.'
+          errors[`category-${id}-cognitive`] = 'Tổng tỷ lệ ba mức nhận thức phải bằng 100% và mỗi tỷ lệ nằm trong khoảng 0–100%.'
         }
       })
       if (!errors.totalQuestions && totalAllocated !== totalQuestions) {
-        errors.allocation = `Tổng số câu các lĩnh vực (${totalAllocated}) phải bằng tổng số câu (${totalQuestions}).`
+        errors.allocation = `Tổng số câu các danh mục (${totalAllocated}) phải bằng tổng số câu (${totalQuestions}).`
       }
     }
 
@@ -364,7 +391,7 @@ export default function ExamConfigPage() {
       <div className="exp-page">
               <section className="exp-assignment-shell">
                 {loading ? (
-                  <div className="exp-empty">Đang tải danh sách lĩnh vực chuyên môn và khoa phòng...</div>
+                  <div className="exp-empty">Đang tải danh sách danh mục câu hỏi và khoa phòng...</div>
                 ) : (
                   <form
                     className="exp-assignment-form"
@@ -457,18 +484,33 @@ export default function ExamConfigPage() {
                       <div className="exp-form-section__heading">
                         <span className="exp-form-section__number"><AppstoreOutlined /></span>
                         <div>
-                          <h3>2. Ma trận lĩnh vực chuyên môn & mức nhận thức</h3>
+                          <h3>2. Ma trận danh mục câu hỏi & mức nhận thức</h3>
                         </div>
                       </div>
 
                       <div className="exp-form-grid">
-                        <label className="exp-form-grid__wide">
-                          <span>Chọn lĩnh vực chuyên môn để thêm vào ma trận <b>*</b></span>
+                        {fields.length > 0 && (
+                          <div>
+                            <span>Lọc theo lĩnh vực chuyên môn</span>
+                            <FormSelectField
+                              ariaLabel="Lọc theo lĩnh vực chuyên môn"
+                              value={fieldFilter}
+                              onChange={setFieldFilter}
+                              options={[
+                                { value: '', label: 'Tất cả lĩnh vực chuyên môn' },
+                                ...fields.map((f) => ({ value: String(f.id), label: f.code ? `${f.code} - ${f.name}` : f.name })),
+                              ]}
+                              placeholder="Tất cả lĩnh vực chuyên môn"
+                            />
+                          </div>
+                        )}
+                        <label className={fields.length > 0 ? '' : 'exp-form-grid__wide'}>
+                          <span>Chọn danh mục câu hỏi để thêm vào ma trận <b>*</b></span>
                           <DepartmentCombobox
-                            departments={fields}
+                            departments={categoryOptions}
                             value=""
-                            onChange={addField}
-                            placeholder="Tìm kiếm và chọn lĩnh vực chuyên môn..."
+                            onChange={addCategory}
+                            placeholder="Tìm kiếm và chọn danh mục câu hỏi..."
                             emptyValue=""
                           />
                           {validationErrors.blueprint && <small className="exp-field-error">{validationErrors.blueprint}</small>}
@@ -489,30 +531,38 @@ export default function ExamConfigPage() {
                       {blueprint.length > 0 && (
                         <div className="exp-blueprint-list">
                           {blueprint.map((item) => {
-                            const field = fields.find((v) => v.id === item.professionalFieldId)
+                            const categoryId = item.categoryId || item.professionalFieldId
+                            const category = categories.find((v) => v.id === categoryId)
                             const cognitiveSum = item.cognitive.reduce((sum, cell) => sum + Number(cell.percentage || 0), 0)
                             const cognitiveValid = Math.abs(cognitiveSum - 100) < 0.001
-                            const previewField = preview?.blueprintFields?.find((f) => f.professionalFieldId === item.professionalFieldId)
+                            const previewCategory = (preview?.blueprintCategories || preview?.blueprintFields)?.find(
+                              (f) => (f.categoryId ?? f.professionalFieldId) === categoryId,
+                            )
 
                             return (
-                              <div key={item.professionalFieldId} className="exp-field-card">
+                              <div key={categoryId} className="exp-field-card">
                                 <div className="exp-field-card__header">
                                   <div className="exp-field-card__title">
                                     <AppstoreOutlined />
-                                    <strong>{field?.name || `Lĩnh vực #${item.professionalFieldId}`}</strong>
+                                    <strong>{category?.name || `Danh mục #${categoryId}`}</strong>
+                                    {category?.professionalFieldName && (
+                                      <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 'normal', marginLeft: '6px' }}>
+                                        ({category.professionalFieldName})
+                                      </span>
+                                    )}
                                   </div>
-                                  <button type="button" className="exp-field-card__remove" onClick={() => removeField(item.professionalFieldId)}>
-                                    <DeleteOutlined /> Xóa lĩnh vực
+                                  <button type="button" className="exp-field-card__remove" onClick={() => removeCategory(categoryId)}>
+                                    <DeleteOutlined /> Xóa danh mục
                                   </button>
                                 </div>
 
                                 <div className="exp-field-card__body">
                                   <label className="exp-field-card__count">
-                                    <span>Số câu hỏi lĩnh vực này:</span>
+                                    <span>Số câu hỏi danh mục này:</span>
                                     <input
                                       type="number"
                                       min="0"
-                                      className={`ch-input${validationErrors[`field-${item.professionalFieldId}-count`] ? ' is-invalid' : ''}`}
+                                      className={`ch-input${validationErrors[`category-${categoryId}-count`] ? ' is-invalid' : ''}`}
                                       value={item.questionCount}
                                       onFocus={(e) => e.target.select()}
                                       onChange={(e) => {
@@ -522,18 +572,18 @@ export default function ExamConfigPage() {
                                         if (raw !== String(normalized) && raw !== '') {
                                           e.target.value = String(normalized)
                                         }
-                                        updateField(item.professionalFieldId, 'questionCount', normalized)
+                                        updateCategory(categoryId, 'questionCount', normalized)
                                       }}
-                                      aria-invalid={Boolean(validationErrors[`field-${item.professionalFieldId}-count`])}
+                                      aria-invalid={Boolean(validationErrors[`category-${categoryId}-count`])}
                                     />
-                                    {validationErrors[`field-${item.professionalFieldId}-count`] && (
-                                      <small className="exp-field-error">{validationErrors[`field-${item.professionalFieldId}-count`]}</small>
+                                    {validationErrors[`category-${categoryId}-count`] && (
+                                      <small className="exp-field-error">{validationErrors[`category-${categoryId}-count`]}</small>
                                     )}
-                                    {previewField && (
-                                      <span className={`exp-cognitive-availability ${previewField.shortage > 0 ? 'is-short' : previewField.backfilledQuestionCount > 0 ? 'is-backfilled' : 'is-ok'}`}>
-                                        Khả dụng {previewField.availableQuestionCount}/{previewField.requiredQuestionCount} câu
-                                        {previewField.backfilledQuestionCount > 0 && ` · đã bù ${previewField.backfilledQuestionCount} câu`}
-                                        {previewField.shortage > 0 && ` · thiếu ${previewField.shortage} câu`}
+                                    {previewCategory && (
+                                      <span className={`exp-cognitive-availability ${previewCategory.shortage > 0 ? 'is-short' : previewCategory.backfilledQuestionCount > 0 ? 'is-backfilled' : 'is-ok'}`}>
+                                        Khả dụng {previewCategory.availableQuestionCount}/{previewCategory.requiredQuestionCount} câu
+                                        {previewCategory.backfilledQuestionCount > 0 && ` · đã bù ${previewCategory.backfilledQuestionCount} câu`}
+                                        {previewCategory.shortage > 0 && ` · thiếu ${previewCategory.shortage} câu`}
                                       </span>
                                     )}
                                   </label>
@@ -549,7 +599,7 @@ export default function ExamConfigPage() {
                                       </thead>
                                       <tbody>
                                         {item.cognitive.map((cell) => {
-                                          const previewCell = previewField?.cells?.find((c) => c.cognitiveLevel === cell.cognitiveLevel)
+                                          const previewCell = previewCategory?.cells?.find((c) => c.cognitiveLevel === cell.cognitiveLevel)
                                           return (
                                             <tr key={cell.cognitiveLevel}>
                                               <td>{cell.label}</td>
@@ -558,7 +608,7 @@ export default function ExamConfigPage() {
                                                   type="number"
                                                   min="0"
                                                   max="100"
-                                                  className={`ch-input${validationErrors[`field-${item.professionalFieldId}-cognitive`] ? ' is-invalid' : ''}`}
+                                                  className={`ch-input${validationErrors[`category-${categoryId}-cognitive`] ? ' is-invalid' : ''}`}
                                                   style={{ width: '80px', textAlign: 'center' }}
                                                   value={cell.percentage}
                                                   onFocus={(e) => e.target.select()}
@@ -569,9 +619,9 @@ export default function ExamConfigPage() {
                                                     if (raw !== String(normalized) && raw !== '') {
                                                       e.target.value = String(normalized)
                                                     }
-                                                    updateCognitive(item.professionalFieldId, cell.cognitiveLevel, normalized)
+                                                    updateCognitive(categoryId, cell.cognitiveLevel, normalized)
                                                   }}
-                                                  aria-invalid={Boolean(validationErrors[`field-${item.professionalFieldId}-cognitive`])}
+                                                  aria-invalid={Boolean(validationErrors[`category-${categoryId}-cognitive`])}
                                                 />
                                               </td>
                                               <td style={{ textAlign: 'right' }}>
@@ -594,7 +644,7 @@ export default function ExamConfigPage() {
 
                                   <div className={`exp-cognitive-summary ${cognitiveValid ? 'is-valid' : 'is-invalid'}`}>
                                     <span>Tổng tỷ lệ: <strong>{cognitiveSum}%</strong></span>
-                                    {!cognitiveValid && <small> {validationErrors[`field-${item.professionalFieldId}-cognitive`] || '(Tổng tỷ lệ phải bằng 100%)'}</small>}
+                                    {!cognitiveValid && <small> {validationErrors[`category-${categoryId}-cognitive`] || '(Tổng tỷ lệ phải bằng 100%)'}</small>}
                                   </div>
                                 </div>
                               </div>
@@ -760,7 +810,7 @@ export default function ExamConfigPage() {
                       <div className={`ch-alert ${preview.valid === false ? 'ch-alert--warning' : 'ch-alert--info'}`} style={{ margin: '16px 24px' }}>
                         <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '6px' }}>
                           <EyeOutlined /> Đánh giá khả dụng:{' '}
-                          {(preview.blueprintFields || []).reduce((sum, field) => sum + field.requiredQuestionCount - field.shortage, 0)} / {totalQuestions} câu có thể chọn
+                          {(preview.blueprintCategories || preview.blueprintFields || []).reduce((sum, item) => sum + item.requiredQuestionCount - item.shortage, 0)} / {totalQuestions} câu có thể chọn
                         </div>
                         {preview.warnings?.length > 0 && (
                           <ul style={{ margin: '4px 0 0 18px', padding: 0 }}>
@@ -770,7 +820,7 @@ export default function ExamConfigPage() {
                           </ul>
                         )}
                         {preview.warnings?.length === 0 && (
-                          <small>Đủ nguồn câu hỏi theo ma trận đã cấu hình. Xem chi tiết khả dụng theo từng mức nhận thức ở bảng lĩnh vực bên trên.</small>
+                          <small>Đủ nguồn câu hỏi theo ma trận đã cấu hình. Xem chi tiết khả dụng theo từng mức nhận thức ở bảng danh mục bên trên.</small>
                         )}
                       </div>
                     )}

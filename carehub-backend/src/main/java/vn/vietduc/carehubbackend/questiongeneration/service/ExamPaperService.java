@@ -506,9 +506,12 @@ public class ExamPaperService {
         for (ExamBlueprintField field : blueprintFieldRepository.findByExamConfigIdOrderByDisplayOrderAsc(config.getId())) {
             List<ExamBlueprintCell> cells = new ArrayList<>(blueprintCellRepository.findByBlueprintFieldId(field.getId()));
             cells.sort(Comparator.comparingInt(cell -> cognitiveOrder(cell.getCognitiveLevel())));
+            Long targetCategoryId = field.getCategory() != null ? field.getCategory().getId()
+                    : (field.getProfessionalField() != null ? field.getProfessionalField().getId() : null);
             Map<CognitiveLevel, List<PaperSourceQuestion>> candidatesByLevel = sourceItems.stream()
-                    .filter(item -> item.question() != null && item.question().getProfessionalField() != null)
-                    .filter(item -> item.question().getProfessionalField().getId().equals(field.getProfessionalField().getId()))
+                    .filter(item -> item.question() != null
+                            && ((item.question().getCategory() != null && Objects.equals(item.question().getCategory().getId(), targetCategoryId))
+                            || (item.question().getProfessionalField() != null && Objects.equals(item.question().getProfessionalField().getId(), targetCategoryId))))
                     .collect(Collectors.groupingBy(item -> item.question().getCognitiveLevel()));
             Set<Long> excludedFamilies = new HashSet<>(usedFamilies);
             if (batchUsedFamilies != null) excludedFamilies.addAll(batchUsedFamilies);
@@ -520,12 +523,14 @@ public class ExamPaperService {
                     .toList();
             List<CognitiveBackfillAllocator.CellOutcome> outcomes = CognitiveBackfillAllocator.allocate(
                     demands, familiesByLevel, backfill);
+            String displayName = field.getCategory() != null ? field.getCategory().getName()
+                    : (field.getProfessionalField() != null ? field.getProfessionalField().getName() : "Danh mục #" + targetCategoryId);
             for (int cellIndex = 0; cellIndex < cells.size(); cellIndex++) {
                 ExamBlueprintCell cell = cells.get(cellIndex);
                 CognitiveBackfillAllocator.CellOutcome outcome = outcomes.get(cellIndex);
                 if (outcome.shortage() > 0) {
                     throw new BadRequestException("Không đủ họ câu hỏi độc lập cho "
-                            + field.getProfessionalField().getName() + " / "
+                            + displayName + " / "
                             + QuestionGenerationLabels.cognitiveLevel(cell.getCognitiveLevel()));
                 }
                 for (CognitiveBackfillAllocator.FamilyPick pick : outcome.picks()) {
@@ -723,13 +728,21 @@ public class ExamPaperService {
 
     private List<PaperSourceQuestion> paperSourceQuestionsDirect(ExamConfig config) {
         if (blueprintFieldRepository == null || sourceFilterRepository == null) throw new BadRequestException("Blueprint repository chưa được cấu hình");
-        Set<Long> fieldIds = blueprintFieldRepository.findByExamConfigIdOrderByDisplayOrderAsc(config.getId()).stream().map(field -> field.getProfessionalField().getId()).collect(Collectors.toSet());
+        Set<Long> categoryIds = blueprintFieldRepository.findByExamConfigIdOrderByDisplayOrderAsc(config.getId()).stream()
+                .map(field -> field.getCategory() != null ? field.getCategory().getId()
+                        : (field.getProfessionalField() != null ? field.getProfessionalField().getId() : null))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
         List<ExamConfigSourceFilter> filters = sourceFilterRepository.findByExamConfigOrderByIdAsc(config);
         Set<Long> includeCategories = filterIds(filters, ExamConfigSourceFilter.FilterType.INCLUDE_CATEGORY);
         Set<Long> excludeCategories = filterIds(filters, ExamConfigSourceFilter.FilterType.EXCLUDE_CATEGORY);
         Set<Long> includeDocuments = filterIds(filters, ExamConfigSourceFilter.FilterType.INCLUDE_DOCUMENT);
         Set<Long> excludeDocuments = filterIds(filters, ExamConfigSourceFilter.FilterType.EXCLUDE_DOCUMENT);
-        return questionRepository.findByStatusAndProfessionalFieldIdInOrderByIdAsc(QuestionBankStatus.APPROVED, fieldIds).stream()
+        List<QuestionBankQuestion> rawQuestions = questionRepository.findByStatusAndCategoryIdInOrderByIdAsc(QuestionBankStatus.APPROVED, categoryIds);
+        if (rawQuestions.isEmpty()) {
+            rawQuestions = questionRepository.findByStatusAndProfessionalFieldIdInOrderByIdAsc(QuestionBankStatus.APPROVED, categoryIds);
+        }
+        return rawQuestions.stream()
                 .filter(question -> question.getCategory() != null && question.getCategory().getStatus() == QuestionCategoryStatus.ACTIVE)
                 .filter(question -> question.getCognitiveLevel() != null)
                 .filter(question -> includeCategories.isEmpty() || question.getCategory() != null && includeCategories.contains(question.getCategory().getId()))
@@ -750,12 +763,21 @@ public class ExamPaperService {
         for (ExamBlueprintField field : blueprintFieldRepository.findByExamConfigIdOrderByDisplayOrderAsc(config.getId())) {
             List<ExamBlueprintCell> cells = new ArrayList<>(blueprintCellRepository.findByBlueprintFieldId(field.getId()));
             cells.sort(Comparator.comparingInt(cell -> cognitiveOrder(cell.getCognitiveLevel())));
+            Long catId = field.getCategory() != null ? field.getCategory().getId() : null;
+            String catCode = field.getCategory() != null ? field.getCategory().getCode() : null;
+            String catName = field.getCategory() != null ? field.getCategory().getName() : null;
+            Long fieldId = field.getProfessionalField() != null ? field.getProfessionalField().getId() : null;
+            String fieldCode = field.getProfessionalField() != null ? field.getProfessionalField().getCode() : null;
+            String fieldName = field.getProfessionalField() != null ? field.getProfessionalField().getName() : (catName != null ? catName : "");
             for (ExamBlueprintCell cell : cells) {
                 generationBatchCellRepository.save(ExamPaperGenerationBatchCell.builder()
                         .generationBatch(batch)
-                        .professionalFieldId(field.getProfessionalField().getId())
-                        .professionalFieldCode(field.getProfessionalField().getCode())
-                        .professionalFieldName(field.getProfessionalField().getName())
+                        .categoryId(catId)
+                        .categoryCode(catCode)
+                        .categoryName(catName)
+                        .professionalFieldId(fieldId)
+                        .professionalFieldCode(fieldCode)
+                        .professionalFieldName(fieldName)
                         .cognitiveLevel(cell.getCognitiveLevel())
                         .cognitiveLabel(QuestionGenerationLabels.cognitiveLevel(cell.getCognitiveLevel()))
                         .requiredCount(cell.getQuestionCount())
@@ -774,9 +796,12 @@ public class ExamPaperService {
         for (ExamBlueprintField field : blueprintFieldRepository.findByExamConfigIdOrderByDisplayOrderAsc(config.getId())) {
             List<ExamBlueprintCell> cells = new ArrayList<>(blueprintCellRepository.findByBlueprintFieldId(field.getId()));
             cells.sort(Comparator.comparingInt(cell -> cognitiveOrder(cell.getCognitiveLevel())));
+            Long targetCategoryId = field.getCategory() != null ? field.getCategory().getId()
+                    : (field.getProfessionalField() != null ? field.getProfessionalField().getId() : null);
             Map<CognitiveLevel, List<PaperSourceQuestion>> candidatesByLevel = sourceItems.stream()
-                    .filter(item -> item.question().getProfessionalField().getId()
-                            .equals(field.getProfessionalField().getId()))
+                    .filter(item -> item.question() != null
+                            && ((item.question().getCategory() != null && Objects.equals(item.question().getCategory().getId(), targetCategoryId))
+                            || (item.question().getProfessionalField() != null && Objects.equals(item.question().getProfessionalField().getId(), targetCategoryId))))
                     .collect(Collectors.groupingBy(item -> item.question().getCognitiveLevel()));
             Map<CognitiveLevel, Set<Long>> familiesByLevel = familiesByLevel(
                     candidatesByLevel, usedFamilies, new Random(0));
@@ -791,10 +816,12 @@ public class ExamPaperService {
             outcomes.stream().flatMap(outcome -> outcome.picks().stream())
                     .map(CognitiveBackfillAllocator.FamilyPick::familyId)
                     .forEach(usedFamilies::add);
+            String displayName = field.getCategory() != null ? field.getCategory().getName()
+                    : (field.getProfessionalField() != null ? field.getProfessionalField().getName() : "Danh mục #" + targetCategoryId);
             for (int i = 0; i < cells.size(); i++) {
                 CognitiveBackfillAllocator.CellOutcome outcome = outcomes.get(i);
                 if (outcome.shortage() > 0) {
-                    String fieldLabel = field.getProfessionalField().getName() + " / "
+                    String fieldLabel = displayName + " / "
                             + QuestionGenerationLabels.cognitiveLevel(cells.get(i).getCognitiveLevel());
                     shortages.add(ErrorResponse.FieldErrorDetail.builder()
                             .field(fieldLabel)
@@ -836,20 +863,20 @@ public class ExamPaperService {
         if (Boolean.TRUE.equals(paper.getExamConfig().getBackfillNearestCognitiveLevel())) {
             mismatches = coverage.stream()
                     .collect(Collectors.groupingBy(
-                            ExamPaperCoverageCellResponse::professionalFieldId,
+                            cell -> cell.categoryId() != null ? cell.categoryId() : cell.professionalFieldId(),
                             LinkedHashMap::new,
                             Collectors.toList()))
                     .values().stream()
                     .filter(cells -> cells.stream().mapToInt(ExamPaperCoverageCellResponse::requiredCount).sum()
                             != cells.stream().mapToInt(ExamPaperCoverageCellResponse::actualCount).sum())
-                    .map(cells -> cells.get(0).professionalFieldName()
+                    .map(cells -> (cells.get(0).categoryName() != null ? cells.get(0).categoryName() : cells.get(0).professionalFieldName())
                             + " cần " + cells.stream().mapToInt(ExamPaperCoverageCellResponse::requiredCount).sum()
                             + " câu nhưng đề có " + cells.stream().mapToInt(ExamPaperCoverageCellResponse::actualCount).sum())
                     .toList();
         } else {
             mismatches = coverage.stream()
                     .filter(cell -> !Boolean.TRUE.equals(cell.matchesBlueprint()))
-                    .map(cell -> cell.professionalFieldName() + " / " + cell.cognitiveLabel()
+                    .map(cell -> (cell.categoryName() != null ? cell.categoryName() : cell.professionalFieldName()) + " / " + cell.cognitiveLabel()
                             + " cần " + cell.requiredCount() + " câu nhưng đề có " + cell.actualCount())
                     .toList();
         }
@@ -862,19 +889,27 @@ public class ExamPaperService {
         if (paper.getGenerationBatch() == null || generationBatchCellRepository == null) {
             return List.of();
         }
+        List<ExamPaperGenerationBatchCell> batchCells = generationBatchCellRepository
+                .findByGenerationBatchOrderByDisplayOrderAscCognitiveLevelAsc(paper.getGenerationBatch());
+        boolean matchByCategory = batchCells.stream().anyMatch(cell -> cell.getCategoryId() != null);
+
         Map<MatrixKey, Integer> actual = new LinkedHashMap<>();
         for (ExamPaperQuestion paperQuestion : paperQuestionRepository.findByExamPaperOrderByPositionAsc(paper)) {
             ExamPaperQuestionSnapshot snapshot = snapshotRepository.findByExamPaperQuestion(paperQuestion)
                     .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy snapshot câu hỏi trong đề"));
-            MatrixKey key = new MatrixKey(snapshot.getProfessionalFieldId(), snapshot.getCognitiveLevel());
+            Long keyId = matchByCategory ? snapshot.getCategoryId() : snapshot.getProfessionalFieldId();
+            MatrixKey key = new MatrixKey(keyId, snapshot.getCognitiveLevel());
             actual.merge(key, 1, Integer::sum);
         }
         List<ExamPaperCoverageCellResponse> result = new ArrayList<>();
-        for (ExamPaperGenerationBatchCell cell : generationBatchCellRepository
-                .findByGenerationBatchOrderByDisplayOrderAscCognitiveLevelAsc(paper.getGenerationBatch())) {
+        for (ExamPaperGenerationBatchCell cell : batchCells) {
+            Long cellKeyId = matchByCategory ? cell.getCategoryId() : cell.getProfessionalFieldId();
             int actualCount = actual.getOrDefault(
-                    new MatrixKey(cell.getProfessionalFieldId(), cell.getCognitiveLevel().name()), 0);
+                    new MatrixKey(cellKeyId, cell.getCognitiveLevel().name()), 0);
             result.add(new ExamPaperCoverageCellResponse(
+                    cell.getCategoryId(),
+                    cell.getCategoryCode(),
+                    cell.getCategoryName(),
                     cell.getProfessionalFieldId(),
                     cell.getProfessionalFieldCode(),
                     cell.getProfessionalFieldName(),
@@ -1036,7 +1071,7 @@ public class ExamPaperService {
     private record OptionChoice(String label, String text) {
     }
 
-    private record MatrixKey(Long professionalFieldId, String cognitiveLevel) {
+    private record MatrixKey(Long taxonomyId, String cognitiveLevel) {
     }
 
     private record OptionSnapshot(

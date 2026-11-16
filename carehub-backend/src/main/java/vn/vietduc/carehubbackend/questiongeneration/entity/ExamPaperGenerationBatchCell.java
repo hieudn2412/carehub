@@ -24,21 +24,30 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CognitiveLevel;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "exam_paper_generation_batch_cells", uniqueConstraints = @UniqueConstraint(
-        name = "uq_exam_paper_generation_batch_cells",
-        columnNames = {"generation_batch_id", "professional_field_id", "cognitive_level"}
+        name = "uq_exam_paper_generation_batch_cells_cat_cog",
+        columnNames = {"generation_batch_id", "category_id", "cognitive_level"}
 ))
 public class ExamPaperGenerationBatchCell extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "generation_batch_id", nullable = false)
     private ExamPaperGenerationBatch generationBatch;
 
-    @Column(name = "professional_field_id", nullable = false)
+    @Column(name = "category_id")
+    private Long categoryId;
+
+    @Column(name = "category_code", length = 128)
+    private String categoryCode;
+
+    @Column(name = "category_name")
+    private String categoryName;
+
+    @Column(name = "professional_field_id")
     private Long professionalFieldId;
 
     @Column(name = "professional_field_code", length = 128)
     private String professionalFieldCode;
 
-    @Column(name = "professional_field_name", nullable = false)
+    @Column(name = "professional_field_name")
     private String professionalFieldName;
 
     @Enumerated(EnumType.STRING)
@@ -54,4 +63,3 @@ public class ExamPaperGenerationBatchCell extends BaseEntity {
     @Column(name = "display_order", nullable = false)
     private Integer displayOrder;
 }
-

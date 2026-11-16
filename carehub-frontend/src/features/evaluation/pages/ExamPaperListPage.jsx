@@ -303,8 +303,8 @@ function ExamPaperListPage({
                   <strong>Đối chiếu ma trận snapshot</strong>
                   <div className="exp-coverage__grid">
                     {expandedPaper._detail.coverage.map((cell) => (
-                      <span className={cell.matchesBlueprint ? 'is-valid' : 'is-invalid'} key={`${cell.professionalFieldId}-${cell.cognitiveLevel}`}>
-                        {cell.professionalFieldName} · {cell.cognitiveLabel}: {cell.actualCount}/{cell.requiredCount}
+                      <span className={cell.matchesBlueprint ? 'is-valid' : 'is-invalid'} key={`${cell.categoryId || cell.professionalFieldId}-${cell.cognitiveLevel}`}>
+                        {cell.categoryName || cell.professionalFieldName} · {cell.cognitiveLabel}: {cell.actualCount}/{cell.requiredCount}
                       </span>
                     ))}
                   </div>
