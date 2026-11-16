@@ -158,6 +158,12 @@ export default function ExamAssignmentResultDetailPage() {
               <SummaryCard label="Số câu đúng" value={`${correctCount}/${totalQuestions}`} />
               <SummaryCard label="Thời gian làm" value={formatDuration(attempt.timeSpentSeconds ?? resultRow?.latestTimeSpentSeconds)} />
               <SummaryCard label="Lượt làm" value={attempt.attemptNumber || resultRow?.latestAttemptNumber || '—'} />
+              <SummaryCard
+                label="Giám sát (Out tab / Chụp MH)"
+                value={attempt.tabSwitchCount !== undefined && attempt.tabSwitchCount !== null ? `${attempt.tabSwitchCount} lần vi phạm` : (resultRow?.latestTabSwitchCount !== undefined ? `${resultRow.latestTabSwitchCount} lần vi phạm` : '0 lần')}
+                tone={Number(attempt.tabSwitchCount || resultRow?.latestTabSwitchCount || 0) > 0 ? 'failed' : 'passed'}
+                description={Number(attempt.tabSwitchCount || resultRow?.latestTabSwitchCount || 0) > 0 ? 'Phát hiện vi phạm chụp màn hình hoặc out tab - Căn cứ đánh 0 điểm' : 'Không có vi phạm quy chế'}
+              />
             </section>
 
             <section className="ear-section">

@@ -301,10 +301,44 @@ public class ExamAssignmentService {
 
     @Transactional(readOnly = true)
     public byte[] exportResultsXlsx(Long assignmentId) {
+        return exportResultsXlsx(assignmentId, null, null, null, null);
+    }
+
+    @Transactional(readOnly = true)
+    public byte[] exportResultsXlsx(Long assignmentId, String q, String department, String status, Boolean violation) {
         ExamAssignmentResultsResponse results = results(assignmentId);
         EvaluationResultReportResponse resultReport = evaluationResultService == null
                 ? null
                 : evaluationResultService.report(assignmentId);
+
+        List<ExamAssignmentResultRowResponse> filteredRows = results.rows().stream()
+                .filter(row -> {
+                    if (q != null && !q.isBlank()) {
+                        String needle = q.trim().toLowerCase();
+                        boolean matchName = row.userName() != null && row.userName().toLowerCase().contains(needle);
+                        boolean matchCode = row.employeeCode() != null && row.employeeCode().toLowerCase().contains(needle);
+                        if (!matchName && !matchCode) return false;
+                    }
+                    if (department != null && !department.isBlank() && !"all".equalsIgnoreCase(department)) {
+                        if (row.departmentName() == null || !row.departmentName().equalsIgnoreCase(department.trim())) {
+                            return false;
+                        }
+                    }
+                    if (status != null && !status.isBlank() && !"all".equalsIgnoreCase(status)) {
+                        if ("passed".equalsIgnoreCase(status) && !Boolean.TRUE.equals(row.bestPassed())) return false;
+                        if ("failed".equalsIgnoreCase(status) && !Boolean.FALSE.equals(row.bestPassed())) return false;
+                        if ("not_started".equalsIgnoreCase(status) && (row.attemptCount() != null && row.attemptCount() > 0)) return false;
+                        if ("in_progress".equalsIgnoreCase(status) && !"IN_PROGRESS".equalsIgnoreCase(row.latestStatus())) return false;
+                    }
+                    if (violation != null) {
+                        boolean hasViolations = row.latestTabSwitchCount() != null && row.latestTabSwitchCount() > 0;
+                        if (violation && !hasViolations) return false;
+                        if (!violation && hasViolations) return false;
+                    }
+                    return true;
+                })
+                .toList();
+
         try (Workbook workbook = new XSSFWorkbook();
              ByteArrayOutputStream output = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet("Kết quả");
@@ -318,6 +352,31 @@ public class ExamAssignmentService {
             rowIndex = metadataRow(sheet, rowIndex, "Bộ đề", results.examPaperCode() + " - " + results.examPaperName());
             rowIndex = metadataRow(sheet, rowIndex, "Số nhân viên", String.valueOf(results.targetCount()));
             rowIndex = metadataRow(sheet, rowIndex, "Điểm trung bình", results.averageScore() == null ? "" : results.averageScore().toPlainString());
+
+            boolean hasFilter = (q != null && !q.isBlank())
+                    || (department != null && !department.isBlank() && !"all".equalsIgnoreCase(department))
+                    || (status != null && !status.isBlank() && !"all".equalsIgnoreCase(status))
+                    || violation != null;
+
+            if (hasFilter) {
+                StringBuilder filterDesc = new StringBuilder();
+                if (q != null && !q.isBlank()) filterDesc.append("Từ khóa: \"").append(q.trim()).append("\" ");
+                if (department != null && !department.isBlank() && !"all".equalsIgnoreCase(department)) filterDesc.append("| Khoa: ").append(department).append(" ");
+                if (status != null && !status.isBlank() && !"all".equalsIgnoreCase(status)) {
+                    String stLabel = switch (status.toLowerCase()) {
+                        case "passed" -> "Đạt";
+                        case "failed" -> "Chưa đạt";
+                        case "not_started" -> "Chưa làm";
+                        case "in_progress" -> "Đang làm";
+                        default -> status;
+                    };
+                    filterDesc.append("| Kết quả: ").append(stLabel).append(" ");
+                }
+                if (violation != null) filterDesc.append("| Giám sát: ").append(violation ? "Có vi phạm" : "Bình thường").append(" ");
+                rowIndex = metadataRow(sheet, rowIndex, "Bộ lọc áp dụng", filterDesc.toString().trim());
+                rowIndex = metadataRow(sheet, rowIndex, "Số nhân viên (sau lọc)", String.valueOf(filteredRows.size()));
+            }
+
             rowIndex++;
 
             Row header = sheet.createRow(rowIndex++);
@@ -325,14 +384,14 @@ public class ExamAssignmentService {
                     "Mã NV", "Họ tên", "Khoa/phòng", "Số lượt", "Trạng thái mới nhất",
                     "Điểm mới nhất", "Đúng", "Tổng câu", "Kết quả (lượt mới nhất)",
                     "Điểm cao nhất", "Kết quả (điểm cao nhất)",
-                    "Bắt đầu mới nhất", "Nộp mới nhất", "Thời gian làm"
+                    "Bắt đầu mới nhất", "Nộp mới nhất", "Thời gian làm", "Giám sát (Vi phạm)"
             );
             for (int index = 0; index < headers.size(); index++) {
                 header.createCell(index).setCellValue(headers.get(index));
                 header.getCell(index).setCellStyle(headerStyle);
             }
 
-            for (ExamAssignmentResultRowResponse row : results.rows()) {
+            for (ExamAssignmentResultRowResponse row : filteredRows) {
                 Row xlsxRow = sheet.createRow(rowIndex++);
                 xlsxRow.createCell(0).setCellValue(blank(row.employeeCode()));
                 xlsxRow.createCell(1).setCellValue(blank(row.userName()));
@@ -348,6 +407,9 @@ public class ExamAssignmentService {
                 xlsxRow.createCell(11).setCellValue(row.latestStartedAt() == null ? "" : row.latestStartedAt().toString());
                 xlsxRow.createCell(12).setCellValue(row.latestSubmittedAt() == null ? "" : row.latestSubmittedAt().toString());
                 xlsxRow.createCell(13).setCellValue(row.latestTimeSpentSeconds() == null ? "" : String.valueOf(row.latestTimeSpentSeconds()));
+                xlsxRow.createCell(14).setCellValue(row.latestTabSwitchCount() == null || row.latestTabSwitchCount() == 0
+                        ? "0 lần"
+                        : row.latestTabSwitchCount() + " lần vi phạm");
             }
             for (int index = 0; index < headers.size(); index++) {
                 sheet.autoSizeColumn(index);

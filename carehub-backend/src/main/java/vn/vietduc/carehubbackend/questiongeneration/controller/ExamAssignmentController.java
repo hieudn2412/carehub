@@ -80,10 +80,14 @@ public class ExamAssignmentController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<byte[]> exportResults(
             @PathVariable Long assignmentId,
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String department,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Boolean violation,
             Authentication authentication
     ) {
         cutover.requireFieldResults();
-        byte[] body = assignmentService.exportResultsXlsx(assignmentId);
+        byte[] body = assignmentService.exportResultsXlsx(assignmentId, q, department, status, violation);
         auditLogService.record(
                 "EXAM_ASSIGNMENT_RESULT_EXPORT",
                 "EXAM_ASSIGNMENT",
