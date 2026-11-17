@@ -67,6 +67,7 @@ function ManagerExamResultDetailPage() {
             <tr>
               <th>Nhân viên</th>
               <th>Điểm cao nhất</th>
+              <th>Giám sát</th>
               <th>Kết quả</th>
               <th>Thời gian (lượt mới nhất)</th>
             </tr>
@@ -74,7 +75,7 @@ function ManagerExamResultDetailPage() {
           <tbody>
             {results.length === 0 ? (
               <tr>
-                <td colSpan={4} className="ch-empty">
+                <td colSpan={5} className="ch-empty">
                   Chưa có nhân viên nào làm bài.
                 </td>
               </tr>
@@ -104,6 +105,18 @@ function ManagerExamResultDetailPage() {
                         <div style={{ fontSize: 11.5, color: '#64748b' }}>
                           Lượt mới nhất: {formatNumber(item.latestScore)}/10
                         </div>
+                      )}
+                    </td>
+                    <td data-label="Giám sát">
+                      {Number(item.latestTabSwitchCount || item.tabSwitchCount || 0) > 0 ? (
+                        <span
+                          style={{ color: '#b91c1c', fontWeight: 700, fontSize: 12 }}
+                          title="Phát hiện chụp màn hình hoặc out tab - Căn cứ đánh 0 điểm"
+                        >
+                          ⚠️ {item.latestTabSwitchCount || item.tabSwitchCount} vi phạm (Đề xuất 0đ)
+                        </span>
+                      ) : (
+                        <span style={{ color: '#15803d', fontSize: 12 }}>0 vi phạm</span>
                       )}
                     </td>
                     <td data-label="Kết quả">

@@ -76,8 +76,9 @@ export const examAssignmentApi = {
     })
   },
 
-  exportAssignmentResults(assignmentId) {
+  exportAssignmentResults(assignmentId, params = {}) {
     return httpClient.get(`/exam-assignments/${assignmentId}/export-results`, {
+      params,
       headers: authHeaders(),
       responseType: 'blob',
     })

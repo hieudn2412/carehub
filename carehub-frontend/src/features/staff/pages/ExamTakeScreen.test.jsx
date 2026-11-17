@@ -381,4 +381,194 @@ describe('ExamTakeScreen timer regression', () => {
     })
     expect(screen.queryByText('Cảnh báo vi phạm rời màn hình làm bài')).not.toBeInTheDocument()
   })
+
+  it('blocks Windows/Meta key shortcuts (Win+Shift+S) and activates blackout protective shield', async () => {
+    myExamApi.getAttempt.mockResolvedValue(response({
+      id: 70,
+      status: 'IN_PROGRESS',
+      examPaperName: 'Đề kiểm tra bảo mật',
+      remainingSeconds: 1800,
+      expiresAt: '2026-08-12T08:30:00Z',
+      totalQuestions: 1,
+      employeeCode: 'NV001',
+      userName: 'Nguyễn Văn A',
+      questions: [{
+        paperQuestionId: 1,
+        position: 1,
+        stem: 'Câu hỏi chống Win+Shift+S',
+        optionA: 'A',
+        optionB: 'B',
+        optionC: 'C',
+        optionD: 'D',
+      }],
+      answers: [],
+    }))
+
+    renderExamAttempt()
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+      await vi.advanceTimersByTimeAsync(0)
+    })
+
+    // Simulate pressing Windows key or Win+Shift+S
+    const metaKeyEvent = new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      key: 'Meta',
+      keyCode: 91,
+    })
+    await act(async () => {
+      document.dispatchEvent(metaKeyEvent)
+    })
+
+    expect(metaKeyEvent.defaultPrevented).toBe(true)
+    expect(screen.getByText('Màn hình đang được bảo vệ chống chụp')).toBeInTheDocument()
+    expect(toastContext.showToast).toHaveBeenCalledWith(
+      expect.stringContaining('chụp màn hình'),
+      'warning',
+    )
+  })
+
+  it('blocks PrintScreen keyup and multi-finger touch screenshot gesture', async () => {
+    myExamApi.getAttempt.mockResolvedValue(response({
+      id: 70,
+      status: 'IN_PROGRESS',
+      examPaperName: 'Đề kiểm tra mobile',
+      remainingSeconds: 1800,
+      expiresAt: '2026-08-12T08:30:00Z',
+      totalQuestions: 1,
+      employeeCode: 'NV001',
+      userName: 'Nguyễn Văn A',
+      questions: [{
+        paperQuestionId: 1,
+        position: 1,
+        stem: 'Câu hỏi mobile test',
+        optionA: 'A',
+        optionB: 'B',
+        optionC: 'C',
+        optionD: 'D',
+      }],
+      answers: [],
+    }))
+
+    renderExamAttempt()
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+      await vi.advanceTimersByTimeAsync(0)
+    })
+
+    // PrintScreen keyup
+    const printScreenKeyUp = new KeyboardEvent('keyup', {
+      bubbles: true,
+      cancelable: true,
+      key: 'PrintScreen',
+      keyCode: 44,
+    })
+    await act(async () => {
+      document.dispatchEvent(printScreenKeyUp)
+    })
+    expect(printScreenKeyUp.defaultPrevented).toBe(true)
+    expect(screen.getByText('Màn hình đang được bảo vệ chống chụp')).toBeInTheDocument()
+
+    // 3-finger touch on mobile
+    const touchEvent = new Event('touchstart', { bubbles: true, cancelable: true })
+    Object.defineProperty(touchEvent, 'touches', {
+      value: [{}, {}, {}],
+    })
+    await act(async () => {
+      document.dispatchEvent(touchEvent)
+    })
+    expect(touchEvent.defaultPrevented).toBe(true)
+  })
+
+  it('blocks getDisplayMedia screen recording API attempts during exam', async () => {
+    myExamApi.getAttempt.mockResolvedValue(response({
+      id: 70,
+      status: 'IN_PROGRESS',
+      examPaperName: 'Đề kiểm tra screen recording',
+      remainingSeconds: 1800,
+      expiresAt: '2026-08-12T08:30:00Z',
+      totalQuestions: 1,
+      questions: [{
+        paperQuestionId: 1,
+        position: 1,
+        stem: 'Câu hỏi screen record test',
+        optionA: 'A',
+        optionB: 'B',
+        optionC: 'C',
+        optionD: 'D',
+      }],
+      answers: [],
+    }))
+
+    // Provide mock mediaDevices
+    navigator.mediaDevices = {
+      getDisplayMedia: vi.fn(),
+    }
+
+    renderExamAttempt()
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+      await vi.advanceTimersByTimeAsync(0)
+    })
+
+    // Attempt to call getDisplayMedia (screen recording)
+    let rejectedError = null
+    await act(async () => {
+      try {
+        await navigator.mediaDevices.getDisplayMedia()
+      } catch (err) {
+        rejectedError = err
+      }
+    })
+
+    expect(rejectedError).not.toBeNull()
+    expect(screen.getByText('Màn hình đang được bảo vệ chống chụp')).toBeInTheDocument()
+    expect(toastContext.showToast).toHaveBeenCalledWith(
+      expect.stringContaining('quay màn hình'),
+      'error',
+    )
+  })
+
+  it('detects mobile split-screen / floating window and activates shield', async () => {
+    myExamApi.getAttempt.mockResolvedValue(response({
+      id: 70,
+      status: 'IN_PROGRESS',
+      examPaperName: 'Đề kiểm tra split-screen',
+      remainingSeconds: 1800,
+      expiresAt: '2026-08-12T08:30:00Z',
+      totalQuestions: 1,
+      questions: [{
+        paperQuestionId: 1,
+        position: 1,
+        stem: 'Câu hỏi split screen test',
+        optionA: 'A',
+        optionB: 'B',
+        optionC: 'C',
+        optionD: 'D',
+      }],
+      answers: [],
+    }))
+
+    renderExamAttempt()
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+      await vi.advanceTimersByTimeAsync(0)
+    })
+
+    // Simulate mobile viewport in split-screen (width <= 768, innerHeight < 0.52 * screen.height)
+    Object.defineProperty(window, 'innerWidth', { value: 390, configurable: true })
+    Object.defineProperty(window, 'innerHeight', { value: 300, configurable: true })
+    Object.defineProperty(window, 'screen', { value: { height: 844 }, configurable: true })
+
+    await act(async () => {
+      window.dispatchEvent(new Event('resize'))
+    })
+
+    expect(screen.getByText('Phát hiện chia đôi màn hình hoặc ứng dụng nổi')).toBeInTheDocument()
+  })
 })

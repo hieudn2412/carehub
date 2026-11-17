@@ -903,10 +903,67 @@
   cursor: pointer;
 }
 
+.eh-exam-page--protected {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none !important;
+  touch-action: pan-y !important;
+  overscroll-behavior-y: contain;
+}
+
+.eh-exam-page--protected * {
+  -webkit-touch-callout: none !important;
+}
+
+.eh-exam-page--protected img {
+  pointer-events: none !important;
+  -webkit-user-drag: none !important;
+}
+
 .eh-exam-page--protected .eh-exam-question-list,
 .eh-exam-page--protected .eh-exam-progress {
   user-select: none;
   -webkit-user-select: none;
+}
+
+.eh-exam-workspace--blackout {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  filter: blur(80px) !important;
+  pointer-events: none !important;
+  user-select: none !important;
+}
+
+.eh-exam-ai-decoy {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  opacity: 0;
+  font-size: 0;
+  pointer-events: none;
+  user-select: text;
+}
+
+.eh-exam-question-watermark-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  transform: rotate(-14deg);
+  opacity: 0.08;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 15px;
+  font-weight: 800;
+  color: #dc2626;
+  user-select: none;
+  -webkit-user-select: none;
+  z-index: 1;
+  text-align: center;
+  line-height: 1.5;
 }
 
 /* Cảnh báo bảo mật & Chống AI nằm chính giữa câu hỏi và 4 phương án */
@@ -1002,19 +1059,62 @@
   flex-shrink: 0;
 }
 
-/* Anti-screenshot protective glass overlay */
+/* Real-time forensic dynamic watermark matrix */
+.eh-exam-watermark-matrix {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-auto-rows: 180px;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  opacity: 0.15;
+}
+
+.eh-exam-watermark-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transform: rotate(-24deg);
+  text-align: center;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #b91c1c;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.eh-exam-watermark-candidate {
+  font-size: 12.5px;
+  color: #991b1b;
+}
+
+.eh-exam-watermark-meta {
+  font-size: 11px;
+  color: #b91c1c;
+  margin-top: 3px;
+}
+
+/* Anti-screenshot & Anti-screen-recording pitch-black overlay */
 .eh-exam-anti-screenshot-overlay {
   position: fixed;
   inset: 0;
-  z-index: 1000;
-  background: rgba(15, 23, 42, 0.94);
-  backdrop-filter: blur(28px);
-  -webkit-backdrop-filter: blur(28px);
+  z-index: 99999;
+  background: #000000 !important;
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   user-select: none;
+  -webkit-user-select: none;
+  padding: 20px;
 }
 
 .eh-exam-anti-screenshot-message {
@@ -1023,28 +1123,43 @@
   align-items: center;
   text-align: center;
   gap: 12px;
-  padding: 32px 40px;
-  background: rgba(30, 41, 59, 0.9);
-  border: 1px solid rgba(56, 189, 248, 0.3);
-  border-radius: 16px;
+  padding: 36px 42px;
+  background: #111827;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 18px;
   color: #f8fafc;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9);
+  max-width: 520px;
+  width: 100%;
 }
 
 .eh-exam-anti-screenshot-icon {
-  font-size: 40px;
-  color: #38bdf8;
+  font-size: 46px;
+  color: #ef4444;
 }
 
 .eh-exam-anti-screenshot-message strong {
-  font-size: 18px;
-  font-weight: 700;
-  color: #f1f5f9;
+  font-size: 19px;
+  font-weight: 800;
+  color: #fee2e2;
 }
 
 .eh-exam-anti-screenshot-message span {
   font-size: 14px;
+  color: #cbd5e1;
+}
+
+.eh-exam-anti-screenshot-sub {
+  margin: 4px 0 14px 0;
+  font-size: 13px;
   color: #94a3b8;
+  line-height: 1.5;
+}
+
+.eh-exam-anti-screenshot-resume-btn {
+  width: 100%;
+  min-height: 44px;
+  font-size: 15px;
 }
 
 /* Out-tab violation alert modal */
@@ -1532,6 +1647,11 @@
 
   .eh-exam-question {
     scroll-margin-top: 65px;
+  }
+
+  .eh-exam-question-watermark-overlay {
+    font-size: 13px;
+    opacity: 0.12;
   }
 
   /* Bảng gắn class .eh-table--cards chuyển card-mode (data-label trên từng td) */
