@@ -1,3 +1,4 @@
+import { matchesSearch } from '../../../shared/utils/searchText.js'
 import { useEffect, useMemo, useState } from 'react'
 import { CloseOutlined, LoadingOutlined, PlusOutlined, UserAddOutlined } from '@ant-design/icons'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
@@ -75,7 +76,7 @@ function ExamAssignmentAddTargetsModal({ assignment, onClose, onAdded }) {
     const normalizedQuery = employeeCodeQuery.trim().toLowerCase()
     return availableEmployees.filter((employee) => (
       (!normalizedQuery || [employee.employeeCode, employee.fullName, employee.name, employee.department, employee.position]
-        .some((value) => String(value || '').toLowerCase().includes(normalizedQuery)))
+        .some((value) => matchesSearch(String(value || ''), normalizedQuery)))
       && (!departmentFilter || employee.department === departmentFilter)
       && (!positionFilter || employee.position === positionFilter)
     ))

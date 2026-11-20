@@ -1,3 +1,4 @@
+import { matchesSearch } from '../../../shared/utils/searchText.js'
 import { useEffect, useMemo, useState } from 'react'
 import { EyeOutlined, FilterOutlined, LoadingOutlined, LockOutlined, PlayCircleOutlined, SearchOutlined } from '@ant-design/icons'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -41,7 +42,7 @@ export default function ExamTakeListScreen() {
     const dueDate = item.dueAt?.slice(0, 10)
     const matchesDate = (!fromDate || !dueDate || dueDate >= fromDate) && (!toDate || !dueDate || dueDate <= toDate)
     return matchesDate
-      && (!search.trim() || (item.name || '').toLowerCase().includes(search.trim().toLowerCase()))
+      && (!search.trim() || matchesSearch(item.name || '', search.trim()))
   }), [assignments, fromDate, search, toDate])
 
   const stats = useMemo(() => ({

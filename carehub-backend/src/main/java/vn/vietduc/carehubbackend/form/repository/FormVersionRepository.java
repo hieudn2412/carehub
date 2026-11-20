@@ -47,9 +47,9 @@ public interface FormVersionRepository extends JpaRepository<FormVersion, Long> 
     @Query("""
             select v from FormVersion v
             where (:keyword = ''
-                   or lower(v.form.code) like lower(concat('%', :keyword, '%'))
-                   or lower(v.form.title) like lower(concat('%', :keyword, '%'))
-                   or lower(v.title) like lower(concat('%', :keyword, '%')))
+                   or carehub_search_text(v.form.code) like carehub_search_text(concat('%', :keyword, '%'))
+                   or carehub_search_text(v.form.title) like carehub_search_text(concat('%', :keyword, '%'))
+                   or carehub_search_text(v.title) like carehub_search_text(concat('%', :keyword, '%')))
               and (:status is null or v.status = :status)
             """)
     Page<FormVersion> searchScoringConfigurations(@Param("keyword") String keyword,

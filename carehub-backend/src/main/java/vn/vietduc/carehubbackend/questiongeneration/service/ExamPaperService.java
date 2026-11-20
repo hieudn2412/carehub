@@ -1,5 +1,6 @@
 package vn.vietduc.carehubbackend.questiongeneration.service;
 
+import vn.vietduc.carehubbackend.common.SearchText;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -64,7 +65,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
-import java.text.Normalizer;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -1026,9 +1026,7 @@ public class ExamPaperService {
     }
 
     private String normalize(String value) {
-        return Normalizer.normalize(value == null ? "" : value, Normalizer.Form.NFD)
-                .replaceAll("\\p{M}+", "")
-                .toLowerCase(Locale.ROOT)
+        return SearchText.normalize(value)
                 .replaceAll("[^\\p{L}\\p{N}\\s]", " ")
                 .replaceAll("\\s+", " ")
                 .trim();

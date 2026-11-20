@@ -1,3 +1,4 @@
+import { normalizeSearchText } from '../../../shared/utils/searchText.js'
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
@@ -169,14 +170,6 @@ const navGroups = [
   },
 ]
 
-function normalizeSearchText(value) {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/đ/g, 'd')
-    .replace(/Đ/g, 'D')
-    .toLocaleLowerCase('vi')
-}
 
 function AdminSidebar() {
   const navigate = useNavigate()

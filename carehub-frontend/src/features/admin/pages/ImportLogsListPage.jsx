@@ -1,3 +1,4 @@
+import { matchesSearch } from '../../../shared/utils/searchText.js'
 import { useState, useEffect, useMemo } from 'react'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
@@ -323,7 +324,7 @@ function ImportLogsListPage() {
     }
     if (rowSearchQuery.trim()) {
       const q = rowSearchQuery.toLowerCase()
-      result = result.filter(r => r.employeeCode && r.employeeCode.toLowerCase().includes(q))
+      result = result.filter(r => r.employeeCode && matchesSearch(r.employeeCode, q))
     }
     return result
   }, [parsedRowResults, rowStatusFilter, rowSearchQuery])

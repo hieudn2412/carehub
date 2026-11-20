@@ -1,3 +1,4 @@
+import { matchesSearch } from '../../../shared/utils/searchText.js'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -122,7 +123,7 @@ function matchesRetiredFilters(form, { departmentId, keyword }) {
 
   return [form.code, form.title, form.description]
     .filter(Boolean)
-    .some((value) => String(value).toLowerCase().includes(normalizedKeyword))
+    .some((value) => matchesSearch(String(value), normalizedKeyword))
 }
 
 function mergeCachedRetiredForms(forms, filters) {

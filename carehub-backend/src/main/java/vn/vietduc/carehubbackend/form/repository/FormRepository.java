@@ -28,8 +28,8 @@ public interface FormRepository extends JpaRepository<Form, Long> {
                    or (:status is null and f.deleted = false)
                    or (:status is not null and :status != vn.vietduc.carehubbackend.form.entity.enums.FormStatus.RETIRED and f.deleted = false and f.status = :status))
               and (:keyword is null
-                   or lower(f.code) like lower(concat('%', :keyword, '%'))
-                   or lower(f.title) like lower(concat('%', :keyword, '%')))
+                   or carehub_search_text(f.code) like carehub_search_text(concat('%', :keyword, '%'))
+                   or carehub_search_text(f.title) like carehub_search_text(concat('%', :keyword, '%')))
               and (:subjectType is null or f.subjectType = :subjectType)
               and (:ownerDepartmentId is null or f.ownerDepartment.id = :ownerDepartmentId)
             """)

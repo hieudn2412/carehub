@@ -1,5 +1,6 @@
 package vn.vietduc.carehubbackend.questiongeneration.service;
 
+import vn.vietduc.carehubbackend.common.SearchText;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -152,9 +153,7 @@ public class QuestionCategoryService {
     }
 
     private String normalize(String value) {
-        return Normalizer.normalize(value == null ? "" : value, Normalizer.Form.NFD)
-                .replaceAll("\\p{M}+", "")
-                .toLowerCase(Locale.ROOT)
+        return SearchText.normalize(value)
                 .replaceAll("[^\\p{L}\\p{N}\\s]", " ")
                 .replaceAll("\\s+", " ")
                 .trim();

@@ -1,3 +1,4 @@
+import { matchesSearch } from '../../../shared/utils/searchText.js'
 import { useCallback, useState, useMemo, useEffect } from 'react'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import LoadingState from '../../../shared/components/LoadingState.jsx'
@@ -137,7 +138,7 @@ function ReferenceDepartmentsListPage() {
   // Apply filters
   const filteredDepartments = useMemo(() => {
     return apiDepts.filter(dept => {
-      const matchSearch = dept.name.toLowerCase().includes(search.toLowerCase())
+      const matchSearch = matchesSearch(dept.name, search)
       return matchSearch
     })
   }, [apiDepts, search])

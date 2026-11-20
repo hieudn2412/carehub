@@ -219,8 +219,8 @@ public interface FormAssignmentItemRepository extends JpaRepository<FormAssignme
               and (i.assignment.effectiveFrom is null or i.assignment.effectiveFrom <= :now)
               and (i.assignment.effectiveTo is null or i.assignment.effectiveTo >= :now)
               and (:keyword is null
-                   or lower(i.form.code) like :keyword
-                   or lower(i.form.title) like :keyword)
+                   or carehub_search_text(i.form.code) like carehub_search_text(:keyword)
+                   or carehub_search_text(i.form.title) like carehub_search_text(:keyword))
               and (:ownerDepartmentId is null or ownerDepartment.id = :ownerDepartmentId)
               and (:expiringSoon = false or (i.assignment.effectiveTo is not null
                    and i.assignment.effectiveTo >= :now
@@ -245,8 +245,8 @@ public interface FormAssignmentItemRepository extends JpaRepository<FormAssignme
               and (i.assignment.effectiveFrom is null or i.assignment.effectiveFrom <= :now)
               and (i.assignment.effectiveTo is null or i.assignment.effectiveTo >= :now)
               and (:keyword is null
-                   or lower(i.form.code) like :keyword
-                   or lower(i.form.title) like :keyword)
+                   or carehub_search_text(i.form.code) like carehub_search_text(:keyword)
+                   or carehub_search_text(i.form.title) like carehub_search_text(:keyword))
               and (:ownerDepartmentId is null or ownerDepartment.id = :ownerDepartmentId)
               and (:expiringSoon = false or (i.assignment.effectiveTo is not null
                    and i.assignment.effectiveTo >= :now
@@ -284,8 +284,8 @@ public interface FormAssignmentItemRepository extends JpaRepository<FormAssignme
               and (i.assignment.effectiveFrom is null or i.assignment.effectiveFrom <= :now)
               and (i.assignment.effectiveTo is null or i.assignment.effectiveTo >= :now)
               and (:keyword is null
-                   or lower(i.assignment.manager.employeeCode) like :keyword
-                   or lower(i.assignment.manager.name) like :keyword)
+                   or carehub_search_text(i.assignment.manager.employeeCode) like carehub_search_text(:keyword)
+                   or carehub_search_text(i.assignment.manager.name) like carehub_search_text(:keyword))
               and (:departmentId is null or department.id = :departmentId)
               and exists (
                     select ur.id from UserRole ur
@@ -333,8 +333,8 @@ public interface FormAssignmentItemRepository extends JpaRepository<FormAssignme
               and (i.assignment.effectiveFrom is null or i.assignment.effectiveFrom <= :now)
               and (i.assignment.effectiveTo is null or i.assignment.effectiveTo >= :now)
               and (:keyword is null
-                   or lower(i.assignment.manager.employeeCode) like :keyword
-                   or lower(i.assignment.manager.name) like :keyword)
+                   or carehub_search_text(i.assignment.manager.employeeCode) like carehub_search_text(:keyword)
+                   or carehub_search_text(i.assignment.manager.name) like carehub_search_text(:keyword))
               and (:departmentId is null or department.id = :departmentId)
               and exists (
                     select ur.id from UserRole ur

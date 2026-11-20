@@ -53,6 +53,8 @@ spring:
     enabled: false
 
   datasource:
+    hikari:
+      connection-init-sql: CREATE ALIAS IF NOT EXISTS carehub_search_text FOR "vn.vietduc.carehubbackend.common.SearchText.normalize"
     url: jdbc:h2:mem:carehub-test-${random.uuid};MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
     driver-class-name: org.h2.Driver
     username: sa

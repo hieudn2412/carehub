@@ -1,3 +1,4 @@
+import { matchesSearch } from '../../../shared/utils/searchText.js'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
@@ -280,7 +281,7 @@ function ChecklistAssignmentPage() {
     return items.filter((department) => [
       department.departmentName || department.name,
       department.code,
-    ].filter(Boolean).some((text) => String(text).toLowerCase().includes(normalizedDeptScopeSearch)))
+    ].filter(Boolean).some((text) => matchesSearch(String(text), normalizedDeptScopeSearch)))
   }, [normalizedDeptScopeSearch])
 
   const visibleSelectedDepartments = useMemo(

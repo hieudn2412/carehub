@@ -26,6 +26,14 @@ vi.mock('react-router-dom', () => ({
 vi.mock('../../../../features/training/api/trainingApi', () => ({ trainingApi: api }))
 vi.mock('../../../../shared/context/ToastContext.jsx', () => ({ useToast: () => ({ showToast }) }))
 vi.mock('../../../../shared/components/AppShell.jsx', () => ({ default: ({ children }) => <main>{children}</main> }))
+vi.mock('../../../training/components/EvidenceImageViewer.jsx', () => ({
+  default: ({ src, filename, onClose }) => (
+    <section role="dialog" aria-label={filename}>
+      <span>{src}</span>
+      <button type="button" onClick={onClose}>Đóng ảnh</button>
+    </section>
+  ),
+}))
 vi.mock('../../../../shared/components/KeyboardDatePicker.jsx', () => ({
   default: ({ value, onChange }) => (
     <input aria-label="Ngày đào tạo" type="date" value={value || ''} onChange={(event) => onChange(event.target.value)} />
@@ -453,6 +461,22 @@ describe('TrainingHoursFormScreen - minh chứng', () => {
     expect(screen.getByText('2.0 KB')).toBeInTheDocument()
   })
 
+  it('xem ảnh mới chọn mà không tải lên, lưu hồ sơ hoặc xóa tệp', async () => {
+    window.URL.createObjectURL = vi.fn(() => 'blob:preview')
+    window.URL.revokeObjectURL = vi.fn()
+    await renderCreate()
+    fireEvent.change(fileInput(), { target: { files: [makeFile('anh.png', 'image/png')] } })
+    fireEvent.click(await screen.findByRole('button', { name: 'Xem ảnh minh chứng anh.png' }))
+    expect(screen.getByRole('dialog', { name: 'anh.png' })).toHaveTextContent('blob:preview')
+    expect(api.uploadEvidence).not.toHaveBeenCalled()
+    expect(api.createRecord).not.toHaveBeenCalled()
+    expect(api.createEvidencePreviewUrl).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Đóng ảnh' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByText('File sẽ tải lên (1):')).toBeInTheDocument()
+    expect(window.URL.revokeObjectURL).not.toHaveBeenCalled()
+  })
+
   it('từ chối tệp sai định dạng và hiện lỗi', async () => {
     await renderCreate()
     fireEvent.change(fileInput(), { target: { files: [makeFile('bang-luong.xlsx', 'application/vnd.ms-excel')] } })
@@ -546,6 +570,20 @@ describe('TrainingHoursFormScreen - minh chứng đã có (chỉnh sửa)', () =
     await renderEdit()
     expect(await screen.findByText('File đã tải lên (1):')).toBeInTheDocument()
     expect(screen.getByText('giay-chung-nhan.pdf')).toBeInTheDocument()
+  })
+
+  it('mở ảnh đã lưu trong viewer mà không mở tab mới', async () => {
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null)
+    api.listEvidence.mockResolvedValue({ data: { data: [{ id: 901, originalFilename: 'chung-chi.jpg', mimeType: 'image/jpeg' }] } })
+    await renderEdit()
+    await screen.findByText('File đã tải lên (1):')
+    fireEvent.click(screen.getByTitle('Xem minh chứng'))
+    await waitFor(() => expect(screen.getByRole('dialog', { name: 'chung-chi.jpg' })).toHaveTextContent('https://r2/preview'))
+    expect(api.createEvidencePreviewUrl).toHaveBeenCalledWith('55', 901)
+    expect(open).not.toHaveBeenCalled()
+    expect(api.deleteEvidence).not.toHaveBeenCalled()
+    expect(api.updateRecord).not.toHaveBeenCalled()
+    open.mockRestore()
   })
 
   it('bỏ qua lỗi khi không tải được danh sách minh chứng', async () => {

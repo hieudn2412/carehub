@@ -1,5 +1,6 @@
 package vn.vietduc.carehubbackend.notification.service;
 
+import vn.vietduc.carehubbackend.common.SearchText;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -56,9 +57,9 @@ public class EmailTemplateService {
             if (query != null) {
                 String pattern = "%" + query + "%";
                 predicates.add(cb.or(
-                        cb.like(cb.lower(root.get("code")), pattern),
-                        cb.like(cb.lower(root.get("name")), pattern),
-                        cb.like(cb.lower(root.get("subject")), pattern)
+                        cb.like(SearchText.expression(cb, root.get("code")), SearchText.normalize(pattern)),
+                        cb.like(SearchText.expression(cb, root.get("name")), SearchText.normalize(pattern)),
+                        cb.like(SearchText.expression(cb, root.get("subject")), SearchText.normalize(pattern))
                 ));
             }
             if (category != null) {

@@ -1,3 +1,4 @@
+import { matchesSearch } from '../../../shared/utils/searchText.js'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppShell from '../../../shared/components/AppShell.jsx'
@@ -42,10 +43,10 @@ function ClassificationRuleListPage() {
     const normalized = keyword.trim().toLowerCase()
     return rules.filter((rule) => {
       const matchesKeyword = !normalized
-        || (rule.name || '').toLowerCase().includes(normalized)
-        || (rule.categoryName || '').toLowerCase().includes(normalized)
-        || (rule.keywords || '').toLowerCase().includes(normalized)
-        || (rule.sourcePattern || '').toLowerCase().includes(normalized)
+        || matchesSearch(rule.name || '', normalized)
+        || matchesSearch(rule.categoryName || '', normalized)
+        || matchesSearch(rule.keywords || '', normalized)
+        || matchesSearch(rule.sourcePattern || '', normalized)
       const matchesStatus = enabledFilter === ''
         || (enabledFilter === 'true' ? rule.enabled : !rule.enabled)
       return matchesKeyword && matchesStatus

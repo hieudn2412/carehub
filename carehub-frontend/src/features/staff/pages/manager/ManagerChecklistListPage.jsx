@@ -1,3 +1,4 @@
+import { matchesSearch } from '../../../../shared/utils/searchText.js'
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
@@ -136,7 +137,7 @@ function ManagerChecklistListPage() {
     return checklists.filter((checklist) =>
       [checklist.title, checklist.formCode]
         .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(keyword)),
+        .some((value) => matchesSearch(String(value), keyword)),
     )
   }, [checklists, search])
 

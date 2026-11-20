@@ -1,3 +1,4 @@
+import { matchesSearch } from '../../../shared/utils/searchText.js'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
@@ -852,7 +853,7 @@ export function ComplianceTargetModal({ form, isAdmin, departments, currentDepar
   const normalizedDepartmentQuery = departmentQuery.trim().toLowerCase()
   const filteredDepartments = useMemo(() => {
     if (!normalizedDepartmentQuery) return departmentOptions
-    return departmentOptions.filter((item) => `${item.name} ${item.code || ''}`.toLowerCase().includes(normalizedDepartmentQuery))
+    return departmentOptions.filter((item) => matchesSearch(`${item.name} ${item.code || ''}`, normalizedDepartmentQuery))
   }, [departmentOptions, normalizedDepartmentQuery])
   const selectedDepartmentSet = useMemo(() => new Set(selectedDepartmentIds), [selectedDepartmentIds])
   const selectedDepartments = useMemo(

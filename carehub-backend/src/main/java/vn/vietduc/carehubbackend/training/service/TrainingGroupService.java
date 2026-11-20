@@ -1,5 +1,6 @@
 package vn.vietduc.carehubbackend.training.service;
 
+import vn.vietduc.carehubbackend.common.SearchText;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,7 +28,7 @@ public class TrainingGroupService {
         List<TrainingGroup> groups;
         if (q != null && !q.isBlank()) {
             groups = trainingGroupRepository.findAll().stream()
-                    .filter(g -> g.getName().toLowerCase().contains(q.toLowerCase()))
+                    .filter(g -> SearchText.contains(g.getName(), q))
                     .collect(Collectors.toList());
         } else {
             groups = trainingGroupRepository.findByActiveTrueOrderByNameAsc();

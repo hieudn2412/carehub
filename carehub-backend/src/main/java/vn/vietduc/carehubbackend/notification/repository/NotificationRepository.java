@@ -35,8 +35,8 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
             FROM Notification n
             WHERE n.user.id = :userId
               AND (cast(:q as string) IS NULL
-                   OR LOWER(n.title) LIKE LOWER(CONCAT('%', cast(:q as string), '%'))
-                   OR LOWER(n.type) LIKE LOWER(CONCAT('%', cast(:q as string), '%')))
+                   OR carehub_search_text(n.title) LIKE concat('%', carehub_search_text(cast(:q as string)), '%')
+                   OR carehub_search_text(n.type) LIKE concat('%', carehub_search_text(cast(:q as string)), '%'))
               AND (cast(:read as boolean) IS NULL OR n.read = :read)
             ORDER BY n.createdAt DESC
             """)

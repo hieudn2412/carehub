@@ -1,3 +1,4 @@
+import { matchesSearch } from '../../../shared/utils/searchText.js'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { DeleteOutlined, DownloadOutlined, PlusCircleOutlined, ReloadOutlined, SendOutlined, EyeOutlined, CloseOutlined, FileTextOutlined } from '@ant-design/icons'
@@ -66,9 +67,9 @@ function ExamPaperListPage({
     const normalized = appliedFilters.keyword.toLowerCase()
     return papers.filter((paper) => {
       const matchesKeyword = !normalized
-        || (paper.name || '').toLowerCase().includes(normalized)
-        || (paper.code || '').toLowerCase().includes(normalized)
-        || (paper.examConfigName || '').toLowerCase().includes(normalized)
+        || matchesSearch(paper.name || '', normalized)
+        || matchesSearch(paper.code || '', normalized)
+        || matchesSearch(paper.examConfigName || '', normalized)
       const matchesStatus = !appliedFilters.status || paper.status === appliedFilters.status
       return matchesKeyword && matchesStatus
     })

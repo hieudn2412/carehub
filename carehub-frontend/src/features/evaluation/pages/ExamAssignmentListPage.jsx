@@ -1,3 +1,4 @@
+import { matchesSearch } from '../../../shared/utils/searchText.js'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { DeleteOutlined, EyeOutlined, FileTextOutlined, FolderOpenOutlined, PlusCircleOutlined, ReloadOutlined, SearchOutlined, StopOutlined, FilterOutlined, UserAddOutlined } from '@ant-design/icons'
@@ -41,9 +42,9 @@ function ExamAssignmentListPage() {
     const normalized = keyword.trim().toLowerCase()
     return assignments.filter((assignment) => {
       const matchesKeyword = !normalized
-        || (assignment.name || '').toLowerCase().includes(normalized)
-        || (assignment.examPaperName || '').toLowerCase().includes(normalized)
-        || (assignment.examPaperCode || '').toLowerCase().includes(normalized)
+        || matchesSearch(assignment.name || '', normalized)
+        || matchesSearch(assignment.examPaperName || '', normalized)
+        || matchesSearch(assignment.examPaperCode || '', normalized)
       const matchesStatus = !status || assignment.status === status
       return matchesKeyword && matchesStatus
     })

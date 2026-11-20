@@ -1,3 +1,4 @@
+import { matchesSearch } from '../../../shared/utils/searchText.js'
 import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppShell from '../../../shared/components/AppShell.jsx'
@@ -107,8 +108,8 @@ function ReferenceEmployeesListPage() {
   const filteredEmployees = useMemo(() => {
     return employees.filter(emp => {
       const matchSearch =
-        emp.fullName.toLowerCase().includes(search.toLowerCase()) ||
-        emp.employeeCode.toLowerCase().includes(search.toLowerCase())
+        matchesSearch(emp.fullName, search) ||
+        matchesSearch(emp.employeeCode, search)
 
       const matchPosition = positionFilter === 'all' || emp.positionName === positionFilter
       const matchDegree = degreeFilter === 'all' || emp.degree === degreeFilter

@@ -1,5 +1,6 @@
 package vn.vietduc.carehubbackend.questiongeneration.service;
 
+import vn.vietduc.carehubbackend.common.SearchText;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,7 +36,6 @@ import vn.vietduc.carehubbackend.training.repository.ProfessionalFieldRepository
 import vn.vietduc.carehubbackend.questiongeneration.entity.EvaluationAudience;
 import vn.vietduc.carehubbackend.questiongeneration.repository.EvaluationAudienceRepository;
 
-import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
@@ -667,9 +667,7 @@ public class ExamConfigService {
     }
 
     private String normalize(String value) {
-        return Normalizer.normalize(value == null ? "" : value, Normalizer.Form.NFD)
-                .replaceAll("\\p{M}+", "")
-                .toLowerCase(Locale.ROOT)
+        return SearchText.normalize(value)
                 .replaceAll("[^\\p{L}\\p{N}\\s]", " ")
                 .replaceAll("\\s+", " ")
                 .trim();

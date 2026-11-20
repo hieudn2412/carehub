@@ -21,8 +21,8 @@ public interface ProfessionalFieldRepository extends JpaRepository<ProfessionalF
             SELECT field
             FROM ProfessionalField field
             WHERE (:keyword IS NULL
-                   OR LOWER(field.code) LIKE :keyword
-                   OR LOWER(field.name) LIKE :keyword)
+                   OR carehub_search_text(field.code) LIKE carehub_search_text(:keyword)
+                   OR carehub_search_text(field.name) LIKE carehub_search_text(:keyword))
               AND (:active IS NULL OR field.active = :active)
             """)
     Page<ProfessionalField> search(

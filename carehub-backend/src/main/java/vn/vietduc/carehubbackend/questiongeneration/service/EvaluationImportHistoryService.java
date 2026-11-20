@@ -1,5 +1,6 @@
 package vn.vietduc.carehubbackend.questiongeneration.service;
 
+import vn.vietduc.carehubbackend.common.SearchText;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Font;
@@ -293,6 +294,6 @@ public class EvaluationImportHistoryService {
     }
 
     private String normalize(Object value) {
-        return String.valueOf(value == null ? "" : value).toLowerCase(Locale.ROOT).trim();
+        return SearchText.normalize(value == null ? "" : String.valueOf(value));
     }
 }

@@ -186,7 +186,7 @@ public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, 
                     LEFT JOIN r.professionalField professionalField
                     WHERE (:scopeEmployeeId IS NULL OR employee.id = :scopeEmployeeId)
                       AND (:scopeDepartmentId IS NULL OR employeeDepartment.id = :scopeDepartmentId)
-                      AND (:keyword IS NULL OR LOWER(r.title) LIKE :keyword)
+                      AND (:keyword IS NULL OR carehub_search_text(r.title) LIKE carehub_search_text(:keyword))
                       AND r.startDate >= :dateFrom
                       AND r.startDate <= :dateTo
                       AND (:activityTypeId IS NULL OR activityType.id = :activityTypeId)
@@ -225,7 +225,7 @@ public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, 
                     JOIN r.activityType activityType
                     WHERE (:scopeEmployeeId IS NULL OR employee.id = :scopeEmployeeId)
                       AND (:scopeDepartmentId IS NULL OR employeeDepartment.id = :scopeDepartmentId)
-                      AND (:keyword IS NULL OR LOWER(r.title) LIKE :keyword)
+                      AND (:keyword IS NULL OR carehub_search_text(r.title) LIKE carehub_search_text(:keyword))
                       AND r.startDate >= :dateFrom
                       AND r.startDate <= :dateTo
                       AND (:activityTypeId IS NULL OR activityType.id = :activityTypeId)

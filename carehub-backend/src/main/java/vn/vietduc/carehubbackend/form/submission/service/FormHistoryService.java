@@ -270,7 +270,7 @@ public class FormHistoryService {
                     from form_templates f
                     join eligible_versions ev on ev.form_id = f.id
                     where f.deleted = false
-                      and (:keyword is null or lower(f.code) like :keyword or lower(f.title) like :keyword)
+                      and (:keyword is null or carehub_search_text(f.code) like carehub_search_text(:keyword) or carehub_search_text(f.title) like carehub_search_text(:keyword))
                 """ + assignmentCondition + """
                     group by f.id, f.code, f.title
                 )

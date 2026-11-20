@@ -1,3 +1,4 @@
+import { matchesSearch } from '../../../shared/utils/searchText.js'
 import { useEffect, useMemo, useState } from 'react'
 import '../styles/ExamHistoryScreen.css'
 import AppShell from '../../../shared/components/AppShell.jsx'
@@ -58,16 +59,16 @@ function ExamHistoryScreen() {
   const filtered = useMemo(() => {
     const normalized = search.trim().toLowerCase()
     return completedAttempts.filter((attempt) => {
-      const matchesSearch = !normalized
-        || (attempt.examPaperName || '').toLowerCase().includes(normalized)
-        || (attempt.assignmentName || '').toLowerCase().includes(normalized)
+      const matchesKeyword = !normalized
+        || matchesSearch(attempt.examPaperName || '', normalized)
+        || matchesSearch(attempt.assignmentName || '', normalized)
       const matchesStatus =
         statusFilter === 'all'
         || (statusFilter === 'pass' && attempt.passed === true)
         || (statusFilter === 'fail' && attempt.passed === false)
         || (statusFilter === 'expired' && attempt.status === 'EXPIRED')
       const matchesField = !professionalFieldId || String(attempt.professionalFieldId) === professionalFieldId
-      return matchesSearch && matchesStatus && matchesField
+      return matchesKeyword && matchesStatus && matchesField
     })
   }, [completedAttempts, professionalFieldId, search, statusFilter])
 

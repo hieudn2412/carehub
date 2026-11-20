@@ -1,5 +1,6 @@
 package vn.vietduc.carehubbackend.questiongeneration.service;
 
+import vn.vietduc.carehubbackend.common.SearchText;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Font;
 import org.apache.poi.ss.usermodel.Row;
@@ -58,7 +59,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.Instant;
-import java.text.Normalizer;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.nio.charset.StandardCharsets;
@@ -1246,9 +1246,7 @@ public class ExamAssignmentService {
     }
 
     private String normalize(String value) {
-        return Normalizer.normalize(value == null ? "" : value, Normalizer.Form.NFD)
-                .replaceAll("\\p{M}+", "")
-                .toLowerCase(Locale.ROOT)
+        return SearchText.normalize(value)
                 .replaceAll("[^\\p{L}\\p{N}\\s]", " ")
                 .replaceAll("\\s+", " ")
                 .trim();

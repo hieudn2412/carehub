@@ -246,7 +246,7 @@ public class QualityChecklistDashboardService {
                       and f.status = 'PUBLISHED'
                       and current_version.status = 'PUBLISHED'
                       and (:formId is null or f.id = :formId)
-                      and (:keyword is null or lower(f.code) like :keyword or lower(f.title) like :keyword)
+                      and (:keyword is null or carehub_search_text(f.code) like carehub_search_text(:keyword) or carehub_search_text(f.title) like carehub_search_text(:keyword))
                 """ + assignmentPredicate + "\n)";
     }
 

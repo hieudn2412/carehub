@@ -13,6 +13,15 @@ vi.mock('../../../../shared/components/ConfirmModal.jsx', () => ({
   default: () => null,
 }))
 
+vi.mock('../../../training/components/EvidenceImageViewer.jsx', () => ({
+  default: ({ src, filename, onClose }) => (
+    <section role="dialog" aria-label={filename}>
+      <span>{src}</span>
+      <button type="button" onClick={onClose}>Đóng ảnh</button>
+    </section>
+  ),
+}))
+
 vi.mock('../../../../shared/context/ToastContext.jsx', () => ({
   useToast: () => ({ showToast: vi.fn() }),
 }))
@@ -99,6 +108,25 @@ describe('TrainingHoursDetailScreen evidence viewer', () => {
         'noopener,noreferrer',
       )
     })
+  })
+
+  it('opens image thumbnails in the viewer without opening a tab or requesting a second URL', async () => {
+    renderDetail()
+    const trigger = await screen.findByRole('button', { name: 'Xem ảnh minh chứng chung-chi.jpg' })
+    fireEvent.click(trigger)
+    expect(screen.getByRole('dialog', { name: 'chung-chi.jpg' })).toHaveTextContent('https://files.example.com/101')
+    expect(trainingApi.createEvidencePreviewUrl).toHaveBeenCalledTimes(1)
+    expect(window.open).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Đóng ảnh' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('opens the existing view action in the same image viewer', async () => {
+    renderDetail()
+    await screen.findByRole('button', { name: 'Xem ảnh minh chứng chung-chi.jpg' })
+    fireEvent.click(screen.getByRole('button', { name: 'Xem chung-chi.jpg' }))
+    expect(screen.getByRole('dialog', { name: 'chung-chi.jpg' })).toBeInTheDocument()
+    expect(window.open).not.toHaveBeenCalled()
   })
 })
 

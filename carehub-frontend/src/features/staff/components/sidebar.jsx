@@ -1,3 +1,4 @@
+import { normalizeSearchText } from '../../../shared/utils/searchText.js'
 import { useState, useEffect, useLayoutEffect, useRef } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
@@ -28,14 +29,6 @@ import { staffApi } from '../api/staffApi.js'
 import logo from '../../../assets/logo.png'
 import '../styles/StaffDashBoardScreen.css'
 
-function normalizeSearchText(value) {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/đ/g, 'd')
-    .replace(/Đ/g, 'D')
-    .toLocaleLowerCase('vi')
-}
 
 function Sidebar({ alertSummary = {} }) {
   const navigate = useNavigate()

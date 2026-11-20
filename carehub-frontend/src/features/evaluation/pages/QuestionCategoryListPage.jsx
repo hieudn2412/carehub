@@ -1,3 +1,4 @@
+import { matchesSearch } from '../../../shared/utils/searchText.js'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
@@ -72,9 +73,9 @@ export default function QuestionCategoryListPage() {
   const filteredCategories = useMemo(() => {
     return categories.filter((item) => {
       const matchesKeyword =
-        item.name.toLowerCase().includes(appliedFilters.keyword.toLowerCase()) ||
-        (item.description || '').toLowerCase().includes(appliedFilters.keyword.toLowerCase()) ||
-        (item.code || '').toLowerCase().includes(appliedFilters.keyword.toLowerCase())
+        matchesSearch(item.name, appliedFilters.keyword) ||
+        matchesSearch(item.description || '', appliedFilters.keyword) ||
+        matchesSearch(item.code || '', appliedFilters.keyword)
       const matchesStatus = appliedFilters.status === '' || item.status === appliedFilters.status
       return matchesKeyword && matchesStatus
     })

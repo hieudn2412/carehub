@@ -1,5 +1,6 @@
 package vn.vietduc.carehubbackend.questiongeneration.service;
 
+import vn.vietduc.carehubbackend.common.SearchText;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -187,6 +188,6 @@ public class EvaluationAuditLogService {
     }
 
     private String normalize(String value) {
-        return value == null ? "" : value.toLowerCase(Locale.ROOT).trim();
+        return SearchText.normalize(value);
     }
 }

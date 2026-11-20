@@ -1,3 +1,4 @@
+import { matchesSearch } from '../../../../shared/utils/searchText.js'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -36,11 +37,11 @@ function TrainingHoursEvidencesListScreen() {
   }, [])
 
   const filteredRecords = records.filter(r => {
-    const matchesSearch = r.title?.toLowerCase().includes(search.toLowerCase())
-    if (statusFilter === 'all') return matchesSearch
-    if (statusFilter === 'has_evidence') return matchesSearch && r.evidenceCount > 0
-    if (statusFilter === 'no_evidence') return matchesSearch && (!r.evidenceCount || r.evidenceCount === 0)
-    return matchesSearch
+    const matchesKeyword = matchesSearch(r.title, search)
+    if (statusFilter === 'all') return matchesKeyword
+    if (statusFilter === 'has_evidence') return matchesKeyword && r.evidenceCount > 0
+    if (statusFilter === 'no_evidence') return matchesKeyword && (!r.evidenceCount || r.evidenceCount === 0)
+    return matchesKeyword
   })
 
   const getStatusLabel = (status) => {

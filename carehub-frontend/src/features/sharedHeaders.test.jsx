@@ -163,7 +163,7 @@ describe('staff Header', () => {
     headerMocks.unreadCount = 4
     renderHeader(Header)
 
-    const toggle = screen.getByRole('button', { name: 'Mở thông báo' })
+    const toggle = screen.getByRole('button', { name: 'Mở thông báo, 4 thông báo chưa đọc' })
     fireEvent.click(toggle)
 
     const popover = screen.getByText('Thông báo').closest('.notify-popover')
@@ -184,7 +184,7 @@ describe('staff Header', () => {
 
   it('shows an empty notification state and disables mark-all', () => {
     renderHeader(Header)
-    fireEvent.click(screen.getByRole('button', { name: 'Mở thông báo' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Mở thông báo, không có thông báo chưa đọc' }))
 
     expect(screen.getByText('Không có thông báo mới nào')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Đọc tất cả' })).toBeDisabled()
@@ -296,7 +296,7 @@ describe('AdminHeader', () => {
     renderHeader(AdminHeader)
 
     expect(screen.getByRole('link', { name: '105 bài kiểm tra chưa làm' })).toHaveTextContent('99+')
-    const toggle = screen.getByRole('button', { name: 'Thông báo, 4 chưa đọc' })
+    const toggle = screen.getByRole('button', { name: 'Mở thông báo, 4 thông báo chưa đọc' })
     fireEvent.click(toggle)
 
     const popover = screen.getByText('Thông báo').closest('.notify-popover')
@@ -327,7 +327,7 @@ describe('AdminHeader', () => {
     })
 
     expect(screen.getByTestId('account-dropdown')).toHaveTextContent('A||Quản lý cấp Bệnh Viện|/admin/profile')
-    fireEvent.click(screen.getByRole('button', { name: 'Thông báo' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Mở thông báo, không có thông báo chưa đọc' }))
     expect(screen.getByText('Không có thông báo mới nào')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Mở tìm kiếm và bộ lọc, 1 điều kiện đang chọn' }))
     expect(onToggle).toHaveBeenCalled()
@@ -343,5 +343,68 @@ describe('AdminHeader', () => {
       'Error loading admin header profile',
       headerMocks.profileError,
     ))
+  })
+})
+
+describe.each([
+  ['staff', Header, 'USER'],
+  ['manager', Header, 'MANAGER'],
+  ['admin', AdminHeader, 'ADMIN'],
+])('%s notification bell', (_label, Component, role) => {
+  beforeEach(() => {
+    headerMocks.roles = [role]
+    headerMocks.profileData = { fullName: 'Người dùng', roles: [role] }
+    headerMocks.profileError = null
+    headerMocks.notifications = []
+    headerMocks.pendingExamCount = 0
+    headerMocks.hasChecklistAssignment = false
+  })
+
+  it.each([[0, null], [1, '1'], [12, '12'], [99, '99'], [100, '99+'], [125, '99+'], [10000, '99+']])('formats unread count %i on the badge and keeps the exact accessible count', (count, label) => {
+    headerMocks.unreadCount = count
+    renderHeader(Component)
+
+    const button = screen.getByRole('button', {
+      name: `Mở thông báo, ${count > 0 ? `${count} thông báo chưa đọc` : 'không có thông báo chưa đọc'}`,
+    })
+    const badge = button.querySelector('.dashboard-header__notify-badge')
+    const icon = button.querySelector('.dashboard-header__notify-icon')
+
+    if (count > 0) {
+      expect(badge.textContent).toBe(label)
+      expect(badge).toHaveAttribute('aria-hidden', 'true')
+      expect(icon).toHaveClass('dashboard-header__notify-icon--ringing')
+    } else {
+      expect(badge).not.toBeInTheDocument()
+      expect(icon).not.toHaveClass('dashboard-header__notify-icon--ringing')
+    }
+
+    fireEvent.click(button)
+    expect(screen.getByText('Thông báo').closest('.notify-popover'))
+      .toHaveTextContent(`Bạn có ${count} thông báo chưa đọc`)
+    expect(screen.queryByText(/hôm nay/)).not.toBeInTheDocument()
+  })
+
+  it('updates the badge and ringing after reads, new notifications and a rollback', () => {
+    headerMocks.unreadCount = 3
+    const view = renderHeader(Component)
+
+    for (const [count, label] of [[100, '99+'], [99, '99'], [2, '2'], [0, null], [125, '99+'], [0, null], [125, '99+']]) {
+      headerMocks.unreadCount = count
+      view.rerender(<MemoryRouter><Component /></MemoryRouter>)
+
+      const button = screen.getByRole('button', {
+        name: `Mở thông báo, ${count > 0 ? `${count} thông báo chưa đọc` : 'không có thông báo chưa đọc'}`,
+      })
+      const icon = button.querySelector('.dashboard-header__notify-icon')
+      const badge = button.querySelector('.dashboard-header__notify-badge')
+      if (count > 0) {
+        expect(badge.textContent).toBe(label)
+        expect(icon).toHaveClass('dashboard-header__notify-icon--ringing')
+      } else {
+        expect(badge).not.toBeInTheDocument()
+        expect(icon).not.toHaveClass('dashboard-header__notify-icon--ringing')
+      }
+    }
   })
 })

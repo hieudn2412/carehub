@@ -1,3 +1,4 @@
+import { matchesSearch } from '../../../../shared/utils/searchText.js'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { CheckCircleFilled, CloseOutlined, EyeOutlined, SafetyCertificateOutlined, SearchOutlined, WarningFilled } from '@ant-design/icons'
@@ -75,7 +76,7 @@ export default function StaffCompetencyPage() {
 
   const visibleItems = useMemo(() => {
     if (!query) return data?.items || []
-    return (data?.items || []).filter(item => String(item.formName || '').toLowerCase().includes(query.toLowerCase()))
+    return (data?.items || []).filter(item => matchesSearch(String(item.formName || ''), query))
   }, [data, query])
 
   // Người được chấm quan tâm "bước nào bị trừ điểm", không phải điểm quy đổi của từng bước,

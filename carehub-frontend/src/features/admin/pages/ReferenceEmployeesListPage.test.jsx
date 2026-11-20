@@ -112,6 +112,21 @@ describe('ReferenceEmployeesListPage - danh sách', () => {
 })
 
 describe('ReferenceEmployeesListPage - tìm kiếm và lọc', () => {
+  it.each(['duong', 'DUONG', 'dương', 'ngoc hieu', 'dang'])('tìm tên tiếng Việt bằng từ khóa %s', async (keyword) => {
+    api.getUsers.mockResolvedValue(usersResponse([
+      user(1, { fullName: 'Đặng Dương Ngọc Hiếu' }),
+      user(2, { fullName: 'Nguyễn Văn An' }),
+    ]))
+    render(<ReferenceEmployeesListPage />)
+    await screen.findByText('Đặng Dương Ngọc Hiếu')
+
+    fireEvent.change(searchBox(), { target: { value: keyword } })
+
+    expect(screen.getByText('Đặng Dương Ngọc Hiếu')).toBeInTheDocument()
+    expect(screen.queryByText('Nguyễn Văn An')).not.toBeInTheDocument()
+    expect(screen.getByText('1 kết quả')).toBeInTheDocument()
+  })
+
   it('tìm theo tên và mã nhân viên', async () => {
     await renderPage()
 

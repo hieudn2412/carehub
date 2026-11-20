@@ -174,12 +174,14 @@
   color: #555;
   cursor: pointer;
   position: relative;
-  display: flex;
+  display: grid;
+  grid-template-areas: "bell";
+  min-width: 40px;
+  flex-shrink: 0;
   align-items: center;
-  justify-content: center;
   border: 0;
   background: transparent;
-  padding: 0 4px;
+  padding: 0;
 }
 
 .dashboard-header__notify,
@@ -188,14 +190,51 @@
   min-height: 40px;
 }
 
-.dashboard-header__notify-dot {
-  position: absolute;
-  top: -2px;
-  right: -2px;
-  width: 6px;
-  height: 6px;
+.dashboard-header__notify-icon {
+  grid-area: bell;
+  justify-self: start;
+  margin-inline-start: 11px;
+  transform-origin: 50% 15%;
+}
+
+.dashboard-header__notify-icon--ringing {
+  animation: dashboard-notification-ring 6s ease-in-out infinite;
+}
+
+.dashboard-header__notify-badge {
+  grid-area: bell;
+  align-self: start;
+  justify-self: end;
+  min-width: 18px;
+  height: 18px;
+  margin-inline-start: 22px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: #c0392b;
-  border-radius: 50%;
+  color: #fff;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+@keyframes dashboard-notification-ring {
+  0%, 13.333%, 100% { transform: rotate(0deg); }
+  2%, 6% { transform: rotate(14deg); }
+  4%, 8% { transform: rotate(-14deg); }
+  10% { transform: rotate(8deg); }
+  12% { transform: rotate(-8deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-header__notify-icon--ringing {
+    animation: none;
+  }
 }
 
 .dashboard-header__profile {
@@ -237,6 +276,7 @@
 /* ── Notification Popover ── */
 .dashboard-header__notify-container {
   position: relative;
+  flex-shrink: 0;
 }
 
 .notify-popover {

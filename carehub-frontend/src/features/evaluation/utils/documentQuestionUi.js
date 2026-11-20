@@ -1,3 +1,4 @@
+import { normalizeSearchText } from '../../../shared/utils/searchText.js'
 const DOCUMENT_STATUS_LABELS = {
   READY: 'Sẵn sàng',
   OCR_REQUIRED: 'Cần OCR',
@@ -103,7 +104,7 @@ export function chunkGenerationEligible(chunk) {
 }
 
 export function normalizeText(value) {
-  return String(value || '').toLowerCase().trim()
+  return normalizeSearchText(value)
 }
 export {
   apiData,

@@ -1,14 +1,7 @@
+import { normalizeSearchText as normalizeSearch } from '../utils/searchText.js'
 import { useId, useMemo, useRef, useState } from 'react'
 import { DownOutlined, SearchOutlined } from '@ant-design/icons'
 
-function normalizeSearch(value = '') {
-  return value
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .replace(/đ/gi, 'd')
-    .toLocaleLowerCase('vi')
-    .trim()
-}
 
 function DepartmentCombobox({
   id,

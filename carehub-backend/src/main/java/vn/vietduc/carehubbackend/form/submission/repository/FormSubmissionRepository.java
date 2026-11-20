@@ -85,8 +85,8 @@ public interface FormSubmissionRepository extends JpaRepository<FormSubmission, 
             where v.form.deleted = false
               and v.status in :versionStatuses
               and (:keyword is null
-                   or lower(v.form.code) like :keyword
-                   or lower(v.form.title) like :keyword)
+                   or carehub_search_text(v.form.code) like carehub_search_text(:keyword)
+                   or carehub_search_text(v.form.title) like carehub_search_text(:keyword))
             group by v.form.id, v.form.code, v.form.title
             order by max(v.createdAt) desc, v.form.id desc
             """,
@@ -96,8 +96,8 @@ public interface FormSubmissionRepository extends JpaRepository<FormSubmission, 
             where v.form.deleted = false
               and v.status in :versionStatuses
               and (:keyword is null
-                   or lower(v.form.code) like :keyword
-                   or lower(v.form.title) like :keyword)
+                   or carehub_search_text(v.form.code) like carehub_search_text(:keyword)
+                   or carehub_search_text(v.form.title) like carehub_search_text(:keyword))
             """)
     Page<FormHistoryProjection> searchHistoryForms(
             @Param("keyword") String keyword,
@@ -203,8 +203,8 @@ public interface FormSubmissionRepository extends JpaRepository<FormSubmission, 
               and (:departmentId is null or subject.department.id = :departmentId)
               and (:formId is null or s.formVersion.form.id = :formId)
               and (:keyword is null
-                   or lower(subject.name) like :keyword
-                   or lower(subject.employeeCode) like :keyword)
+                   or carehub_search_text(subject.name) like carehub_search_text(:keyword)
+                   or carehub_search_text(subject.employeeCode) like carehub_search_text(:keyword))
             order by subject.name asc, subject.id asc
             """,
             countQuery = """
@@ -218,8 +218,8 @@ public interface FormSubmissionRepository extends JpaRepository<FormSubmission, 
               and (:departmentId is null or subject.department.id = :departmentId)
               and (:formId is null or s.formVersion.form.id = :formId)
               and (:keyword is null
-                   or lower(subject.name) like :keyword
-                   or lower(subject.employeeCode) like :keyword)
+                   or carehub_search_text(subject.name) like carehub_search_text(:keyword)
+                   or carehub_search_text(subject.employeeCode) like carehub_search_text(:keyword))
             """)
     Page<User> findCompetencyTechniqueCandidates(
             @Param("departmentId") Long departmentId,
@@ -247,8 +247,8 @@ public interface FormSubmissionRepository extends JpaRepository<FormSubmission, 
               and (:departmentId is null or subject.department.id = :departmentId)
               and (:formId is null or s.formVersion.form.id = :formId)
               and (:keyword is null
-                   or lower(subject.name) like :keyword
-                   or lower(subject.employeeCode) like :keyword)
+                   or carehub_search_text(subject.name) like carehub_search_text(:keyword)
+                   or carehub_search_text(subject.employeeCode) like carehub_search_text(:keyword))
             group by subject.id, subject.employeeCode, subject.name, subject.department.name
             order by subject.name asc, subject.id asc
             """,
@@ -263,8 +263,8 @@ public interface FormSubmissionRepository extends JpaRepository<FormSubmission, 
               and (:departmentId is null or subject.department.id = :departmentId)
               and (:formId is null or s.formVersion.form.id = :formId)
               and (:keyword is null
-                   or lower(subject.name) like :keyword
-                   or lower(subject.employeeCode) like :keyword)
+                   or carehub_search_text(subject.name) like carehub_search_text(:keyword)
+                   or carehub_search_text(subject.employeeCode) like carehub_search_text(:keyword))
             """)
     Page<CompetencyTechniqueAggregateProjection> summarizeCompetencyTechnique(
             @Param("departmentId") Long departmentId,
@@ -365,10 +365,10 @@ public interface FormSubmissionRepository extends JpaRepository<FormSubmission, 
             left join s.subjectContext context
             where (:status is null or s.status = :status)
               and (:keyword is null
-                   or lower(s.formVersion.title) like :keyword
-                   or lower(context.fullName) like :keyword
-                   or lower(context.employeeCode) like :keyword
-                   or lower(s.submittedBy.name) like :keyword)
+                   or carehub_search_text(s.formVersion.title) like carehub_search_text(:keyword)
+                   or carehub_search_text(context.fullName) like carehub_search_text(:keyword)
+                   or carehub_search_text(context.employeeCode) like carehub_search_text(:keyword)
+                   or carehub_search_text(s.submittedBy.name) like carehub_search_text(:keyword))
             order by s.createdAt desc
             """)
     Page<FormSubmission> searchAll(@Param("status") FormSubmissionStatus status,
@@ -381,9 +381,9 @@ public interface FormSubmissionRepository extends JpaRepository<FormSubmission, 
             where s.submittedBy.id = :userId
               and (:status is null or s.status = :status)
               and (:keyword is null
-                   or lower(s.formVersion.title) like :keyword
-                   or lower(context.fullName) like :keyword
-                   or lower(context.employeeCode) like :keyword)
+                   or carehub_search_text(s.formVersion.title) like carehub_search_text(:keyword)
+                   or carehub_search_text(context.fullName) like carehub_search_text(:keyword)
+                   or carehub_search_text(context.employeeCode) like carehub_search_text(:keyword))
             order by s.createdAt desc
             """)
     Page<FormSubmission> searchOwned(@Param("userId") Long userId,
@@ -429,8 +429,8 @@ public interface FormSubmissionRepository extends JpaRepository<FormSubmission, 
               and s.formVersion.id = :versionId
               and s.status = 'SUBMITTED'
               and (:keyword is null
-                   or lower(context.fullName) like :keyword
-                   or lower(context.employeeCode) like :keyword)
+                   or carehub_search_text(context.fullName) like carehub_search_text(:keyword)
+                   or carehub_search_text(context.employeeCode) like carehub_search_text(:keyword))
               and (:submittedByUserId is null or s.submittedBy.id = :submittedByUserId)
               and (:departmentId is null or subject.department.id = :departmentId)
               and (:filterDepartmentIds = false or subject.department.id in :departmentIds)
@@ -466,8 +466,8 @@ public interface FormSubmissionRepository extends JpaRepository<FormSubmission, 
               and s.formVersion.id = :versionId
               and s.status = 'SUBMITTED'
               and (:keyword is null
-                   or lower(context.fullName) like :keyword
-                   or lower(context.employeeCode) like :keyword)
+                   or carehub_search_text(context.fullName) like carehub_search_text(:keyword)
+                   or carehub_search_text(context.employeeCode) like carehub_search_text(:keyword))
               and (:submittedByUserId is null or s.submittedBy.id = :submittedByUserId)
               and (:departmentId is null or subject.department.id = :departmentId)
               and (:filterDepartmentIds = false or subject.department.id in :departmentIds)
@@ -502,10 +502,10 @@ public interface FormSubmissionRepository extends JpaRepository<FormSubmission, 
             where (:formId is null or s.formVersion.form.id = :formId)
               and s.status = 'SUBMITTED'
               and (:keyword is null
-                   or lower(context.fullName) like :keyword
-                   or lower(context.employeeCode) like :keyword
-                   or lower(s.formVersion.form.title) like :keyword
-                   or lower(s.formVersion.form.code) like :keyword)
+                   or carehub_search_text(context.fullName) like carehub_search_text(:keyword)
+                   or carehub_search_text(context.employeeCode) like carehub_search_text(:keyword)
+                   or carehub_search_text(s.formVersion.form.title) like carehub_search_text(:keyword)
+                   or carehub_search_text(s.formVersion.form.code) like carehub_search_text(:keyword))
               and (:submittedByUserId is null or s.submittedBy.id = :submittedByUserId)
               and (:departmentId is null
                    or subject.department.id = :departmentId
@@ -541,10 +541,10 @@ public interface FormSubmissionRepository extends JpaRepository<FormSubmission, 
             where (:formId is null or s.formVersion.form.id = :formId)
               and s.status = 'SUBMITTED'
               and (:keyword is null
-                   or lower(context.fullName) like :keyword
-                   or lower(context.employeeCode) like :keyword
-                   or lower(s.formVersion.form.title) like :keyword
-                   or lower(s.formVersion.form.code) like :keyword)
+                   or carehub_search_text(context.fullName) like carehub_search_text(:keyword)
+                   or carehub_search_text(context.employeeCode) like carehub_search_text(:keyword)
+                   or carehub_search_text(s.formVersion.form.title) like carehub_search_text(:keyword)
+                   or carehub_search_text(s.formVersion.form.code) like carehub_search_text(:keyword))
               and (:submittedByUserId is null or s.submittedBy.id = :submittedByUserId)
               and (:departmentId is null
                    or subject.department.id = :departmentId
@@ -616,8 +616,8 @@ public interface FormSubmissionRepository extends JpaRepository<FormSubmission, 
               and s.formVersion.id = :versionId
               and s.status = 'SUBMITTED'
               and (:keyword is null
-                   or lower(context.fullName) like :keyword
-                   or lower(context.employeeCode) like :keyword)
+                   or carehub_search_text(context.fullName) like carehub_search_text(:keyword)
+                   or carehub_search_text(context.employeeCode) like carehub_search_text(:keyword))
               and (:submittedByUserId is null or s.submittedBy.id = :submittedByUserId)
               and (:departmentId is null or subject.department.id = :departmentId)
               and (:filterResults = false or s.result in :results)

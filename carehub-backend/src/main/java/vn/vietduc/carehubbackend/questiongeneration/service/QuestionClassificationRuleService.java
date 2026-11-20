@@ -1,5 +1,6 @@
 package vn.vietduc.carehubbackend.questiongeneration.service;
 
+import vn.vietduc.carehubbackend.common.SearchText;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,14 +30,14 @@ public class QuestionClassificationRuleService {
 
     @Transactional(readOnly = true)
     public List<QuestionClassificationRuleResponse> list(String query, Boolean enabled) {
-        String normalizedQuery = normalize(query);
+        String normalizedQuery = normalizeForSearch(query);
         return ruleRepository.findAllByOrderByPriorityDescIdAsc().stream()
                 .filter(rule -> enabled == null || rule.getEnabled().equals(enabled))
                 .filter(rule -> normalizedQuery.isBlank()
-                        || normalize(rule.getName()).contains(normalizedQuery)
-                        || normalize(rule.getKeywords()).contains(normalizedQuery)
-                        || normalize(rule.getSourcePattern()).contains(normalizedQuery)
-                        || normalize(rule.getCategory().getName()).contains(normalizedQuery))
+                        || normalizeForSearch(rule.getName()).contains(normalizedQuery)
+                        || normalizeForSearch(rule.getKeywords()).contains(normalizedQuery)
+                        || normalizeForSearch(rule.getSourcePattern()).contains(normalizedQuery)
+                        || normalizeForSearch(rule.getCategory().getName()).contains(normalizedQuery))
                 .sorted(Comparator.comparing(QuestionClassificationRule::getPriority).reversed()
                         .thenComparing(QuestionClassificationRule::getId))
                 .map(this::toResponse)
@@ -228,6 +229,10 @@ public class QuestionClassificationRuleService {
 
     private String safe(String value) {
         return value == null ? "" : value;
+    }
+
+    private String normalizeForSearch(String value) {
+        return normalize(SearchText.normalize(value));
     }
 
     private String normalize(String value) {

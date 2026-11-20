@@ -14,11 +14,15 @@ import {
   FileImageOutlined,
   FilePdfOutlined,
   LoadingOutlined,
+  ZoomInOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../../shared/components/AppShell.jsx'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
 import ConfirmModal from '../../../../shared/components/ConfirmModal.jsx'
+import EvidenceImageViewer from '../../../training/components/EvidenceImageViewer.jsx'
+import useEvidenceImageViewer from '../../../training/hooks/useEvidenceImageViewer.js'
+import { resolveEvidenceUrl } from '../../../training/utils/evidenceUrl.js'
 import { getApiErrorMessage } from '../../../../shared/api/apiError.js'
 import '../../../training/styles/TrainingHours.css'
 
@@ -63,6 +67,7 @@ function TrainingHoursDetailScreen() {
   const [openingEvidenceId, setOpeningEvidenceId] = useState(null)
   const [mobileTab, setMobileTab] = useState('info')
   const [trainingWindowYears, setTrainingWindowYears] = useState(null)
+  const { viewer, openImage, closeImage, retryImage } = useEvidenceImageViewer(id)
 
   const fetchRecord = useCallback(() => {
     setLoading(true)
@@ -88,7 +93,7 @@ function TrainingHoursDetailScreen() {
 
   const requestEvidencePreview = useCallback(async (evidenceId) => {
     const response = await trainingApi.createEvidencePreviewUrl(id, evidenceId)
-    const url = response.data?.data?.downloadUrl
+    const url = resolveEvidenceUrl(response.data?.data?.downloadUrl)
     if (!url) {
       throw new Error('Preview URL is missing')
     }
@@ -158,6 +163,11 @@ function TrainingHoursDetailScreen() {
   }
 
   const handleViewEvidence = async (evidenceId) => {
+    const evidence = record?.evidences?.find(item => item.id === evidenceId)
+    if (canPreviewEvidence(evidence)) {
+      openImage({ id: evidenceId, filename: evidence.originalFilename, src: evidencePreviews[evidenceId]?.url })
+      return
+    }
     setOpeningEvidenceId(evidenceId)
     try {
       const url = await requestEvidencePreview(evidenceId)
@@ -334,13 +344,21 @@ function TrainingHoursDetailScreen() {
                             {isPreviewable && (
                               <div className="th-evidence-preview">
                                 {preview?.status === 'ready' ? (
-                                  <img
-                                    className="th-evidence-preview__image"
-                                    src={preview.url}
-                                    alt={`Minh chứng ${ev.originalFilename}`}
-                                    loading="eager"
-                                    onError={() => handlePreviewImageError(ev.id)}
-                                  />
+                                  <button
+                                    type="button"
+                                    className="evidence-image-trigger"
+                                    aria-label={`Xem ảnh minh chứng ${ev.originalFilename}`}
+                                    onClick={() => handleViewEvidence(ev.id)}
+                                  >
+                                    <img
+                                      className="th-evidence-preview__image"
+                                      src={preview.url}
+                                      alt={`Minh chứng ${ev.originalFilename}`}
+                                      loading="eager"
+                                      onError={() => handlePreviewImageError(ev.id)}
+                                    />
+                                    <span className="evidence-image-trigger__hint" aria-hidden="true"><ZoomInOutlined /> Xem ảnh</span>
+                                  </button>
                                 ) : preview?.status === 'error' ? (
                                   <div className="th-evidence-preview__state" role="alert">
                                     <span>Không thể hiển thị ảnh.</span>
@@ -477,6 +495,7 @@ function TrainingHoursDetailScreen() {
               </>
             )}
       </div>
+      {viewer && <EvidenceImageViewer {...viewer} onClose={closeImage} onRetry={retryImage} />}
       <ConfirmModal
         isOpen={returnConfirmOpen}
         title="Trả hồ sơ về nháp"

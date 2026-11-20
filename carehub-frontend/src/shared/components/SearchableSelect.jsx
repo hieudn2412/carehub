@@ -1,14 +1,8 @@
+import { normalizeSearchText as normalizeSearch } from '../utils/searchText.js'
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { CheckOutlined, DownOutlined, SearchOutlined } from '@ant-design/icons'
 import './SearchableSelect.css'
 
-function normalizeSearch(value) {
-  return String(value ?? '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLocaleLowerCase('vi')
-    .trim()
-}
 
 function SearchableSelect({
   value,

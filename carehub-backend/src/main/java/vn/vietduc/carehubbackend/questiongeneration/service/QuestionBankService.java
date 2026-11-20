@@ -1,5 +1,6 @@
 package vn.vietduc.carehubbackend.questiongeneration.service;
 
+import vn.vietduc.carehubbackend.common.SearchText;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -29,7 +30,6 @@ import vn.vietduc.carehubbackend.questiongeneration.service.model.DuplicateCheck
 import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
 import vn.vietduc.carehubbackend.training.repository.ProfessionalFieldRepository;
 
-import java.text.Normalizer;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
@@ -541,10 +541,7 @@ public class QuestionBankService {
     }
 
     private String normalize(String value) {
-        String withoutMarks = Normalizer.normalize(value == null ? "" : value, Normalizer.Form.NFD)
-                .replaceAll("\\p{M}+", "");
-        return withoutMarks
-                .toLowerCase(Locale.ROOT)
+        return SearchText.normalize(value)
                 .replaceAll("[^\\p{L}\\p{N}\\s]", " ")
                 .replaceAll("\\s+", " ")
                 .trim();

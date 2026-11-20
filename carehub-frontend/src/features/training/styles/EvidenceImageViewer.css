@@ -1,0 +1,40 @@
+.evidence-image-viewer {
+  width: min(1280px, calc(100vw - 32px));
+  height: calc(100dvh - 32px);
+  max-width: none;
+  max-height: none;
+  padding: 0;
+  border: 1px solid #475569;
+  border-radius: 12px;
+  background: #0f172a;
+  color: #f8fafc;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.evidence-image-viewer[open] { display: flex; flex-direction: column; }
+.evidence-image-viewer::backdrop { background: rgb(2 6 23 / 85%); }
+.evidence-image-viewer__header { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid #334155; }
+.evidence-image-viewer__header h2 { flex: 1; min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; color: inherit; }
+.evidence-image-viewer button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 44px; min-height: 44px; padding: 8px 12px; border: 1px solid #64748b; border-radius: 8px; background: #1e293b; color: #f8fafc; font: inherit; cursor: pointer; }
+.evidence-image-viewer button:hover:enabled { background: #334155; }
+.evidence-image-viewer button:disabled { opacity: 0.4; cursor: default; }
+.evidence-image-viewer button:focus-visible { outline: 3px solid #5eead4; outline-offset: 2px; }
+.evidence-image-viewer__toolbar { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; padding: 8px 12px; }
+.evidence-image-viewer__toolbar output { min-width: 54px; text-align: center; font-variant-numeric: tabular-nums; }
+.evidence-image-viewer__stage { position: relative; flex: 1; min-height: 0; overflow: hidden; touch-action: none; user-select: none; overscroll-behavior: contain; }
+.evidence-image-viewer__stage--zoomed { cursor: grab; }
+.evidence-image-viewer__stage--zoomed:active { cursor: grabbing; }
+.evidence-image-viewer__image { position: absolute; left: 50%; top: 50%; translate: -50% -50%; max-width: none; max-height: none; object-fit: contain; pointer-events: none; }
+.evidence-image-viewer__state { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; margin: 0; padding: 16px; text-align: center; }
+.evidence-image-viewer__hint { margin: 0; padding: 10px 12px; color: #cbd5e1; font-size: 12px; text-align: center; }
+
+.evidence-image-trigger { position: relative; display: block; width: 100%; padding: 0; border: 0; background: transparent; cursor: zoom-in; }
+.evidence-image-trigger:focus-visible { outline: 3px solid #0f766e; outline-offset: -3px; }
+.evidence-image-trigger__hint { position: absolute; right: 8px; bottom: 8px; display: inline-flex; align-items: center; gap: 5px; padding: 5px 8px; border-radius: 6px; background: rgb(15 23 42 / 80%); color: #fff; font-size: 12px; pointer-events: none; }
+
+@media (max-width: 560px) {
+  .evidence-image-viewer { width: calc(100vw - 16px); height: calc(100dvh - 16px); border-radius: 8px; }
+  .evidence-image-viewer__header { padding: 8px; }
+  .evidence-image-viewer__hint { font-size: 11px; padding: 8px; }
+}

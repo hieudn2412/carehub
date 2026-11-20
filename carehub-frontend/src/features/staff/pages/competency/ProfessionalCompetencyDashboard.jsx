@@ -1,3 +1,4 @@
+import { matchesSearch } from '../../../../shared/utils/searchText.js'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
@@ -177,7 +178,7 @@ function ProfessionalCompetencyDashboard() {
     const query = filters.q.toLowerCase()
     return assignments
       .filter(isActionable)
-      .filter(item => !query || String(item.name || '').toLowerCase().includes(query))
+      .filter(item => !query || matchesSearch(String(item.name || ''), query))
       .sort(sortAssignments)
       .slice(0, 4)
   }, [assignments, filters.q])

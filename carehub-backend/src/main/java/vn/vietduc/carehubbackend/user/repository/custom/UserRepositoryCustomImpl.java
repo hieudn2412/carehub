@@ -150,8 +150,8 @@ public class UserRepositoryCustomImpl implements UserRepositoryCustom {
 
             String condition = """
                     AND (
-                        LOWER(u.name) LIKE :keyword
-                        OR LOWER(u.employee_code) LIKE :keyword
+                        carehub_search_text(u.name) LIKE carehub_search_text(:keyword)
+                        OR carehub_search_text(u.employee_code) LIKE carehub_search_text(:keyword)
                     )
                     """;
 
@@ -162,7 +162,7 @@ public class UserRepositoryCustomImpl implements UserRepositoryCustom {
 
             params.put(
                     "keyword",
-                    "%" + request.getKeyword().toLowerCase() + "%"
+                    "%" + request.getKeyword().trim() + "%"
             );
         }
 

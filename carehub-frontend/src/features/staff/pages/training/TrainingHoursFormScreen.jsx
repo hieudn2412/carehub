@@ -1,3 +1,4 @@
+import { matchesSearch } from '../../../../shared/utils/searchText.js'
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
@@ -12,6 +13,7 @@ import {
   EyeOutlined,
   DownloadOutlined,
   LoadingOutlined,
+  ZoomInOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../../shared/components/AppShell.jsx'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
@@ -19,6 +21,8 @@ import { useToast } from '../../../../shared/context/ToastContext.jsx'
 import { getApiErrorMessage } from '../../../../shared/api/apiError.js'
 import { formatEvidenceStorageSummary, getEvidenceFileError } from '../../../../features/training/utils/evidenceFile.js'
 import { getTrainingHoursValidationError, MAX_TRAINING_HOURS } from './utils/trainingHoursValidation.js'
+import EvidenceImageViewer from '../../../training/components/EvidenceImageViewer.jsx'
+import useEvidenceImageViewer from '../../../training/hooks/useEvidenceImageViewer.js'
 import '../../../training/styles/TrainingHours.css'
 
 const formatCompactSize = (bytes) => {
@@ -133,7 +137,7 @@ function SearchableDropdown({
   }, [])
 
   const filteredOptions = options.filter(opt =>
-    (opt.name || '').toLowerCase().includes(search.toLowerCase())
+    matchesSearch(opt.name || '', search)
   )
 
   const selectedOption = options.find(opt => String(opt.id) === String(value))
@@ -338,6 +342,7 @@ function TrainingHoursFormScreen() {
   const [evidencesToDelete, setEvidencesToDelete] = useState([])
   const [isDragOver, setIsDragOver] = useState(false)
   const [fileError, setFileError] = useState('')
+  const { viewer, openImage, closeImage, retryImage } = useEvidenceImageViewer(id)
 
   // Custom professional field modal states
   const [customModalOpen, setCustomModalOpen] = useState(false)
@@ -690,6 +695,11 @@ function TrainingHoursFormScreen() {
   }
 
   const handleViewEvidence = async (evidenceId) => {
+    const evidence = existingEvidences.find(item => item.id === evidenceId)
+    if (['image/jpeg', 'image/png'].includes(evidence?.mimeType?.toLowerCase())) {
+      openImage({ id: evidenceId, filename: evidence.originalFilename })
+      return
+    }
     setOpeningEvidenceId(evidenceId)
     try {
       const res = await trainingApi.createEvidencePreviewUrl(id, evidenceId)
@@ -999,11 +1009,19 @@ function TrainingHoursFormScreen() {
                           {selectedFiles.map(({ file, previewUrl }, i) => (
                             <article key={`${file.name}-${file.lastModified}-${i}`} className="evidence-selection-card">
                               {previewUrl ? (
-                                <img
-                                  className="evidence-selection-card__image"
-                                  src={previewUrl}
-                                  alt={`Ảnh minh chứng ${file.name}`}
-                                />
+                                <button
+                                  type="button"
+                                  className="evidence-image-trigger"
+                                  aria-label={`Xem ảnh minh chứng ${file.name}`}
+                                  onClick={() => openImage({ filename: file.name, src: previewUrl })}
+                                >
+                                  <img
+                                    className="evidence-selection-card__image"
+                                    src={previewUrl}
+                                    alt={`Ảnh minh chứng ${file.name}`}
+                                  />
+                                  <span className="evidence-image-trigger__hint" aria-hidden="true"><ZoomInOutlined /> Xem ảnh</span>
+                                </button>
                               ) : (
                                 <div className="evidence-selection-card__file">
                                   <PaperClipOutlined />
@@ -1292,6 +1310,7 @@ function TrainingHoursFormScreen() {
           </div>
         </div>
       )}
+      {viewer && <EvidenceImageViewer {...viewer} onClose={closeImage} onRetry={retryImage} />}
     </AppShell>
   )
 }

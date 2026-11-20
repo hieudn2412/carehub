@@ -61,8 +61,8 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
               AND u.status = vn.vietduc.carehubbackend.user.entity.UserStatus.ACTIVE
               AND (:departmentId IS NULL OR u.department.id = :departmentId)
               AND (:keyword IS NULL
-                   OR LOWER(u.name) LIKE :keyword
-                   OR LOWER(u.employeeCode) LIKE :keyword)
+                   OR carehub_search_text(u.name) LIKE carehub_search_text(:keyword)
+                   OR carehub_search_text(u.employeeCode) LIKE carehub_search_text(:keyword))
               AND EXISTS (
                   SELECT ur.id
                   FROM UserRole ur
@@ -98,8 +98,8 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
               AND u.status = vn.vietduc.carehubbackend.user.entity.UserStatus.ACTIVE
               AND (:departmentId IS NULL OR u.department.id = :departmentId)
               AND (:keyword IS NULL
-                   OR LOWER(u.name) LIKE :keyword
-                   OR LOWER(u.employeeCode) LIKE :keyword)
+                   OR carehub_search_text(u.name) LIKE carehub_search_text(:keyword)
+                   OR carehub_search_text(u.employeeCode) LIKE carehub_search_text(:keyword))
               AND EXISTS (
                   SELECT ur.id
                   FROM UserRole ur
@@ -160,8 +160,8 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
               AND u.id <> :excludedUserId
               AND (:departmentId IS NULL OR u.department.id = :departmentId)
               AND (:keyword IS NULL
-                   OR LOWER(u.name) LIKE :keyword
-                   OR LOWER(u.employeeCode) LIKE :keyword)
+                   OR carehub_search_text(u.name) LIKE carehub_search_text(:keyword)
+                   OR carehub_search_text(u.employeeCode) LIKE carehub_search_text(:keyword))
             ORDER BY u.name ASC, u.employeeCode ASC
             """,
             countQuery = """
@@ -172,8 +172,8 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
               AND u.id <> :excludedUserId
               AND (:departmentId IS NULL OR u.department.id = :departmentId)
               AND (:keyword IS NULL
-                   OR LOWER(u.name) LIKE :keyword
-                   OR LOWER(u.employeeCode) LIKE :keyword)
+                   OR carehub_search_text(u.name) LIKE carehub_search_text(:keyword)
+                   OR carehub_search_text(u.employeeCode) LIKE carehub_search_text(:keyword))
             """)
     Page<User> searchActiveFormSubjects(
             @Param("keyword") String keyword,
@@ -190,8 +190,8 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
               AND u.id <> :excludedUserId
               AND (:departmentIds IS NULL OR u.department.id IN :departmentIds)
               AND (:keyword IS NULL
-                   OR LOWER(u.name) LIKE :keyword
-                   OR LOWER(u.employeeCode) LIKE :keyword)
+                   OR carehub_search_text(u.name) LIKE carehub_search_text(:keyword)
+                   OR carehub_search_text(u.employeeCode) LIKE carehub_search_text(:keyword))
             ORDER BY u.name ASC, u.id ASC
             """,
             countQuery = """
@@ -202,8 +202,8 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
               AND u.id <> :excludedUserId
               AND (:departmentIds IS NULL OR u.department.id IN :departmentIds)
               AND (:keyword IS NULL
-                   OR LOWER(u.name) LIKE :keyword
-                   OR LOWER(u.employeeCode) LIKE :keyword)
+                   OR carehub_search_text(u.name) LIKE carehub_search_text(:keyword)
+                   OR carehub_search_text(u.employeeCode) LIKE carehub_search_text(:keyword))
             """)
     Page<User> searchActiveFormSubjectsInDepartments(
             @Param("keyword") String keyword,
@@ -229,8 +229,8 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
               AND u.status = vn.vietduc.carehubbackend.user.entity.UserStatus.ACTIVE
               AND (:departmentId IS NULL OR u.department.id = :departmentId)
               AND (:keyword IS NULL
-                   OR LOWER(u.name) LIKE :keyword
-                   OR LOWER(u.employeeCode) LIKE :keyword)
+                   OR carehub_search_text(u.name) LIKE carehub_search_text(:keyword)
+                   OR carehub_search_text(u.employeeCode) LIKE carehub_search_text(:keyword))
             ORDER BY u.name ASC, u.id ASC
             """,
             countQuery = """
@@ -240,8 +240,8 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
               AND u.status = vn.vietduc.carehubbackend.user.entity.UserStatus.ACTIVE
               AND (:departmentId IS NULL OR u.department.id = :departmentId)
               AND (:keyword IS NULL
-                   OR LOWER(u.name) LIKE :keyword
-                   OR LOWER(u.employeeCode) LIKE :keyword)
+                   OR carehub_search_text(u.name) LIKE carehub_search_text(:keyword)
+                   OR carehub_search_text(u.employeeCode) LIKE carehub_search_text(:keyword))
             """)
     Page<User> findCompetencySummaryCandidates(
             @Param("departmentId") Long departmentId,
@@ -266,8 +266,8 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
               AND u.status = vn.vietduc.carehubbackend.user.entity.UserStatus.ACTIVE
               AND (:scopeDepartmentId IS NULL OR u.department.id = :scopeDepartmentId)
               AND (:keyword IS NULL
-                   OR LOWER(u.employeeCode) LIKE :keyword
-                   OR LOWER(u.name) LIKE :keyword)
+                   OR carehub_search_text(u.employeeCode) LIKE carehub_search_text(:keyword)
+                   OR carehub_search_text(u.name) LIKE carehub_search_text(:keyword))
               AND (:departmentId IS NULL OR u.department.id = :departmentId)
               AND (:positionId IS NULL OR u.position.id = :positionId)
               AND NOT EXISTS (

@@ -1,3 +1,4 @@
+import { matchesSearch } from '../../../shared/utils/searchText.js'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -119,8 +120,8 @@ export default function ExamConfigPage() {
     const keyword = departmentKeyword.trim().toLowerCase()
     if (!keyword) return departments
     return departments.filter((dept) => (
-      (dept.departmentCode || '').toLowerCase().includes(keyword)
-      || (dept.name || '').toLowerCase().includes(keyword)
+      matchesSearch(dept.departmentCode || '', keyword)
+      || matchesSearch(dept.name || '', keyword)
     ))
   }, [departments, departmentKeyword])
 
@@ -133,7 +134,7 @@ export default function ExamConfigPage() {
       if (positionFilter && user.positionName !== positionFilter) return false
       if (tokens.length === 0) return true
       const haystack = `${user.employeeCode || ''} ${user.fullName || ''} ${user.departmentName || ''}`.toLowerCase()
-      return tokens.some((token) => haystack.includes(token))
+      return tokens.some((token) => matchesSearch(haystack, token))
     })
   }, [allUsers, filterDepartmentIds, positionFilter, userKeyword])
 
